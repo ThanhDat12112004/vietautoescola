@@ -1,0 +1,17 @@
+{
+  "name": "viet-acosla",
+  "private": true,
+  "version": "1.0.0",
+  "workspaces": [
+    "apps/*",
+    "services/*"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev --workspace apps/api-gateway\" \"npm run dev --workspace services/user-service\" \"npm run dev --workspace services/quiz-service\" \"npm run dev --workspace services/media-service\" \"npm run dev --workspace services/stats-service\" \"npm run dev --workspace services/materials-service\" \"npm run dev --workspace apps/web\"",
+    "build": "npm run build -ws",
+    "start": "npm run start --workspace apps/api-gateway"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}
