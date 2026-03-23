@@ -63,12 +63,14 @@ async function login(payload) {
 
   const deviceKey = createHash('sha256').update(deviceId).digest('hex').slice(0, 16);
   const existingSessionId = String(user.current_session_id || '');
-  const existingDeviceKey = existingSessionId.includes('.') ? existingSessionId.split('.')[0] : null;
+  const existingDeviceKey = existingSessionId.includes('.')
+    ? existingSessionId.split('.')[0]
+    : null;
   const lastSeenAt = user.session_last_seen_at ? new Date(user.session_last_seen_at) : null;
   const sessionIsFresh =
-    lastSeenAt instanceof Date
-    && !Number.isNaN(lastSeenAt.getTime())
-    && (Date.now() - lastSeenAt.getTime()) <= SESSION_STALE_SECONDS * 1000;
+    lastSeenAt instanceof Date &&
+    !Number.isNaN(lastSeenAt.getTime()) &&
+    Date.now() - lastSeenAt.getTime() <= SESSION_STALE_SECONDS * 1000;
 
   if (existingSessionId && existingDeviceKey && existingDeviceKey !== deviceKey && sessionIsFresh) {
     const appError = new Error('Account is already logged in on another device');
@@ -87,7 +89,14 @@ async function login(payload) {
 
   return {
     token,
-    user: { id: user.id, username: user.username, email: user.email, role: user.role },
+    user: {
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      full_name: user.full_name || null,
+      role: user.role,
+      avatar_url: user.avatar_url || null,
+    },
   };
 }
 
@@ -124,4 +133,72 @@ async function heartbeat(userId, sid) {
   return { ok: affected > 0 };
 }
 
-module.exports = { register, login, logout, logoutByToken, heartbeat };
+async function updateMyAvatar(userId, avatarUrl) {
+  const updated = await userRepository.updateAvatarUrl(userId, avatarUrl);
+  if (!updated) {
+    const appError = new Error('User not found');
+    appError.status = 404;
+    throw appError;
+  }
+
+  return {
+    message: 'Avatar updated',
+    user: {
+      id: updated.id,
+      username: updated.username,
+      email: updated.email,
+      full_name: updated.full_name || null,
+      role: updated.role,
+      avatar_url: updated.avatar_url || null,
+    },
+  };
+}
+
+async function updateMyProfile(userId, payload) {
+  const existing = await userRepository.findUserWithPasswordById(userId);
+  if (!existing) {
+    const appError = new Error('User not found');
+    appError.status = 404;
+    throw appError;
+  }
+
+  let passwordHash = null;
+  if (payload.new_password) {
+    const valid = await bcrypt.compare(payload.current_password || '', existing.password_hash);
+    if (!valid) {
+      const appError = new Error('Current password is incorrect');
+      appError.status = 400;
+      throw appError;
+    }
+
+    passwordHash = await bcrypt.hash(payload.new_password, 10);
+  }
+
+  await userRepository.updateProfileByUser(userId, {
+    fullName: payload.full_name ?? existing.full_name,
+    passwordHash,
+  });
+
+  const updated = await userRepository.findUserById(userId);
+  return {
+    message: 'Profile updated',
+    user: {
+      id: updated.id,
+      username: updated.username,
+      email: updated.email,
+      full_name: updated.full_name || null,
+      role: updated.role,
+      avatar_url: updated.avatar_url || null,
+    },
+  };
+}
+
+module.exports = {
+  register,
+  login,
+  logout,
+  logoutByToken,
+  heartbeat,
+  updateMyAvatar,
+  updateMyProfile,
+};

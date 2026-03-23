@@ -12,6 +12,15 @@ async function getLeaderboard(req, res, next) {
   }
 }
 
+async function getSummary(_req, res, next) {
+  try {
+    const data = await statsService.getHomeSummary();
+    return res.json(data);
+  } catch (error) {
+    return next(error);
+  }
+}
+
 async function getMyDashboard(req, res, next) {
   try {
     const lang = getLang(req.query.lang);
@@ -41,4 +50,4 @@ async function getUserDashboard(req, res, next) {
   }
 }
 
-module.exports = { getLeaderboard, getMyDashboard, getUserDashboard };
+module.exports = { getLeaderboard, getSummary, getMyDashboard, getUserDashboard };

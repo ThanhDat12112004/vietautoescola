@@ -31,6 +31,36 @@ async function findLeaderboard(limit = 20) {
   return rows;
 }
 
+async function findHomeSummary() {
+  const [[questionsRow]] = await pool.query(`SELECT COUNT(*) AS total_questions FROM questions`);
+
+  const [[studentsRow]] = await pool.query(
+    `SELECT COUNT(*) AS total_students
+     FROM users
+     WHERE is_active = TRUE AND role = 'student'`
+  );
+
+  const [[attemptsRow]] = await pool.query(
+    `SELECT
+       COUNT(*) AS total_completed,
+       SUM(CASE WHEN a.percentage >= q.passing_score THEN 1 ELSE 0 END) AS total_passed
+     FROM user_quiz_attempts a
+     JOIN quizzes q ON q.id = a.quiz_id
+     WHERE a.status = 'completed'`
+  );
+
+  const totalCompleted = Number(attemptsRow.total_completed || 0);
+  const totalPassed = Number(attemptsRow.total_passed || 0);
+  const passRate =
+    totalCompleted > 0 ? Number(((totalPassed / totalCompleted) * 100).toFixed(1)) : 0;
+
+  return {
+    total_questions: Number(questionsRow.total_questions || 0),
+    total_students: Number(studentsRow.total_students || 0),
+    pass_rate: passRate,
+  };
+}
+
 async function findUserStats(userId) {
   const [rows] = await pool.query(
     `SELECT
@@ -80,6 +110,7 @@ async function findUserAttemptHistory(userId, lang, limit = 30) {
 module.exports = {
   findUserSessionById,
   findLeaderboard,
+  findHomeSummary,
   findUserStats,
   findUserAttemptHistory,
 };

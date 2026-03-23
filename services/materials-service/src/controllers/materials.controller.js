@@ -11,6 +11,77 @@ async function listSubjects(req, res, next) {
   }
 }
 
+async function listSubjectsAdmin(_req, res, next) {
+  try {
+    const rows = await materialsService.listSubjectsForAdmin();
+    return res.json(rows);
+  } catch (error) {
+    return next(error);
+  }
+}
+
+async function createSubject(req, res, next) {
+  const { name_vi, name_es, description_vi, description_es } = req.body;
+
+  if (!name_vi || !name_es) {
+    return res.status(400).json({ message: 'name_vi, name_es are required' });
+  }
+
+  try {
+    const result = await materialsService.createSubject({
+      name_vi,
+      name_es,
+      description_vi,
+      description_es,
+      created_by: req.user.id,
+    });
+
+    return res.status(201).json(result);
+  } catch (error) {
+    return next(error);
+  }
+}
+
+async function updateSubject(req, res, next) {
+  const subjectId = Number(req.params.id);
+  if (Number.isNaN(subjectId)) {
+    return res.status(400).json({ message: 'Invalid subject id' });
+  }
+
+  const { name_vi, name_es, description_vi, description_es } = req.body;
+
+  if (!name_vi || !name_es) {
+    return res.status(400).json({ message: 'name_vi, name_es are required' });
+  }
+
+  try {
+    const result = await materialsService.updateSubject(subjectId, {
+      name_vi,
+      name_es,
+      description_vi,
+      description_es,
+    });
+
+    return res.json(result);
+  } catch (error) {
+    return next(error);
+  }
+}
+
+async function deleteSubject(req, res, next) {
+  const subjectId = Number(req.params.id);
+  if (Number.isNaN(subjectId)) {
+    return res.status(400).json({ message: 'Invalid subject id' });
+  }
+
+  try {
+    const result = await materialsService.deleteSubject(subjectId);
+    return res.json(result);
+  } catch (error) {
+    return next(error);
+  }
+}
+
 async function listReferenceMaterials(req, res, next) {
   const subjectId = Number(req.params.id);
   if (Number.isNaN(subjectId)) {
@@ -34,9 +105,7 @@ async function createReferenceMaterial(req, res, next) {
 
   const { lang_code, title, description, file_path, file_size_mb } = req.body;
   if (!lang_code || !title || !file_path) {
-    return res
-      .status(400)
-      .json({ message: 'lang_code, title, file_path are required' });
+    return res.status(400).json({ message: 'lang_code, title, file_path are required' });
   }
 
   try {
@@ -140,6 +209,10 @@ async function deleteReferenceMaterial(req, res, next) {
 
 module.exports = {
   listSubjects,
+  listSubjectsAdmin,
+  createSubject,
+  updateSubject,
+  deleteSubject,
   listReferenceMaterials,
   createReferenceMaterial,
   createReferenceMaterialsBilingual,

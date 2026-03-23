@@ -4,6 +4,10 @@ async function getLeaderboard(limit = 20) {
   return statsRepository.findLeaderboard(limit);
 }
 
+async function getHomeSummary() {
+  return statsRepository.findHomeSummary();
+}
+
 async function getUserDashboard(userId, lang) {
   const stats = await statsRepository.findUserStats(userId);
 
@@ -17,4 +21,4 @@ async function getUserDashboard(userId, lang) {
   return { stats, history };
 }
 
-module.exports = { getLeaderboard, getUserDashboard };
+module.exports = { getLeaderboard, getHomeSummary, getUserDashboard };

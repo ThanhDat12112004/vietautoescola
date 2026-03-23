@@ -56,7 +56,7 @@ const Leaderboard = () => {
   const podiumIndexes = [1, 0, 2].filter((idx) => idx < ranked.length);
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="app-page min-h-screen flex flex-col">
       <Navbar />
       <div className="bg-hero-pattern py-12 md:py-16">
         <div className="container">

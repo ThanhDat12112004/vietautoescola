@@ -2,7 +2,9 @@ export type AuthUser = {
   id: number;
   username: string;
   email: string;
+  full_name?: string | null;
   role?: string;
+  avatar_url?: string | null;
 };
 
 const AUTH_STORAGE_KEY = 'viet-acosla-auth';
@@ -45,6 +47,28 @@ export function saveAuth(token: string, user: AuthUser) {
 
   const payload: StoredAuth = { token, user };
   window.localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(payload));
+}
+
+export function updateStoredAuthUser(nextUserFields: Partial<AuthUser>) {
+  if (!isBrowser()) {
+    return;
+  }
+
+  const current = getStoredAuth();
+  if (!current?.token || !current.user) {
+    return;
+  }
+
+  const payload: StoredAuth = {
+    token: current.token,
+    user: {
+      ...current.user,
+      ...nextUserFields,
+    },
+  };
+
+  window.localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(payload));
+  window.dispatchEvent(new CustomEvent('auth-updated'));
 }
 
 export function clearAuth() {

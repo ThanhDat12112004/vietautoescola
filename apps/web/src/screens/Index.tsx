@@ -1,14 +1,24 @@
+import BrandLogo from '@/components/BrandLogo';
 import Footer from '@/components/Footer';
 import Navbar from '@/components/Navbar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { useLanguage } from '@/hooks/useLanguage';
-import { getLeaderboard, getQuizzes, type LeaderboardUser, type QuizListItem } from '@/lib/api';
+import {
+  getHomeSummary,
+  getLeaderboard,
+  getQuizzes,
+  getSubjects,
+  type HomeSummary,
+  type LeaderboardUser,
+  type QuizListItem,
+  type Subject,
+} from '@/lib/api';
+import { getStoredAuth } from '@/lib/auth';
 import { motion } from 'framer-motion';
 import {
   ArrowRight,
   BookOpen,
-  Car,
   CheckCircle2,
   Globe2,
   GraduationCap,
@@ -31,10 +41,15 @@ const fadeUp = {
   }),
 };
 
+const DEFAULT_QUIZ_TYPES = ['general', 'bien_bao', 'cao_toc', 'ly_thuyet', 'an_toan', 'sa_hinh'];
+
 const Index = () => {
   const { t, lang } = useLanguage();
   const [leaderboard, setLeaderboard] = useState<LeaderboardUser[]>([]);
   const [quizzes, setQuizzes] = useState<QuizListItem[]>([]);
+  const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [homeSummary, setHomeSummary] = useState<HomeSummary | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   const features = [
     {
@@ -71,26 +86,45 @@ const Index = () => {
     },
   ];
 
-  const stats = [
-    { value: '500+', label: t('Câu hỏi', 'Preguntas') },
-    { value: '2', label: t('Ngôn ngữ', 'Idiomas') },
-    { value: '1000+', label: t('Học viên', 'Estudiantes') },
-    { value: '95%', label: t('Tỷ lệ đậu', 'Tasa de aprobados') },
-  ];
+  const stats = useMemo(
+    () => [
+      {
+        value: String(
+          homeSummary?.total_questions ||
+            quizzes.reduce((sum, item) => sum + Number(item.total_questions || 0), 0)
+        ),
+        label: t('Câu hỏi', 'Preguntas'),
+      },
+      { value: '2', label: t('Ngôn ngữ', 'Idiomas') },
+      {
+        value: String(homeSummary?.total_students || leaderboard.length),
+        label: t('Học viên', 'Estudiantes'),
+      },
+      {
+        value: `${homeSummary?.pass_rate ?? 0}%`,
+        label: t('Tỷ lệ đậu', 'Tasa de aprobados'),
+      },
+    ],
+    [homeSummary, quizzes, leaderboard.length, t]
+  );
 
   useEffect(() => {
     let active = true;
 
     (async () => {
       try {
-        const [leaderboardRows, quizRows] = await Promise.all([
+        const [leaderboardRows, quizRows, subjectRows, summary] = await Promise.all([
           getLeaderboard(8),
           getQuizzes(lang),
+          getSubjects(lang),
+          getHomeSummary(),
         ]);
 
         if (!active) return;
         setLeaderboard(leaderboardRows);
         setQuizzes(quizRows);
+        setSubjects(subjectRows);
+        setHomeSummary(summary);
       } catch {
         // Keep homepage usable even if data loading fails.
       }
@@ -101,44 +135,65 @@ const Index = () => {
     };
   }, [lang]);
 
-  const categoryNames = useMemo(() => {
+  useEffect(() => {
+    const syncAuth = () => {
+      const auth = getStoredAuth();
+      setIsAuthenticated(Boolean(auth?.token));
+    };
+
+    syncAuth();
+    window.addEventListener('storage', syncAuth);
+    window.addEventListener('focus', syncAuth);
+
+    return () => {
+      window.removeEventListener('storage', syncAuth);
+      window.removeEventListener('focus', syncAuth);
+    };
+  }, []);
+
+  const quizTypes = useMemo(() => {
     const values = quizzes
-      .map((quiz) => quiz.category_name)
+      .map((quiz) => quiz.quiz_type)
       .filter((item): item is string => Boolean(item));
-    return Array.from(new Set(values)).slice(0, 6);
+    const unique = Array.from(new Set(values));
+    if (unique.length) return unique.slice(0, 6);
+    return DEFAULT_QUIZ_TYPES;
   }, [quizzes]);
+
+  const formatQuizType = (value: string) =>
+    value.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
 
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar />
 
       {/* Hero */}
-      <section className="bg-hero-pattern relative overflow-hidden">
-        <div className="absolute inset-0 opacity-20">
-          <div className="absolute top-10 left-[10%] h-20 w-40 rounded-full bg-card blur-3xl" />
-          <div className="absolute top-20 right-[15%] h-16 w-32 rounded-full bg-card blur-2xl" />
+      <section className="relative overflow-hidden py-8 md:py-10">
+        <div className="absolute inset-0 opacity-30">
+          <div className="absolute top-8 left-[8%] h-24 w-44 rounded-full bg-primary/20 blur-3xl" />
+          <div className="absolute top-16 right-[12%] h-20 w-36 rounded-full bg-accent/20 blur-2xl" />
         </div>
 
-        <div className="container relative py-20 md:py-28">
-          <div className="grid gap-12 md:grid-cols-2 items-center">
+        <div className="container relative glassmorph-pane rounded-3xl p-6 md:p-8 lg:p-10">
+          <div className="grid gap-8 md:grid-cols-2 items-center">
             <motion.div
               initial={{ opacity: 0, x: -40 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.6 }}
             >
-              <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-1.5 text-sm font-medium text-primary mb-6">
+              <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-primary/12 px-4 py-1.5 text-base font-semibold text-primary">
                 <GraduationCap className="h-4 w-4" />
                 {t('Hệ thống thi trực tuyến #1', 'Sistema de exámenes online #1')}
               </div>
-              <h1 className="font-display text-4xl font-900 leading-tight md:text-5xl lg:text-6xl mb-6">
-                {t('Mô phỏng bài thi lái xe ', 'Simulador de examen ')}
+              <h1 className="font-display text-4xl font-900 leading-tight md:text-5xl lg:text-6xl mb-5">
+                {t('Chinh phục bằng lái xe ', 'Domina tu examen de conducir ')}
                 <span className="text-gradient-primary">{t('song ngữ', 'bilingüe')}</span>
                 {t(' Việt - Tây Ban Nha', ' vietnamita-español')}
               </h1>
-              <p className="text-lg text-muted-foreground mb-8 max-w-lg">
+              <p className="text-lg text-muted-foreground mb-6 max-w-lg">
                 {t(
-                  'Luyện thi bằng lái xe tại Tây Ban Nha với hệ thống câu hỏi song ngữ, giải thích chi tiết và bảng xếp hạng.',
-                  'Practica para el examen de conducir en España con preguntas bilingües, explicaciones detalladas y ranking.'
+                  'Bộ đề bám sát thực tế DGT, chấm điểm tức thì, giải thích rõ ràng và lộ trình học thông minh để bạn đậu nhanh hơn.',
+                  'Exámenes estilo DGT, corrección instantánea, explicaciones claras y una ruta de estudio inteligente para aprobar más rápido.'
                 )}
               </p>
               <div className="flex flex-wrap gap-3">
@@ -148,11 +203,13 @@ const Index = () => {
                     <ArrowRight className="h-4 w-4" />
                   </Button>
                 </Link>
-                <Link to="/register">
-                  <Button size="lg" variant="outline" className="font-semibold text-base px-6">
-                    {t('Đăng ký miễn phí', 'Regístrate gratis')}
-                  </Button>
-                </Link>
+                {!isAuthenticated && (
+                  <Link to="/register">
+                    <Button size="lg" variant="outline" className="font-semibold text-base px-6">
+                      {t('Đăng ký miễn phí', 'Regístrate gratis')}
+                    </Button>
+                  </Link>
+                )}
               </div>
             </motion.div>
 
@@ -163,15 +220,15 @@ const Index = () => {
               className="relative flex justify-center"
             >
               <div className="relative w-72 h-72 md:w-80 md:h-80">
-                <div className="absolute inset-0 rounded-full bg-primary/10 animate-pulse-soft" />
-                <div className="absolute inset-4 rounded-full bg-primary/20 flex items-center justify-center">
-                  <Car className="h-24 w-24 text-primary animate-float" />
+                <div className="absolute inset-0 rounded-full bg-primary/14 animate-pulse-soft" />
+                <div className="absolute inset-4 rounded-full bg-primary/24 flex items-center justify-center glassmorph-card">
+                  <BrandLogo imageClassName="h-24 md:h-28 animate-float" />
                 </div>
-                <div className="absolute -top-2 -right-2 rounded-xl bg-card shadow-lg p-3 flex items-center gap-2">
+                <div className="absolute -top-2 -right-2 rounded-xl glassmorph-card p-3 flex items-center gap-2">
                   <CheckCircle2 className="h-5 w-5 text-accent" />
                   <span className="text-sm font-semibold">DGT</span>
                 </div>
-                <div className="absolute -bottom-2 -left-2 rounded-xl bg-card shadow-lg p-3 flex items-center gap-2">
+                <div className="absolute -bottom-2 -left-2 rounded-xl glassmorph-card p-3 flex items-center gap-2">
                   <Star className="h-5 w-5 text-accent" />
                   <span className="text-sm font-semibold">4.9★</span>
                 </div>
@@ -182,9 +239,9 @@ const Index = () => {
       </section>
 
       {/* Stats */}
-      <section className="border-b border-border bg-card">
-        <div className="container py-8">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+      <section className="py-4">
+        <div className="container py-6">
+          <div className="glassmorph-pane rounded-2xl p-5 md:p-6 grid grid-cols-2 gap-4 md:grid-cols-4 md:gap-6">
             {stats.map((stat, i) => (
               <motion.div
                 key={i}
@@ -204,7 +261,7 @@ const Index = () => {
       </section>
 
       {/* Features */}
-      <section className="py-16 md:py-24">
+      <section className="py-10 md:py-14">
         <div className="container">
           <motion.div
             initial="hidden"
@@ -212,7 +269,7 @@ const Index = () => {
             viewport={{ once: true }}
             variants={fadeUp}
             custom={0}
-            className="text-center mb-12"
+            className="text-center mb-8"
           >
             <h2 className="font-display text-3xl font-800 mb-3">
               {t('Tại sao chọn Viet Auto Escola?', '¿Por qué elegir Viet Auto Escola?')}
@@ -235,13 +292,13 @@ const Index = () => {
                 viewport={{ once: true }}
                 variants={fadeUp}
               >
-                <Card className="card-hover h-full border-border/50">
+                <Card className="card-hover glassmorph-card h-full border-border/50">
                   <CardContent className="p-6">
                     <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
                       <f.icon className="h-6 w-6 text-primary" />
                     </div>
-                    <h3 className="font-display font-bold text-lg mb-2">{f.title}</h3>
-                    <p className="text-sm text-muted-foreground leading-relaxed">{f.desc}</p>
+                    <h3 className="mb-2 font-display text-xl font-bold">{f.title}</h3>
+                    <p className="text-base text-muted-foreground leading-relaxed">{f.desc}</p>
                   </CardContent>
                 </Card>
               </motion.div>
@@ -250,8 +307,8 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Quiz Categories */}
-      <section className="bg-sky-clouds py-16 md:py-24">
+      {/* Quiz Types */}
+      <section className="py-10 md:py-14">
         <div className="container">
           <motion.div
             initial="hidden"
@@ -259,20 +316,20 @@ const Index = () => {
             viewport={{ once: true }}
             variants={fadeUp}
             custom={0}
-            className="text-center mb-12"
+            className="text-center mb-8"
           >
             <h2 className="font-display text-3xl font-800 mb-3">
-              {t('Chủ đề luyện thi', 'Temas de práctica')}
+              {t('Loại đề luyện thi', 'Tipos de examen')}
             </h2>
             <p className="text-muted-foreground">
-              {t('Chọn chủ đề bạn muốn ôn tập', 'Elige el tema que quieres repasar')}
+              {t('Chọn loại đề bạn muốn tập trung', 'Elige el tipo de examen que quieres dominar')}
             </p>
           </motion.div>
 
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {categoryNames.map((cat, i) => (
+            {quizTypes.map((type, i) => (
               <motion.div
-                key={cat}
+                key={type}
                 custom={i + 1}
                 initial="hidden"
                 whileInView="visible"
@@ -280,19 +337,21 @@ const Index = () => {
                 variants={fadeUp}
               >
                 <Link to="/quizzes">
-                  <Card className="card-hover group cursor-pointer border-border/50 overflow-hidden">
+                  <Card className="card-hover glassmorph-card group cursor-pointer border-border/50 overflow-hidden">
                     <CardContent className="p-6">
                       <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-accent/10 group-hover:bg-accent/20 transition-colors">
                         <Target className="h-7 w-7 text-accent" />
                       </div>
-                      <h3 className="font-display font-bold text-lg mb-1">{cat}</h3>
-                      <p className="text-sm text-muted-foreground mb-4">
+                      <h3 className="mb-1 font-display text-xl font-bold">
+                        {formatQuizType(type)}
+                      </h3>
+                      <p className="mb-4 text-base text-muted-foreground">
                         {t(
-                          'Khám phá các đề liên quan trong danh mục này',
-                          'Explora exámenes relacionados con esta categoría'
+                          'Bộ đề được nhóm theo loại để bạn luyện đúng trọng tâm',
+                          'Exámenes agrupados por tipo para practicar con enfoque'
                         )}
                       </p>
-                      <span className="inline-flex items-center gap-1 text-sm font-medium text-primary group-hover:gap-2 transition-all">
+                      <span className="inline-flex items-center gap-1 text-base font-medium text-primary group-hover:gap-2 transition-all">
                         {t('Khám phá ngay', 'Explorar')} <ArrowRight className="h-4 w-4" />
                       </span>
                     </CardContent>
@@ -304,10 +363,65 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Leaderboard Preview */}
-      <section className="py-16 md:py-24">
+      {/* Material Subjects */}
+      <section className="py-10 md:py-12">
         <div className="container">
-          <div className="grid gap-8 lg:grid-cols-2 items-start">
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+            variants={fadeUp}
+            custom={0}
+            className="text-center mb-8"
+          >
+            <h2 className="font-display text-3xl font-800 mb-3">
+              {t('Chủ đề tài liệu', 'Temas de materiales')}
+            </h2>
+            <p className="text-muted-foreground">
+              {t(
+                'Ôn tập theo từng chủ đề tài liệu chính',
+                'Repasa por temas principales de materiales'
+              )}
+            </p>
+          </motion.div>
+
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {subjects.slice(0, 6).map((subject, i) => (
+              <motion.div
+                key={subject.id}
+                custom={i + 1}
+                initial="hidden"
+                whileInView="visible"
+                viewport={{ once: true }}
+                variants={fadeUp}
+              >
+                <Link to="/materials">
+                  <Card className="card-hover glassmorph-card h-full border-border/50">
+                    <CardContent className="p-6">
+                      <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
+                        <BookOpen className="h-6 w-6 text-primary" />
+                      </div>
+                      <h3 className="mb-2 font-display text-xl font-bold">{subject.name}</h3>
+                      <p className="mb-4 text-base text-muted-foreground leading-relaxed">
+                        {subject.description ||
+                          t('Xem tài liệu chi tiết cho chủ đề này', 'Ver materiales de este tema')}
+                      </p>
+                      <span className="inline-flex items-center gap-1 text-base font-medium text-primary">
+                        {t('Xem tài liệu', 'Ver materiales')} <ArrowRight className="h-4 w-4" />
+                      </span>
+                    </CardContent>
+                  </Card>
+                </Link>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Leaderboard Preview */}
+      <section className="py-8 md:py-10">
+        <div className="container">
+          <div className="grid items-start gap-5">
             <motion.div
               initial="hidden"
               whileInView="visible"
@@ -315,24 +429,24 @@ const Index = () => {
               variants={fadeUp}
               custom={0}
             >
-              <h2 className="font-display text-3xl font-800 mb-3">
+              <h2 className="mb-2 font-display text-3xl font-800">
                 {t('Bảng xếp hạng', 'Clasificación')}
               </h2>
-              <p className="text-muted-foreground mb-6">
+              <p className="mb-4 text-base text-muted-foreground">
                 {t('Top học viên xuất sắc nhất', 'Los mejores estudiantes')}
               </p>
 
-              <Card className="border-border/50">
+              <Card className="glassmorph-card border-border/50">
                 <CardContent className="p-0">
                   {leaderboard.slice(0, 5).map((user, i) => (
                     <div
                       key={user.id}
-                      className={`flex items-center gap-4 px-5 py-3.5 ${
+                      className={`flex items-center gap-4 px-5 py-3 ${
                         i !== 4 ? 'border-b border-border/50' : ''
                       } ${i < 3 ? 'bg-accent/5' : ''}`}
                     >
                       <div
-                        className={`flex h-8 w-8 items-center justify-center rounded-full font-display font-bold text-sm ${
+                        className={`flex h-8 w-8 items-center justify-center rounded-full font-display font-bold text-base ${
                           i === 0
                             ? 'bg-accent text-accent-foreground'
                             : i === 1
@@ -348,8 +462,8 @@ const Index = () => {
                         <Users className="h-4 w-4 text-primary" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="font-medium text-sm truncate">{user.full_name}</div>
-                        <div className="text-xs text-muted-foreground">
+                        <div className="font-medium text-base truncate">{user.full_name}</div>
+                        <div className="text-sm text-muted-foreground">
                           {user.total_quizzes} {t('bài thi', 'exámenes')}
                         </div>
                       </div>
@@ -361,81 +475,18 @@ const Index = () => {
                 </CardContent>
               </Card>
 
-              <Link to="/leaderboard" className="mt-4 inline-block">
+              <Link to="/leaderboard" className="mt-3 inline-block">
                 <Button variant="outline" className="gap-2">
                   {t('Xem đầy đủ', 'Ver todo')} <ArrowRight className="h-4 w-4" />
                 </Button>
               </Link>
-            </motion.div>
-
-            {/* Learning path */}
-            <motion.div
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true }}
-              variants={fadeUp}
-              custom={1}
-            >
-              <h2 className="font-display text-3xl font-800 mb-3">
-                {t('Lộ trình học tập', 'Ruta de aprendizaje')}
-              </h2>
-              <p className="text-muted-foreground mb-6">
-                {t('3 bước đơn giản để sẵn sàng thi DGT', '3 pasos sencillos para el examen DGT')}
-              </p>
-
-              <div className="flex flex-col gap-4">
-                {[
-                  {
-                    step: '01',
-                    icon: BookOpen,
-                    title: t('Học lý thuyết', 'Estudiar teoría'),
-                    desc: t(
-                      'Đọc tài liệu song ngữ, xem biển báo giao thông',
-                      'Lee materiales bilingües, aprende las señales'
-                    ),
-                  },
-                  {
-                    step: '02',
-                    icon: Target,
-                    title: t('Luyện thi mô phỏng', 'Practicar simuladores'),
-                    desc: t(
-                      'Làm bài thi thử với câu hỏi thực tế từ DGT',
-                      'Haz exámenes simulados con preguntas reales DGT'
-                    ),
-                  },
-                  {
-                    step: '03',
-                    icon: Trophy,
-                    title: t('Thi và đậu!', '¡Aprobar!'),
-                    desc: t(
-                      'Tự tin bước vào phòng thi với kiến thức vững chắc',
-                      'Entra al examen con confianza y conocimiento sólido'
-                    ),
-                  },
-                ].map((s, i) => (
-                  <Card key={i} className="card-hover border-border/50">
-                    <CardContent className="flex items-start gap-4 p-5">
-                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary/10">
-                        <s.icon className="h-6 w-6 text-primary" />
-                      </div>
-                      <div>
-                        <div className="text-xs font-bold text-primary/60 mb-1">
-                          {t('BƯỚC', 'PASO')} {s.step}
-                        </div>
-                        <h3 className="font-display font-bold mb-1">{s.title}</h3>
-                        <p className="text-sm text-muted-foreground">{s.desc}</p>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
             </motion.div>
           </div>
         </div>
       </section>
 
       {/* CTA */}
-      <section className="bg-primary py-16">
+      <section className="py-10">
         <div className="container text-center">
           <motion.div
             initial="hidden"
@@ -443,23 +494,26 @@ const Index = () => {
             viewport={{ once: true }}
             variants={fadeUp}
             custom={0}
+            className="glassmorph-pane rounded-3xl px-6 py-8 md:px-10"
           >
-            <h2 className="font-display text-3xl font-800 text-primary-foreground mb-4">
+            <h2 className="font-display text-3xl font-800 text-primary mb-4">
               {t('Sẵn sàng bắt đầu luyện thi?', '¿Listo para empezar a practicar?')}
             </h2>
-            <p className="text-primary-foreground/80 mb-8 max-w-lg mx-auto">
+            <p className="mx-auto mb-6 max-w-lg text-muted-foreground">
               {t(
                 'Đăng ký ngay để truy cập hàng trăm câu hỏi mô phỏng thi DGT miễn phí',
                 'Regístrate para acceder a cientos de preguntas del examen DGT gratis'
               )}
             </p>
-            <Link to="/register">
+            <Link to={isAuthenticated ? '/quizzes' : '/register'}>
               <Button
                 size="lg"
                 variant="secondary"
                 className="gap-2 font-semibold text-base px-6 bg-accent text-accent-foreground hover:bg-accent/90"
               >
-                {t('Đăng ký miễn phí', 'Regístrate gratis')}
+                {isAuthenticated
+                  ? t('Làm bài thi ngay', 'Haz el examen ahora')
+                  : t('Đăng ký miễn phí', 'Regístrate gratis')}
                 <ArrowRight className="h-4 w-4" />
               </Button>
             </Link>

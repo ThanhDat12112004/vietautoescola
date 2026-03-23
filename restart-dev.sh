@@ -48,6 +48,13 @@ else
   echo "[restart-dev] Copy from .env.example: cp .env.example .env"
 fi
 
+# Ensure required packages (like concurrently) are installed
+# If the project doesn't have the binary, run npm install to populate node_modules
+if [[ ! -x "$ROOT_DIR/node_modules/.bin/concurrently" ]]; then
+  echo "[restart-dev] 'concurrently' not found. Installing dependencies..."
+  npm install --no-audit --no-fund
+fi
+
 nohup npm run dev >"$LOG_FILE" 2>&1 &
 
 NEW_PID=$!

@@ -5,6 +5,30 @@ const { authRequired, requireRoles } = require('../../middleware/auth.middleware
 const router = express.Router();
 
 router.get('/subjects', materialsController.listSubjects);
+router.get(
+  '/admin/subjects',
+  authRequired,
+  requireRoles('admin'),
+  materialsController.listSubjectsAdmin
+);
+router.post(
+  '/admin/subjects',
+  authRequired,
+  requireRoles('admin'),
+  materialsController.createSubject
+);
+router.patch(
+  '/admin/subjects/:id',
+  authRequired,
+  requireRoles('admin'),
+  materialsController.updateSubject
+);
+router.delete(
+  '/admin/subjects/:id',
+  authRequired,
+  requireRoles('admin'),
+  materialsController.deleteSubject
+);
 router.get('/subjects/:id/materials', materialsController.listReferenceMaterials);
 router.post(
   '/subjects/:id/materials',

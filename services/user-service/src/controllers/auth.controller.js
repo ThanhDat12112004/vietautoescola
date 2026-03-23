@@ -1,5 +1,9 @@
 const authService = require('../services/auth.service');
-const { registerSchema, loginSchema } = require('../validators/auth.validator');
+const {
+  registerSchema,
+  loginSchema,
+  updateProfileSchema,
+} = require('../validators/auth.validator');
 const { validateOrThrow } = require('../utils/validate');
 
 async function register(req, res, next) {
@@ -50,4 +54,36 @@ async function heartbeat(req, res, next) {
   }
 }
 
-module.exports = { register, login, logout, logoutBeacon, heartbeat };
+async function updateMyAvatar(req, res, next) {
+  try {
+    const avatarUrl = String(req.body?.avatar_url || '').trim();
+    if (!avatarUrl) {
+      return res.status(400).json({ message: 'avatar_url is required' });
+    }
+
+    const result = await authService.updateMyAvatar(req.user.id, avatarUrl);
+    return res.json(result);
+  } catch (error) {
+    return next(error);
+  }
+}
+
+async function updateMyProfile(req, res, next) {
+  try {
+    const payload = validateOrThrow(updateProfileSchema, req.body || {});
+    const result = await authService.updateMyProfile(req.user.id, payload);
+    return res.json(result);
+  } catch (error) {
+    return next(error);
+  }
+}
+
+module.exports = {
+  register,
+  login,
+  logout,
+  logoutBeacon,
+  heartbeat,
+  updateMyAvatar,
+  updateMyProfile,
+};

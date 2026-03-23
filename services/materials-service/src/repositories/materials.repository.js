@@ -23,11 +23,119 @@ async function findSubjects(lang) {
        ${lang === 'es' ? 'name_es' : 'name_vi'} AS name,
        ${lang === 'es' ? 'description_es' : 'description_vi'} AS description,
        created_at
-     FROM subjects
+     FROM material_types
      ORDER BY created_at DESC`
   );
 
   return rows;
+}
+
+async function findAllSubjectsAdmin() {
+  const [rows] = await pool.query(
+    `SELECT
+       id,
+       code,
+       name_vi,
+       name_es,
+       description_vi,
+       description_es,
+       created_at
+          FROM material_types
+     ORDER BY created_at DESC`
+  );
+
+  return rows;
+}
+
+function normalizeSubjectCode(code) {
+  return String(code || '')
+    .trim()
+    .toUpperCase();
+}
+
+async function generateNextSubjectCode() {
+  const [rows] = await pool.query('SELECT code FROM material_types');
+  const usedCodes = new Set();
+  let maxIndex = 0;
+
+  for (const row of rows) {
+    const normalized = normalizeSubjectCode(row.code);
+    if (!normalized) continue;
+    usedCodes.add(normalized);
+    const match = normalized.match(/^SUB(\d+)$/);
+    if (!match) continue;
+    const numeric = Number(match[1]);
+    if (Number.isFinite(numeric) && numeric > maxIndex) {
+      maxIndex = numeric;
+    }
+  }
+
+  let next = maxIndex + 1;
+  while (true) {
+    const candidate = `SUB${String(next).padStart(3, '0')}`;
+    if (!usedCodes.has(candidate)) {
+      return candidate;
+    }
+    next += 1;
+  }
+}
+
+async function createSubject(payload) {
+  // Retry a few times in case concurrent inserts pick the same generated code.
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const code = await generateNextSubjectCode();
+    try {
+      const [result] = await pool.execute(
+        `INSERT INTO material_types
+          (code, name_vi, name_es, description_vi, description_es, created_by)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [
+          code,
+          payload.name_vi,
+          payload.name_es,
+          payload.description_vi || null,
+          payload.description_es || null,
+          payload.created_by || null,
+        ]
+      );
+
+      return { id: result.insertId, code };
+    } catch (error) {
+      if (error.code === 'ER_DUP_ENTRY') {
+        continue;
+      }
+      throw error;
+    }
+  }
+
+  const appError = new Error('Unable to generate subject code');
+  appError.status = 500;
+  throw appError;
+}
+
+async function updateSubject(subjectId, payload) {
+  const [result] = await pool.execute(
+    `UPDATE material_types
+     SET name_vi = ?,
+         name_es = ?,
+         description_vi = ?,
+         description_es = ?
+     WHERE id = ?`,
+    [
+      payload.name_vi,
+      payload.name_es,
+      payload.description_vi || null,
+      payload.description_es || null,
+      subjectId,
+    ]
+  );
+
+  return result.affectedRows;
+}
+
+async function deleteSubject(subjectId) {
+  const [result] = await pool.execute('DELETE FROM material_types WHERE id = ?', [subjectId]);
+  return result.affectedRows;
 }
 
 async function findReferenceMaterials(subjectId, lang) {
@@ -41,7 +149,7 @@ async function findReferenceMaterials(subjectId, lang) {
        file_size_mb,
        uploaded_at
      FROM reference_materials
-     WHERE subject_id = ? AND lang_code = ?
+     WHERE material_type_id = ? AND lang_code = ?
      ORDER BY uploaded_at DESC`,
     [subjectId, lang]
   );
@@ -53,7 +161,7 @@ async function createReferenceMaterial(payload) {
   const randomId = generateRandomMaterialId();
   await pool.execute(
     `INSERT INTO reference_materials
-      (id, subject_id, lang_code, title, description, file_path, file_size_mb, uploaded_by)
+      (id, material_type_id, lang_code, title, description, file_path, file_size_mb, uploaded_by)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       randomId,
@@ -81,7 +189,7 @@ async function createReferenceMaterialsBilingual(payload) {
 
     await connection.execute(
       `INSERT INTO reference_materials
-        (id, subject_id, lang_code, title, description, file_path, file_size_mb, uploaded_by)
+        (id, material_type_id, lang_code, title, description, file_path, file_size_mb, uploaded_by)
        VALUES (?, ?, 'vi', ?, ?, ?, ?, ?)`,
       [
         randomIdVi,
@@ -96,7 +204,7 @@ async function createReferenceMaterialsBilingual(payload) {
 
     await connection.execute(
       `INSERT INTO reference_materials
-        (id, subject_id, lang_code, title, description, file_path, file_size_mb, uploaded_by)
+        (id, material_type_id, lang_code, title, description, file_path, file_size_mb, uploaded_by)
        VALUES (?, ?, 'es', ?, ?, ?, ?, ?)`,
       [
         randomIdEs,
@@ -148,6 +256,10 @@ async function deleteReferenceMaterial(materialId) {
 module.exports = {
   findUserSessionById,
   findSubjects,
+  findAllSubjectsAdmin,
+  createSubject,
+  updateSubject,
+  deleteSubject,
   findReferenceMaterials,
   createReferenceMaterial,
   createReferenceMaterialsBilingual,
