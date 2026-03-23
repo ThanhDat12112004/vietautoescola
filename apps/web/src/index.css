@@ -1,0 +1,169 @@
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Burgundy / Đỏ đô theme */
+    --background: 20 15% 96%;
+    --foreground: 220 20% 18%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 220 20% 18%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 20% 18%;
+
+    /* Đỏ đô - Burgundy main brand */
+    --primary: 348 60% 32%;
+    --primary-foreground: 0 0% 100%;
+
+    /* Dark navy secondary */
+    --secondary: 210 45% 22%;
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 20 10% 92%;
+    --muted-foreground: 220 10% 46%;
+
+    /* Gold accent */
+    --accent: 42 85% 52%;
+    --accent-foreground: 42 10% 15%;
+
+    --destructive: 0 72% 55%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 20 12% 88%;
+    --input: 20 12% 88%;
+    --ring: 348 60% 32%;
+
+    --radius: 0.75rem;
+
+    --sky-light: 210 20% 94%;
+    --sky-mid: 210 25% 88%;
+    --hero-gradient-start: 210 18% 94%;
+    --hero-gradient-end: 210 22% 87%;
+    --gold: 42 85% 52%;
+    --gold-foreground: 42 10% 15%;
+
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 220 20% 18%;
+    --sidebar-primary: 348 60% 32%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 20 10% 95%;
+    --sidebar-accent-foreground: 220 20% 18%;
+    --sidebar-border: 20 12% 88%;
+    --sidebar-ring: 348 60% 32%;
+  }
+
+  .dark {
+    --background: 220 25% 8%;
+    --foreground: 20 10% 92%;
+
+    --card: 220 22% 12%;
+    --card-foreground: 20 10% 92%;
+
+    --popover: 220 22% 12%;
+    --popover-foreground: 20 10% 92%;
+
+    --primary: 348 55% 42%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 210 35% 30%;
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 220 20% 16%;
+    --muted-foreground: 20 8% 58%;
+
+    --accent: 42 75% 48%;
+    --accent-foreground: 42 10% 90%;
+
+    --destructive: 0 62% 40%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 20% 18%;
+    --input: 220 20% 18%;
+    --ring: 348 55% 42%;
+
+    --sky-light: 220 22% 12%;
+    --sky-mid: 220 20% 16%;
+    --hero-gradient-start: 220 22% 10%;
+    --hero-gradient-end: 220 25% 14%;
+    --gold: 42 75% 48%;
+    --gold-foreground: 42 10% 90%;
+
+    --sidebar-background: 220 25% 8%;
+    --sidebar-foreground: 20 10% 92%;
+    --sidebar-primary: 348 55% 42%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 220 20% 16%;
+    --sidebar-accent-foreground: 20 10% 92%;
+    --sidebar-border: 220 20% 18%;
+    --sidebar-ring: 348 55% 42%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-body antialiased;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: 'Nunito', sans-serif;
+  }
+}
+
+@layer utilities {
+  .container {
+    max-width: 100% !important;
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  @media (min-width: 768px) {
+    .container {
+      padding-left: 1.5rem;
+      padding-right: 1.5rem;
+    }
+  }
+
+  .text-gradient-primary {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--accent)));
+  }
+
+  .bg-hero-pattern {
+    background: linear-gradient(
+      180deg,
+      hsl(var(--hero-gradient-start)) 0%,
+      hsl(var(--hero-gradient-end)) 60%,
+      hsl(var(--background)) 100%
+    );
+  }
+
+  .bg-sky-clouds {
+    background: linear-gradient(
+      180deg,
+      hsl(var(--sky-light)) 0%,
+      hsl(var(--sky-mid)) 50%,
+      hsl(var(--background)) 100%
+    );
+  }
+
+  .card-hover {
+    @apply transition-all duration-300;
+  }
+  .card-hover:hover {
+    @apply -translate-y-1 shadow-xl;
+  }
+}

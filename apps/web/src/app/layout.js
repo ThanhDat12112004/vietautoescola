@@ -1,8 +1,8 @@
-import "../styles/globals.css";
+import '../index.css';
 
 export const metadata = {
-  title: "Viet Acosla",
-  description: "Bilingual quiz platform"
+  title: 'Your Daily Delight',
+  description: 'Quiz and learning interface',
 };
 
 export default function RootLayout({ children }) {
