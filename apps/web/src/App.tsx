@@ -12,6 +12,7 @@ import QuizTake from "./screens/QuizTake";
 import Leaderboard from "./screens/Leaderboard";
 import Materials from "./screens/Materials";
 import Profile from "./screens/Profile";
+import Admin from "./screens/Admin";
 import NotFound from "./screens/NotFound";
 
 const queryClient = new QueryClient();
@@ -32,6 +33,7 @@ const App = () => (
             <Route path="/leaderboard" element={<Leaderboard />} />
             <Route path="/materials" element={<Materials />} />
             <Route path="/profile" element={<Profile />} />
+            <Route path="/admin" element={<Admin />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

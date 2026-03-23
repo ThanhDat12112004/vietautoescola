@@ -11,7 +11,7 @@ async function createUser({ username, email, passwordHash, fullName }) {
 
 async function findUserByEmail(email) {
   const [rows] = await pool.execute(
-    'SELECT id, username, email, role, password_hash, is_active, current_session_id, session_last_seen_at FROM users WHERE email = ? LIMIT 1',
+    'SELECT id, username, email, role, full_name, password_hash, avatar_url, is_active, current_session_id, session_last_seen_at FROM users WHERE email = ? LIMIT 1',
     [email]
   );
 
@@ -26,7 +26,10 @@ async function updateLoginSession(userId, sessionId) {
 }
 
 async function clearCurrentSession(userId) {
-  await pool.execute('UPDATE users SET current_session_id = NULL, session_last_seen_at = NULL WHERE id = ?', [userId]);
+  await pool.execute(
+    'UPDATE users SET current_session_id = NULL, session_last_seen_at = NULL WHERE id = ?',
+    [userId]
+  );
 }
 
 async function findSessionByUserId(userId) {
@@ -67,7 +70,19 @@ async function findAllUsers() {
 
 async function findUserById(userId) {
   const [rows] = await pool.execute(
-    `SELECT id, username, email, role, full_name, is_active
+    `SELECT id, username, email, role, full_name, avatar_url, is_active
+     FROM users
+     WHERE id = ?
+     LIMIT 1`,
+    [userId]
+  );
+
+  return rows[0] || null;
+}
+
+async function findUserWithPasswordById(userId) {
+  const [rows] = await pool.execute(
+    `SELECT id, username, email, role, full_name, avatar_url, password_hash, is_active
      FROM users
      WHERE id = ?
      LIMIT 1`,
@@ -141,6 +156,36 @@ async function setUserLock(userId, locked) {
   return result.affectedRows;
 }
 
+async function updateProfileByUser(userId, payload) {
+  if (payload.passwordHash) {
+    await pool.execute(
+      `UPDATE users
+       SET full_name = ?, password_hash = ?
+       WHERE id = ?`,
+      [payload.fullName || null, payload.passwordHash, userId]
+    );
+    return;
+  }
+
+  await pool.execute(
+    `UPDATE users
+     SET full_name = ?
+     WHERE id = ?`,
+    [payload.fullName || null, userId]
+  );
+}
+
+async function updateAvatarUrl(userId, avatarUrl) {
+  await pool.execute(
+    `UPDATE users
+     SET avatar_url = ?
+     WHERE id = ?`,
+    [avatarUrl || null, userId]
+  );
+
+  return findUserById(userId);
+}
+
 module.exports = {
   createUser,
   findUserByEmail,
@@ -149,9 +194,12 @@ module.exports = {
   findSessionByUserId,
   findAllUsers,
   findUserById,
+  findUserWithPasswordById,
   createUserByAdmin,
   updateUserByAdmin,
   deleteUserById,
   setUserLock,
   touchCurrentSession,
+  updateAvatarUrl,
+  updateProfileByUser,
 };

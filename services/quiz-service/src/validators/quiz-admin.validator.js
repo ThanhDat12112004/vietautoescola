@@ -21,7 +21,6 @@ const questionSchema = z
   });
 
 const createManualQuizSchema = z.object({
-  subject_id: z.number().int().positive(),
   category_id: z.number().int().positive().optional().nullable(),
   quiz_type: z.string().trim().min(1).default('general'),
   title_vi: z.string().trim().min(1),
@@ -31,7 +30,7 @@ const createManualQuizSchema = z.object({
   instructions_vi: z.string().trim().optional().nullable(),
   instructions_es: z.string().trim().optional().nullable(),
   duration_minutes: z.number().int().nonnegative().default(0),
-  passing_score: z.number().positive().default(5),
+  passing_score: z.number().positive().default(10),
   questions: z.array(questionSchema).min(1),
 });
 

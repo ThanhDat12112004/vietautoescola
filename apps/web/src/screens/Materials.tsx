@@ -105,10 +105,10 @@ const Materials = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
+    <div className="app-page min-h-screen flex flex-col">
       <Navbar />
-      <div className="bg-hero-pattern py-10 md:py-14">
-        <div className="container">
+      <div className="py-3 md:py-4 px-2 md:px-4">
+        <div className="container border border-[#dbe3ee] bg-white/88 backdrop-blur-sm rounded-2xl shadow-sm py-5 md:py-6">
           <div className="flex items-center gap-3 mb-2">
             <BookOpen className="h-7 w-7 text-primary" />
             <h1 className="font-display text-2xl md:text-3xl font-800">
@@ -124,106 +124,108 @@ const Materials = () => {
         </div>
       </div>
 
-      <div className="container py-8 flex-1">
-        {loadingSubjects && (
-          <p className="text-sm text-muted-foreground">{t('Đang tải...', 'Cargando...')}</p>
-        )}
-        {!loadingSubjects && error && <p className="text-sm text-destructive mb-3">{error}</p>}
+      <div className="px-2 md:px-4 pb-4 flex-1">
+        <div className="container border border-[#dbe3ee] bg-white/88 backdrop-blur-sm rounded-2xl shadow-sm py-5 md:py-6">
+          {loadingSubjects && (
+            <p className="text-sm text-muted-foreground">{t('Đang tải...', 'Cargando...')}</p>
+          )}
+          {!loadingSubjects && error && <p className="text-sm text-destructive mb-3">{error}</p>}
 
-        {!loadingSubjects && subjects.length > 0 && (
-          <div className="flex flex-wrap gap-2 mb-5">
-            {subjects.map((subject) => (
-              <Button
-                key={subject.id}
-                size="sm"
-                variant={activeSubject === subject.id ? 'default' : 'outline'}
-                className="rounded-full h-8 text-xs"
-                onClick={() => setActiveSubject(subject.id)}
+          {!loadingSubjects && subjects.length > 0 && (
+            <div className="flex flex-wrap gap-2 mb-5">
+              {subjects.map((subject) => (
+                <Button
+                  key={subject.id}
+                  size="sm"
+                  variant={activeSubject === subject.id ? 'default' : 'outline'}
+                  className="rounded-full h-8 text-xs"
+                  onClick={() => setActiveSubject(subject.id)}
+                >
+                  {subject.name}
+                </Button>
+              ))}
+            </div>
+          )}
+
+          {activeSubjectInfo && (
+            <p className="text-xs text-muted-foreground mb-4">
+              {activeSubjectInfo.description || ''}
+            </p>
+          )}
+
+          {loadingMaterials && (
+            <p className="text-sm text-muted-foreground">
+              {t('Đang tải tài liệu...', 'Cargando materiales...')}
+            </p>
+          )}
+
+          {!loadingMaterials && materials.length === 0 && (
+            <p className="text-sm text-muted-foreground">
+              {t('Chưa có tài liệu', 'No hay materiales')}
+            </p>
+          )}
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            {materials.map((material, i) => (
+              <motion.div
+                key={material.id}
+                custom={i}
+                initial="hidden"
+                animate="visible"
+                variants={fadeUp}
               >
-                {subject.name}
-              </Button>
+                <Card className="card-hover h-full border-border/50">
+                  <CardContent className="p-4 flex flex-col h-full">
+                    <div className="flex items-start gap-3 mb-3">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10">
+                        <FileText className="h-5 w-5 text-primary" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-display font-bold text-sm mb-0.5 truncate">
+                          {material.title}
+                        </h3>
+                        <p className="text-xs text-muted-foreground line-clamp-2">
+                          {material.description || t('Không có mô tả', 'Sin descripción')}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between mt-auto pt-3 border-t border-border/50">
+                      <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                        <span className="uppercase font-bold px-1.5 py-0.5 rounded bg-muted">
+                          {material.lang_code === 'vi' ? 'VI' : 'ES'}
+                        </span>
+                        <span>
+                          PDF
+                          {material.file_size_mb ? ` · ${material.file_size_mb} MB` : ''}
+                        </span>
+                      </div>
+                      <div className="flex gap-1.5">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="gap-1 h-7 text-xs"
+                          onClick={() => openMaterial(material.file_path)}
+                        >
+                          <Eye className="h-3 w-3" />
+                          {t('Xem', 'Ver')}
+                        </Button>
+                        <Button
+                          variant="default"
+                          size="sm"
+                          className="gap-1 h-7 text-xs"
+                          onClick={() => openMaterial(material.file_path)}
+                        >
+                          <Download className="h-3 w-3" />
+                          {t('Tải', 'Descargar')}
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
             ))}
           </div>
-        )}
-
-        {activeSubjectInfo && (
-          <p className="text-xs text-muted-foreground mb-4">
-            {activeSubjectInfo.description || ''}
-          </p>
-        )}
-
-        {loadingMaterials && (
-          <p className="text-sm text-muted-foreground">
-            {t('Đang tải tài liệu...', 'Cargando materiales...')}
-          </p>
-        )}
-
-        {!loadingMaterials && materials.length === 0 && (
-          <p className="text-sm text-muted-foreground">
-            {t('Chưa có tài liệu', 'No hay materiales')}
-          </p>
-        )}
-
-        <div className="grid gap-3 sm:grid-cols-2">
-          {materials.map((material, i) => (
-            <motion.div
-              key={material.id}
-              custom={i}
-              initial="hidden"
-              animate="visible"
-              variants={fadeUp}
-            >
-              <Card className="card-hover h-full border-border/50">
-                <CardContent className="p-4 flex flex-col h-full">
-                  <div className="flex items-start gap-3 mb-3">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10">
-                      <FileText className="h-5 w-5 text-primary" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-display font-bold text-sm mb-0.5 truncate">
-                        {material.title}
-                      </h3>
-                      <p className="text-xs text-muted-foreground line-clamp-2">
-                        {material.description || t('Không có mô tả', 'Sin descripción')}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between mt-auto pt-3 border-t border-border/50">
-                    <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
-                      <span className="uppercase font-bold px-1.5 py-0.5 rounded bg-muted">
-                        {material.lang_code === 'vi' ? 'VI' : 'ES'}
-                      </span>
-                      <span>
-                        PDF
-                        {material.file_size_mb ? ` · ${material.file_size_mb} MB` : ''}
-                      </span>
-                    </div>
-                    <div className="flex gap-1.5">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="gap-1 h-7 text-xs"
-                        onClick={() => openMaterial(material.file_path)}
-                      >
-                        <Eye className="h-3 w-3" />
-                        {t('Xem', 'Ver')}
-                      </Button>
-                      <Button
-                        variant="default"
-                        size="sm"
-                        className="gap-1 h-7 text-xs"
-                        onClick={() => openMaterial(material.file_path)}
-                      >
-                        <Download className="h-3 w-3" />
-                        {t('Tải', 'Descargar')}
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-          ))}
         </div>
       </div>
 

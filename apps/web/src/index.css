@@ -20,8 +20,8 @@
     --primary: 348 60% 32%;
     --primary-foreground: 0 0% 100%;
 
-    /* Dark navy secondary */
-    --secondary: 210 45% 22%;
+    /* Burgundy secondary */
+    --secondary: 345 38% 24%;
     --secondary-foreground: 0 0% 100%;
 
     --muted: 20 10% 92%;
@@ -40,10 +40,10 @@
 
     --radius: 0.75rem;
 
-    --sky-light: 210 20% 94%;
-    --sky-mid: 210 25% 88%;
-    --hero-gradient-start: 210 18% 94%;
-    --hero-gradient-end: 210 22% 87%;
+    --sky-light: 350 40% 96%;
+    --sky-mid: 350 35% 92%;
+    --hero-gradient-start: 350 40% 96%;
+    --hero-gradient-end: 350 35% 90%;
     --gold: 42 85% 52%;
     --gold-foreground: 42 10% 15%;
 
@@ -111,6 +111,46 @@
 
   body {
     @apply bg-background text-foreground font-body antialiased;
+    position: relative;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: -2;
+    background-image: url('/brand/background.png');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    filter: blur(10px);
+    transform: scale(1.06);
+    pointer-events: none;
+  }
+
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    background: rgba(248, 251, 255, 0.72);
+    pointer-events: none;
+  }
+
+  .app-page {
+    font-size: 1.08rem;
+  }
+
+  .app-page .text-sm {
+    font-size: 1rem;
+    line-height: 1.5;
+  }
+
+  .app-page .text-xs {
+    font-size: 0.93rem;
+    line-height: 1.45;
   }
 
   h1,
@@ -165,5 +205,27 @@
   }
   .card-hover:hover {
     @apply -translate-y-1 shadow-xl;
+  }
+
+  .glassmorph-pane {
+    background: linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.86) 0%,
+      rgba(255, 255, 255, 0.72) 100%
+    );
+    border: 1px solid rgba(135, 34, 59, 0.18);
+    box-shadow: 0 12px 32px rgba(95, 20, 40, 0.12);
+    backdrop-filter: blur(10px);
+  }
+
+  .glassmorph-card {
+    background: linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.92) 0%,
+      rgba(255, 248, 250, 0.76) 100%
+    );
+    border: 1px solid rgba(135, 34, 59, 0.14);
+    box-shadow: 0 8px 22px rgba(95, 20, 40, 0.1);
+    backdrop-filter: blur(8px);
   }
 }

@@ -13,6 +13,26 @@ async function listQuizzes(req, res, next) {
   }
 }
 
+async function listCategories(req, res, next) {
+  try {
+    const lang = getLang(req.query.lang);
+    const rows = await quizService.listCategories(lang);
+    return res.json(rows);
+  } catch (error) {
+    return next(error);
+  }
+}
+
+async function listTypes(req, res, next) {
+  try {
+    const lang = getLang(req.query.lang);
+    const rows = await quizService.listTypes(lang);
+    return res.json(rows);
+  } catch (error) {
+    return next(error);
+  }
+}
+
 async function getQuizDetail(req, res, next) {
   const quizId = Number(req.params.id);
   if (Number.isNaN(quizId)) {
@@ -50,6 +70,149 @@ async function listAdminQuizzes(_req, res, next) {
   }
 }
 
+async function listAdminCategories(_req, res, next) {
+  try {
+    const rows = await quizService.listCategoriesForAdmin();
+    return res.json(rows);
+  } catch (error) {
+    return next(error);
+  }
+}
+
+async function listAdminTypes(_req, res, next) {
+  try {
+    const rows = await quizService.listTypesForAdmin();
+    return res.json(rows);
+  } catch (error) {
+    return next(error);
+  }
+}
+
+async function createType(req, res, next) {
+  const { code, name_vi, name_es, description_vi, description_es, is_active } = req.body;
+
+  if (!name_vi || !name_es) {
+    return res.status(400).json({ message: 'name_vi and name_es are required' });
+  }
+
+  try {
+    const result = await quizService.createType({
+      code,
+      name_vi,
+      name_es,
+      description_vi,
+      description_es,
+      is_active,
+    });
+    return res.status(201).json(result);
+  } catch (error) {
+    return next(error);
+  }
+}
+
+async function updateType(req, res, next) {
+  const typeId = Number(req.params.id);
+  if (Number.isNaN(typeId)) {
+    return res.status(400).json({ message: 'Invalid type id' });
+  }
+
+  const { code, name_vi, name_es, description_vi, description_es, is_active } = req.body;
+  if (!name_vi || !name_es) {
+    return res.status(400).json({ message: 'name_vi and name_es are required' });
+  }
+
+  try {
+    const result = await quizService.updateType(typeId, {
+      code,
+      name_vi,
+      name_es,
+      description_vi,
+      description_es,
+      is_active,
+    });
+    return res.json(result);
+  } catch (error) {
+    return next(error);
+  }
+}
+
+async function deleteType(req, res, next) {
+  const typeId = Number(req.params.id);
+  if (Number.isNaN(typeId)) {
+    return res.status(400).json({ message: 'Invalid type id' });
+  }
+
+  try {
+    const result = await quizService.deleteType(typeId);
+    return res.json(result);
+  } catch (error) {
+    return next(error);
+  }
+}
+
+async function createCategory(req, res, next) {
+  const { name_vi, name_es, slug, description_vi, description_es, is_active } = req.body;
+
+  if (!name_vi || !name_es) {
+    return res.status(400).json({ message: 'name_vi and name_es are required' });
+  }
+
+  try {
+    const result = await quizService.createCategory({
+      name_vi,
+      name_es,
+      slug,
+      description_vi,
+      description_es,
+      is_active,
+    });
+    return res.status(201).json(result);
+  } catch (error) {
+    return next(error);
+  }
+}
+
+async function updateCategory(req, res, next) {
+  const categoryId = Number(req.params.id);
+  if (Number.isNaN(categoryId)) {
+    return res.status(400).json({ message: 'Invalid category id' });
+  }
+
+  const { name_vi, name_es, slug, description_vi, description_es, is_active } = req.body;
+
+  if (!name_vi || !name_es) {
+    return res.status(400).json({ message: 'name_vi and name_es are required' });
+  }
+
+  try {
+    const result = await quizService.updateCategory(categoryId, {
+      name_vi,
+      name_es,
+      slug,
+      description_vi,
+      description_es,
+      is_active,
+    });
+    return res.json(result);
+  } catch (error) {
+    return next(error);
+  }
+}
+
+async function deleteCategory(req, res, next) {
+  const categoryId = Number(req.params.id);
+  if (Number.isNaN(categoryId)) {
+    return res.status(400).json({ message: 'Invalid category id' });
+  }
+
+  try {
+    const result = await quizService.deleteCategory(categoryId);
+    return res.json(result);
+  } catch (error) {
+    return next(error);
+  }
+}
+
 async function updateQuiz(req, res, next) {
   const quizId = Number(req.params.id);
   if (Number.isNaN(quizId)) {
@@ -57,7 +220,6 @@ async function updateQuiz(req, res, next) {
   }
 
   const {
-    subject_id,
     category_id,
     quiz_type,
     title_vi,
@@ -71,12 +233,13 @@ async function updateQuiz(req, res, next) {
   } = req.body;
 
   if (!quiz_type || !title_vi || !title_es || !passing_score) {
-    return res.status(400).json({ message: 'quiz_type, title_vi, title_es, passing_score are required' });
+    return res
+      .status(400)
+      .json({ message: 'quiz_type, title_vi, title_es, passing_score are required' });
   }
 
   try {
     const result = await quizService.updateQuiz(quizId, {
-      subject_id,
       category_id,
       quiz_type,
       title_vi,
@@ -110,9 +273,19 @@ async function deleteQuiz(req, res, next) {
 
 module.exports = {
   listQuizzes,
+  listCategories,
+  listTypes,
   getQuizDetail,
   createManualQuiz,
   listAdminQuizzes,
+  listAdminCategories,
+  listAdminTypes,
+  createType,
+  updateType,
+  deleteType,
+  createCategory,
+  updateCategory,
+  deleteCategory,
   updateQuiz,
   deleteQuiz,
 };

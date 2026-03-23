@@ -1,3 +1,4 @@
+import BrandLogo from '@/components/BrandLogo';
 import Footer from '@/components/Footer';
 import Navbar from '@/components/Navbar';
 import { Button } from '@/components/ui/button';
@@ -8,7 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/hooks/useLanguage';
 import { login } from '@/lib/api';
 import { saveAuth } from '@/lib/auth';
-import { Car, Lock, Mail } from 'lucide-react';
+import { Lock, Mail } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
@@ -31,7 +32,7 @@ const Login = () => {
         title: t('Đăng nhập thành công', 'Inicio de sesión correcto'),
         description: t('Chào mừng quay lại', 'Bienvenido de nuevo'),
       });
-      navigate('/quizzes');
+      navigate((result.user?.role || '').toLowerCase() === 'admin' ? '/admin' : '/quizzes');
     } catch (error) {
       toast({
         title: t('Đăng nhập thất bại', 'Error de inicio de sesión'),
@@ -45,15 +46,13 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="app-page min-h-screen flex flex-col">
       <Navbar />
       <div className="flex-1 flex items-center justify-center bg-hero-pattern py-12 px-4">
         <Card className="w-full max-w-md border-border/50 shadow-xl">
           <CardHeader className="text-center pb-2">
             <div className="flex justify-center mb-4">
-              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary">
-                <Car className="h-7 w-7 text-primary-foreground" />
-              </div>
+              <BrandLogo imageClassName="h-16" />
             </div>
             <h1 className="font-display text-2xl font-800">{t('Đăng nhập', 'Iniciar sesión')}</h1>
             <p className="text-sm text-muted-foreground mt-1">

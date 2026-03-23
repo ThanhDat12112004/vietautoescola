@@ -5,6 +5,7 @@ const { authRequired } = require('../../middleware/auth.middleware');
 const router = express.Router();
 
 router.get('/leaderboard', statsController.getLeaderboard);
+router.get('/summary', statsController.getSummary);
 router.get('/me/dashboard', authRequired, statsController.getMyDashboard);
 router.get('/users/:id/dashboard', authRequired, statsController.getUserDashboard);
 
