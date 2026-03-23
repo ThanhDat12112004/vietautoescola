@@ -1,0 +1,84 @@
+
+> viet-acosla@1.0.0 dev
+> concurrently "npm run dev --workspace apps/api-gateway" "npm run dev --workspace services/user-service" "npm run dev --workspace services/quiz-service" "npm run dev --workspace services/media-service" "npm run dev --workspace services/stats-service" "npm run dev --workspace services/materials-service" "npm run dev --workspace apps/web"
+
+[3] 
+[3] > media-service@1.0.0 dev
+[3] > nodemon src/server.js
+[3] 
+[6] 
+[6] > web@1.0.0 dev
+[6] > next dev -p ${WEB_PORT}
+[6] 
+[5] 
+[5] > materials-service@1.0.0 dev
+[5] > nodemon src/server.js
+[5] 
+[2] 
+[2] > quiz-service@1.0.0 dev
+[2] > nodemon src/server.js
+[2] 
+[4] 
+[4] > stats-service@1.0.0 dev
+[4] > nodemon src/server.js
+[4] 
+[0] 
+[0] > api-gateway@1.0.0 dev
+[0] > nodemon src/server.js
+[0] 
+[1] 
+[1] > user-service@1.0.0 dev
+[1] > nodemon src/server.js
+[1] 
+[5] [33m[nodemon] 3.1.14[39m
+[5] [33m[nodemon] to restart at any time, enter `rs`[39m
+[1] [33m[nodemon] 3.1.14[39m
+[1] [33m[nodemon] to restart at any time, enter `rs`[39m
+[1] [33m[nodemon] watching path(s): *.*[39m
+[1] [33m[nodemon] watching extensions: js,mjs,cjs,json[39m
+[5] [33m[nodemon] watching path(s): *.*[39m
+[5] [33m[nodemon] watching extensions: js,mjs,cjs,json[39m
+[5] [32m[nodemon] starting `node src/server.js`[39m
+[4] [33m[nodemon] 3.1.14[39m
+[1] [32m[nodemon] starting `node src/server.js`[39m
+[3] [33m[nodemon] 3.1.14[39m
+[4] [33m[nodemon] to restart at any time, enter `rs`[39m
+[4] [33m[nodemon] watching path(s): *.*[39m
+[4] [33m[nodemon] watching extensions: js,mjs,cjs,json[39m
+[4] [32m[nodemon] starting `node src/server.js`[39m
+[3] [33m[nodemon] to restart at any time, enter `rs`[39m
+[3] [33m[nodemon] watching path(s): *.*[39m
+[3] [33m[nodemon] watching extensions: js,mjs,cjs,json[39m
+[3] [32m[nodemon] starting `node src/server.js`[39m
+[2] [33m[nodemon] 3.1.14[39m
+[2] [33m[nodemon] to restart at any time, enter `rs`[39m
+[2] [33m[nodemon] watching path(s): *.*[39m
+[0] [33m[nodemon] 3.1.14[39m
+[0] [33m[nodemon] to restart at any time, enter `rs`[39m
+[0] [33m[nodemon] watching path(s): *.*[39m
+[0] [33m[nodemon] watching extensions: js,mjs,cjs,json[39m
+[0] [32m[nodemon] starting `node src/server.js`[39m
+[2] [33m[nodemon] watching extensions: js,mjs,cjs,json[39m
+[2] [32m[nodemon] starting `node src/server.js`[39m
+[0] api-gateway listening on port 8080
+[4] stats-service listening on port 4004
+[5] materials-service listening on port 4005
+[3] media-service listening on port 4002
+[1] user-service listening on port 4003
+[2] quiz-service listening on port 4001
+[6]   ▲ Next.js 14.2.25
+[6]   - Local:        http://localhost:3000
+[6] 
+[6]  ✓ Starting...
+[6]  ✓ Ready in 1947ms
+[0] (node:65754) [DEP0060] DeprecationWarning: The `util._extend` API is deprecated. Please use Object.assign() instead.
+[0] (Use `node --trace-deprecation ...` to show where the warning was created)
+[1] [0mPOST /auth/heartbeat [32m200[0m 52.592 ms - 11[0m
+[0] [0mPOST /auth/heartbeat [32m200[0m 70.050 ms - 11[0m
+[6]  ○ Compiling /exam ...
+[6]  ✓ Compiled /exam in 1101ms (534 modules)
+[6]  GET /_next/static/webpack/0772a2a0e01389b8.webpack.hot-update.json 404 in 1211ms
+[6]  GET /exam 200 in 50ms
+[6]  GET /.well-known/appspecific/com.chrome.devtools.json 404 in 62ms
+[6]  ○ Compiling / ...
+[6]  ✓ Compiled / in 783ms (526 modules)
