@@ -1,12 +1,15 @@
 const quizService = require('../services/quiz.service');
 const { getLang } = require('../utils/lang');
-const { createManualQuizSchema } = require('../validators/quiz-admin.validator');
+const {
+  createManualQuizSchema,
+  updateQuizDetailSchema,
+} = require('../validators/quiz-admin.validator');
 const { validateOrThrow } = require('../utils/validate');
 
 async function listQuizzes(req, res, next) {
   try {
     const lang = getLang(req.query.lang);
-    const quizzes = await quizService.listQuizzes(lang);
+    const quizzes = await quizService.listQuizzes(lang, req.user?.id || null);
     return res.json(quizzes);
   } catch (error) {
     return next(error);
@@ -257,6 +260,35 @@ async function updateQuiz(req, res, next) {
   }
 }
 
+async function getAdminQuizDetail(req, res, next) {
+  const quizId = Number(req.params.id);
+  if (Number.isNaN(quizId)) {
+    return res.status(400).json({ message: 'Invalid quiz id' });
+  }
+
+  try {
+    const detail = await quizService.getQuizDetailForAdmin(quizId);
+    return res.json(detail);
+  } catch (error) {
+    return next(error);
+  }
+}
+
+async function updateQuizDetail(req, res, next) {
+  const quizId = Number(req.params.id);
+  if (Number.isNaN(quizId)) {
+    return res.status(400).json({ message: 'Invalid quiz id' });
+  }
+
+  try {
+    const payload = validateOrThrow(updateQuizDetailSchema, req.body);
+    const result = await quizService.updateQuizDetail(quizId, payload);
+    return res.json(result);
+  } catch (error) {
+    return next(error);
+  }
+}
+
 async function deleteQuiz(req, res, next) {
   const quizId = Number(req.params.id);
   if (Number.isNaN(quizId)) {
@@ -286,6 +318,8 @@ module.exports = {
   createCategory,
   updateCategory,
   deleteCategory,
+  getAdminQuizDetail,
+  updateQuizDetail,
   updateQuiz,
   deleteQuiz,
 };

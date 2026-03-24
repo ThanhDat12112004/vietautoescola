@@ -91,10 +91,10 @@ const Profile = () => {
 
   if (loading) {
     return (
-      <div className="app-page min-h-screen flex flex-col">
+      <div className="app-page min-h-screen flex flex-col bg-[radial-gradient(circle_at_15%_20%,rgba(255,214,224,0.45),transparent_42%),radial-gradient(circle_at_85%_10%,rgba(255,228,171,0.45),transparent_35%),linear-gradient(180deg,#f9edf1_0%,#f4f7ff_55%,#f7eef5_100%)]">
         <Navbar />
         <div className="px-2 md:px-4 py-4 flex-1">
-          <div className="container border border-[#dbe3ee] bg-white/88 backdrop-blur-sm rounded-2xl shadow-sm py-5 md:py-6">
+          <div className="container section-panel py-5 md:py-6">
             <p className="text-sm text-muted-foreground">{t('Đang tải...', 'Cargando...')}</p>
           </div>
         </div>
@@ -105,10 +105,10 @@ const Profile = () => {
 
   if (!dashboard) {
     return (
-      <div className="app-page min-h-screen flex flex-col">
+      <div className="app-page min-h-screen flex flex-col bg-[radial-gradient(circle_at_15%_20%,rgba(255,214,224,0.45),transparent_42%),radial-gradient(circle_at_85%_10%,rgba(255,228,171,0.45),transparent_35%),linear-gradient(180deg,#f9edf1_0%,#f4f7ff_55%,#f7eef5_100%)]">
         <Navbar />
         <div className="px-2 md:px-4 py-4 flex-1">
-          <div className="container border border-[#dbe3ee] bg-white/88 backdrop-blur-sm rounded-2xl shadow-sm py-5 md:py-6">
+          <div className="container section-panel py-5 md:py-6">
             <p className="text-sm text-destructive">
               {error || t('Không có dữ liệu', 'Sin datos')}
             </p>
@@ -303,11 +303,11 @@ const Profile = () => {
   };
 
   return (
-    <div className="app-page min-h-screen flex flex-col">
+    <div className="app-page min-h-screen flex flex-col bg-[radial-gradient(circle_at_15%_20%,rgba(255,214,224,0.45),transparent_42%),radial-gradient(circle_at_85%_10%,rgba(255,228,171,0.45),transparent_35%),linear-gradient(180deg,#f9edf1_0%,#f4f7ff_55%,#f7eef5_100%)]">
       <Navbar />
 
       <div className="px-2 md:px-4 pt-3 md:pt-4">
-        <div className="container border border-[#dbe3ee] bg-[#6e1e33]/88 backdrop-blur-sm rounded-2xl shadow-sm py-6 md:py-8">
+        <div className="container rounded-2xl border border-[#7a2038]/30 bg-[linear-gradient(135deg,rgba(122,32,56,0.92)_0%,rgba(178,61,88,0.86)_62%,rgba(202,138,4,0.72)_100%)] py-6 shadow-[0_14px_34px_rgba(95,20,40,0.22)] backdrop-blur-sm md:py-8">
           <div className="flex flex-col sm:flex-row items-center gap-4">
             <div className="relative shrink-0">
               <div className="h-16 w-16 md:h-20 md:w-20 rounded-full bg-primary-foreground/20 flex items-center justify-center border-3 border-primary-foreground/30">
@@ -395,7 +395,7 @@ const Profile = () => {
       </div>
 
       <div className="px-2 md:px-4 pb-4 pt-3 flex-1">
-        <div className="container border border-[#dbe3ee] bg-white/88 backdrop-blur-sm rounded-2xl shadow-sm py-5 md:py-6">
+        <div className="container section-panel py-5 md:py-6">
           {error && <p className="text-sm text-destructive mb-3">{error}</p>}
 
           <Tabs defaultValue="info" className="w-full">

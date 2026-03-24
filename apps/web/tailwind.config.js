@@ -27,8 +27,8 @@ module.exports = {
         '25': 'repeat(25, minmax(0, 1fr))',
       },
       fontFamily: {
-        display: ["'Nunito'", 'sans-serif'],
-        body: ["'Be Vietnam Pro'", 'sans-serif'],
+        display: ["'Montserrat'", 'sans-serif'],
+        body: ["'Inter'", 'sans-serif'],
       },
       colors: {
         border: 'hsl(var(--border))',

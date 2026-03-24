@@ -37,7 +37,9 @@ async function getUserDashboard(req, res, next) {
     return res.status(400).json({ message: 'Invalid user id' });
   }
 
-  if (userId !== req.user.id) {
+  const isOwner = userId === req.user.id;
+  const isAdmin = req.user?.role === 'admin';
+  if (!isOwner && !isAdmin) {
     return res.status(403).json({ message: 'Forbidden' });
   }
 

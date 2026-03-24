@@ -32,6 +32,32 @@ async function authRequired(req, res, next) {
   }
 }
 
+async function authOptional(req, _res, next) {
+  const authHeader = req.headers.authorization || '';
+  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
+
+  if (!token) {
+    req.user = null;
+    return next();
+  }
+
+  try {
+    const payload = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await userRepository.findSessionByUserId(payload.id);
+
+    if (!user || !user.is_active || !payload.sid || user.current_session_id !== payload.sid) {
+      req.user = null;
+      return next();
+    }
+
+    req.user = { ...payload, role: user.role };
+    return next();
+  } catch (_error) {
+    req.user = null;
+    return next();
+  }
+}
+
 function requireRoles(...roles) {
   return (req, res, next) => {
     if (!req.user || !roles.includes(req.user.role)) {
@@ -42,4 +68,4 @@ function requireRoles(...roles) {
   };
 }
 
-module.exports = { authRequired, requireRoles };
+module.exports = { authRequired, authOptional, requireRoles };

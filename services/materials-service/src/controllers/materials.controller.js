@@ -103,19 +103,33 @@ async function createReferenceMaterial(req, res, next) {
     return res.status(400).json({ message: 'Invalid subject id' });
   }
 
-  const { lang_code, title, description, file_path, file_size_mb } = req.body;
-  if (!lang_code || !title || !file_path) {
-    return res.status(400).json({ message: 'lang_code, title, file_path are required' });
+  const {
+    title_vi,
+    description_vi,
+    file_path_vi,
+    file_size_mb_vi,
+    title_es,
+    description_es,
+    file_path_es,
+    file_size_mb_es,
+  } = req.body;
+  if (!title_vi || !file_path_vi || !title_es || !file_path_es) {
+    return res.status(400).json({
+      message: 'title_vi, file_path_vi, title_es, file_path_es are required',
+    });
   }
 
   try {
     const result = await materialsService.createReferenceMaterial({
       subject_id: subjectId,
-      lang_code,
-      title,
-      description,
-      file_path,
-      file_size_mb,
+      title_vi,
+      description_vi,
+      file_path_vi,
+      file_size_mb_vi,
+      title_es,
+      description_es,
+      file_path_es,
+      file_size_mb_es,
       uploaded_by: req.user.id,
     });
 
@@ -174,17 +188,32 @@ async function updateReferenceMaterial(req, res, next) {
     return res.status(400).json({ message: 'Invalid material id' });
   }
 
-  const { title, description, file_path, file_size_mb } = req.body;
-  if (!title || !file_path) {
-    return res.status(400).json({ message: 'title and file_path are required' });
+  const {
+    title_vi,
+    description_vi,
+    file_path_vi,
+    file_size_mb_vi,
+    title_es,
+    description_es,
+    file_path_es,
+    file_size_mb_es,
+  } = req.body;
+  if (!title_vi || !file_path_vi || !title_es || !file_path_es) {
+    return res.status(400).json({
+      message: 'title_vi, file_path_vi, title_es, file_path_es are required',
+    });
   }
 
   try {
     const result = await materialsService.updateReferenceMaterial(materialId, {
-      title,
-      description,
-      file_path,
-      file_size_mb,
+      title_vi,
+      description_vi,
+      file_path_vi,
+      file_size_mb_vi,
+      title_es,
+      description_es,
+      file_path_es,
+      file_size_mb_es,
     });
 
     return res.json(result);

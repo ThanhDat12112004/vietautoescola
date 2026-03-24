@@ -19,7 +19,6 @@ import {
   Eye,
   Home,
   RotateCcw,
-  Volume2,
   XCircle,
 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
@@ -28,6 +27,17 @@ import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 type QuizMode = 'practice' | 'exam';
 
 type CheckedMap = Record<number, CheckQuestionResult>;
+
+function shuffleArray(items) {
+  const next = [...items];
+  for (let i = next.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [next[i], next[j]] = [next[j], next[i]];
+  }
+  return next;
+}
+
+const ANSWER_BADGES = ['/brand/a.png', '/brand/b.png', '/brand/c.png'];
 
 const QuizTake = () => {
   const { lang, setLang, t } = useLanguage();
@@ -51,6 +61,7 @@ const QuizTake = () => {
   const [showExplanationPanel, setShowExplanationPanel] = useState(false);
   const [timer, setTimer] = useState(0);
   const [submitResult, setSubmitResult] = useState<SubmitAttemptResult | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const candidateName = getStoredAuth()?.user?.username || '-';
 
   useEffect(() => {
@@ -69,7 +80,13 @@ const QuizTake = () => {
         const attempt = await startAttempt(quizId);
         if (!active) return;
 
-        setQuiz(detail);
+        setQuiz({
+          ...detail,
+          questions: detail.questions.map((q) => ({
+            ...q,
+            answers: shuffleArray(q.answers),
+          })),
+        });
         setAttemptId(attempt.attempt_id);
         setTimer(0);
         setError('');
@@ -152,17 +169,21 @@ const QuizTake = () => {
   };
 
   const handleFinish = async () => {
-    if (!attemptId) return;
+    if (!attemptId || isSubmitting || submitResult) return;
 
     try {
+      setIsSubmitting(true);
       const payload = Object.fromEntries(
         Object.entries(selectedAnswers).map(([key, value]) => [String(key), value])
       );
       const result = await submitAttempt(attemptId, payload);
       setSubmitResult(result);
       setShowResult(true);
+      setShowReview(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : t('Nộp bài thất bại', 'Error al enviar'));
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -316,7 +337,7 @@ const QuizTake = () => {
                 variant="outline"
                 className="w-full gap-1.5"
                 onClick={() => {
-                  setShowResult(false);
+                  setShowResult(true);
                   setShowReview(true);
                   setReviewIndex(0);
                 }}
@@ -345,29 +366,32 @@ const QuizTake = () => {
     );
   }
 
+  const shouldUseTwoRowsOnMobile = questions.length > 20;
+  const mobileTopCount = Math.ceil(questions.length / 2);
+
   return (
     <div
-      className="h-screen flex flex-col overflow-hidden bg-[linear-gradient(135deg,#f8eaee_0%,#f4dee5_100%)]
+      className="h-screen flex flex-col overflow-hidden bg-[radial-gradient(circle_at_15%_20%,rgba(255,214,224,0.45),transparent_42%),radial-gradient(circle_at_85%_10%,rgba(255,228,171,0.45),transparent_35%),linear-gradient(180deg,#f9edf1_0%,#f4f7ff_55%,#f7eef5_100%)]
                    p-0"
     >
       <div
-        className="flex-1 flex flex-col overflow-hidden w-full rounded-xl border border-[#cfd6df] bg-[#f9eef2] shadow-sm
+        className="flex-1 flex flex-col overflow-hidden w-full rounded-xl border border-border bg-card/90 shadow-sm
                      p-1
                      sm:p-2
                      md:p-3
                      lg:p-4"
       >
         <div className="mb-3 grid gap-2 md:gap-3 grid-cols-[minmax(0,1fr)_auto] lg:grid-cols-[260px_1fr_160px]">
-          <div className="col-span-2 flex items-center gap-2 rounded-md border border-[#cfd6df] bg-white px-3 py-2 text-sm lg:col-span-1 lg:row-span-2">
+          <div className="col-span-2 hidden items-center gap-2 rounded-md border border-border bg-background px-3 py-2 text-sm lg:flex lg:col-span-1 lg:row-span-2">
             <BrandLogo imageClassName="h-11" withText />
           </div>
 
-          <div className="rounded-md border border-[#cfd6df] bg-white px-3 py-2 text-sm lg:text-base lg:col-start-2 lg:row-start-1">
+          <div className="rounded-md border border-border bg-background px-3 py-2 text-sm lg:text-base lg:col-start-2 lg:row-start-1">
             <span className="font-bold">{t('Đề thi', 'Examen')}:</span>
             <span className="ml-1 break-words">{quiz.title}</span>
           </div>
 
-          <div className="flex items-center justify-center rounded-md border border-[#cfd6df] bg-white px-2 py-2 lg:col-start-3 lg:row-start-1">
+          <div className="flex items-center justify-center rounded-md border border-border bg-background px-2 py-2 lg:col-start-3 lg:row-start-1">
             <div className="flex items-center gap-1 text-sm lg:text-base">
               <Clock className="h-3.5 w-3.5 text-muted-foreground" />
               <span
@@ -378,15 +402,15 @@ const QuizTake = () => {
             </div>
           </div>
 
-          <div className="rounded-md border border-[#cfd6df] bg-white px-3 py-2 text-sm lg:text-base lg:col-start-2 lg:row-start-2">
+          <div className="rounded-md border border-border bg-background px-3 py-2 text-sm lg:text-base lg:col-start-2 lg:row-start-2">
             <span className="font-bold">{t('Thí sinh', 'Aspirante')}:</span>
             <span className="ml-1 break-words uppercase">{candidateName}</span>
           </div>
 
-          <div className="rounded-md border border-[#cfd6df] bg-white px-1 py-1 lg:col-start-3 lg:row-start-2">
+          <div className="rounded-md border border-border bg-background px-1 py-1 lg:col-start-3 lg:row-start-2">
             <button
               onClick={() => setLang(lang === 'vi' ? 'es' : 'vi')}
-              className="mx-auto flex h-8 w-full items-center justify-center rounded-md border border-[#dfc7cf] bg-[#fbf4f6] text-lg font-semibold text-[#5a1428]"
+              className="mx-auto flex h-8 w-full items-center justify-center rounded-md border border-border bg-background text-lg font-semibold text-primary"
               aria-label={t('Đổi ngôn ngữ', 'Cambiar idioma')}
             >
               {lang === 'vi' ? '🇻🇳' : '🇪🇸'}
@@ -395,18 +419,18 @@ const QuizTake = () => {
         </div>
 
         <div
-          className="flex-1 min-h-0 grid gap-2 md:gap-3 rounded-lg border border-[#cfd6df] bg-[#fff7f9] p-2 md:p-3
+          className="flex-1 min-h-0 grid gap-2 md:gap-3 rounded-lg border border-border bg-background/80 p-2 md:p-3
                         grid-cols-1
                         md:grid-cols-2"
         >
           <div
-            className="rounded-lg border border-[#e0c5cf] bg-[#f7eaee] p-3 flex flex-col overflow-hidden gap-3
+            className="rounded-lg border border-border bg-card p-3 flex flex-col overflow-hidden gap-3
                           min-h-[240px]
                           md:min-h-[300px]
                           lg:min-h-[360px]
                           h-full"
           >
-            <div className="flex-1 w-full rounded-md border border-[#ddc1cb] bg-white flex items-center justify-center overflow-hidden">
+            <div className="flex-1 w-full rounded-md border border-border bg-background flex items-center justify-center overflow-hidden">
               {question.image_url ? (
                 <img
                   src={question.image_url}
@@ -422,7 +446,7 @@ const QuizTake = () => {
             <Button
               type="button"
               variant="outline"
-              className="h-10 w-full rounded-md border-[#bd7d94] bg-[#bd7d94] text-white hover:bg-[#ab5b76] font-bold"
+              className="h-10 w-full rounded-md border-primary bg-primary text-primary-foreground hover:bg-primary/90 font-bold"
               disabled={mode !== 'practice' || !checkedForCurrent || !question.explanation}
               onClick={() => setShowExplanationPanel((prev) => !prev)}
             >
@@ -446,7 +470,7 @@ const QuizTake = () => {
 
           {/* RIGHT: Question + answers - responsive typography */}
           <div
-            className="min-w-0 rounded-lg border border-[#e0c5cf] bg-white px-2 py-2
+            className="min-w-0 rounded-lg border border-border bg-card px-2 py-2
                           md:px-3 md:py-2
                           lg:px-4 lg:py-3
                           flex flex-col"
@@ -487,8 +511,12 @@ const QuizTake = () => {
                   const isSelected = selectedId === answer.id;
                   const isCorrect = detail?.correct_answer_id === answer.id;
                   const isWrong = Boolean(detail && isSelected && !detail.is_correct);
-                  const optionLetter = String.fromCharCode(65 + idx);
-
+                  const badgeSrc = ANSWER_BADGES[idx] || null;
+                  const answerTextClass = isCorrect
+                    ? 'text-green-700'
+                    : isWrong
+                      ? 'text-destructive'
+                      : 'text-foreground';
                   return (
                     <button
                       key={answer.id}
@@ -502,32 +530,31 @@ const QuizTake = () => {
                                      : isWrong
                                        ? 'border-destructive bg-destructive/10'
                                        : isSelected
-                                         ? 'border-[#7a2038] bg-[#f8dfe6]'
-                                         : 'border-[#dfc7cf] bg-white hover:bg-[#fdf5f8]'
+                                         ? 'border-primary bg-primary/10'
+                                         : 'border-border bg-background hover:bg-muted/40'
                                  }`}
                     >
-                      <span
-                        className="shrink-0 flex items-center justify-center rounded-full border border-[#b8b8b8] bg-[#f3f3f3] font-bold text-[#5b5b5b] mt-0.5
+                      {badgeSrc ? (
+                        <img
+                          src={badgeSrc}
+                          alt={`option-${idx + 1}`}
+                          className="shrink-0 mt-0.5 h-7 w-7 md:h-8 md:w-8 lg:h-9 lg:w-9 object-contain"
+                        />
+                      ) : (
+                        <span
+                          className="shrink-0 flex items-center justify-center rounded-full border border-[#b8b8b8] bg-[#f3f3f3] font-bold text-[#5b5b5b] mt-0.5
                                       h-7 w-7 text-sm
                                       md:h-8 md:w-8 md:text-base
                                       lg:h-9 lg:w-9 lg:text-lg"
-                      >
-                        {optionLetter}
-                      </span>
+                        >
+                          {String.fromCharCode(65 + idx)}
+                        </span>
+                      )}
                       <span
-                        className="flex-1 leading-tight pt-0.5
-                                      text-sm
-                                      md:text-base
-                                      lg:text-lg"
+                        className={`flex-1 line-clamp-2 overflow-hidden break-words leading-tight pt-0.5 text-sm md:line-clamp-none md:overflow-visible md:text-base lg:text-lg ${answerTextClass}`}
                       >
                         {answer.answer_text}
                       </span>
-                      <Volume2
-                        className="shrink-0 text-[#8d2f4b] mt-1
-                                        h-3.5 w-3.5
-                                        md:h-4 md:w-4
-                                        lg:h-5 lg:w-5"
-                      />
                     </button>
                   );
                 })}
@@ -538,7 +565,7 @@ const QuizTake = () => {
             <div className="mt-3 grid gap-2 w-full grid-cols-3">
               <Button
                 variant="outline"
-                className="rounded-lg border-[#cfd6df] bg-white font-bold hover:bg-[#f6f6f6] transition-colors
+                className="rounded-lg border-border bg-background font-bold hover:bg-muted transition-colors
                           h-10 text-sm
                           md:h-11 md:text-base
                           lg:h-12 lg:text-lg"
@@ -555,7 +582,7 @@ const QuizTake = () => {
               </Button>
 
               <Button
-                className="rounded-lg border border-[#cfd6df] bg-white text-black font-bold hover:bg-[#f6f6f6] transition-colors
+                className="rounded-lg border border-border bg-background text-foreground font-bold hover:bg-muted transition-colors
                           h-10 text-sm
                           md:h-11 md:text-base
                           lg:h-12 lg:text-lg"
@@ -577,56 +604,166 @@ const QuizTake = () => {
                           md:h-11 md:text-base
                           lg:h-12 lg:text-lg"
                 onClick={() => void handleFinish()}
+                disabled={isSubmitting || Boolean(submitResult)}
               >
-                {t('Nộp bài', 'FINALIZAR TEST')}
+                {isSubmitting
+                  ? t('Đang nộp...', 'Enviando...')
+                  : t('Nộp bài', 'FINALIZAR TEST')}
               </Button>
             </div>
           </div>
         </div>
 
         <div
-          className="mt-3 rounded-lg border border-[#cfd6df] bg-[#fdf1f5] p-2
+          className="mt-3 rounded-lg border border-border bg-card p-2
                        md:p-3 lg:p-4"
         >
-          <div
-            className="grid gap-1
+          {shouldUseTwoRowsOnMobile ? (
+            <>
+              <div
+                className="grid gap-1 md:hidden"
+                style={{ gridTemplateColumns: `repeat(${mobileTopCount}, minmax(0, 1fr))` }}
+              >
+                {questions.slice(0, mobileTopCount).map((item, index) => {
+                  const isCurrent = index === currentIndex;
+                  const detail = detailsMap[item.id];
+                  const hasJudged = Boolean(detail);
+                  const isCorrect = Boolean(detail?.is_correct);
+
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => setCurrentIndex(index)}
+                      className={`rounded-md border font-bold transition-colors h-8 text-sm ${
+                        hasJudged
+                          ? isCorrect
+                            ? 'border-green-500 bg-green-50 text-green-700'
+                            : 'border-red-500 bg-red-50 text-red-700'
+                          : isCurrent
+                            ? 'border-primary bg-primary/10 text-primary'
+                            : 'border-border bg-background text-muted-foreground hover:bg-muted'
+                      }`}
+                      aria-label={`${t('Câu', 'Pregunta')} ${index + 1}`}
+                    >
+                      {String(index + 1).padStart(2, '0')}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div
+                className="mt-1 grid gap-1 md:hidden"
+                style={{
+                  gridTemplateColumns: `repeat(${Math.max(questions.length - mobileTopCount, 1)}, minmax(0, 1fr))`,
+                }}
+              >
+                {questions.slice(mobileTopCount).map((item, idx) => {
+                  const index = mobileTopCount + idx;
+                  const isCurrent = index === currentIndex;
+                  const detail = detailsMap[item.id];
+                  const hasJudged = Boolean(detail);
+                  const isCorrect = Boolean(detail?.is_correct);
+
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => setCurrentIndex(index)}
+                      className={`rounded-md border font-bold transition-colors h-8 text-sm ${
+                        hasJudged
+                          ? isCorrect
+                            ? 'border-green-500 bg-green-50 text-green-700'
+                            : 'border-red-500 bg-red-50 text-red-700'
+                          : isCurrent
+                            ? 'border-primary bg-primary/10 text-primary'
+                            : 'border-border bg-background text-muted-foreground hover:bg-muted'
+                      }`}
+                      aria-label={`${t('Câu', 'Pregunta')} ${index + 1}`}
+                    >
+                      {String(index + 1).padStart(2, '0')}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div
+                className="hidden gap-1 md:grid md:grid-cols-18 lg:grid-cols-20 xl:grid-cols-25"
+              >
+                {questions.map((item, index) => {
+                  const isCurrent = index === currentIndex;
+                  const detail = detailsMap[item.id];
+                  const hasJudged = Boolean(detail);
+                  const isCorrect = Boolean(detail?.is_correct);
+
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => setCurrentIndex(index)}
+                      className={`rounded-md border font-bold transition-colors
+                             h-9 text-base
+                             lg:h-10 lg:text-lg
+                             xl:h-11 xl:text-xl
+                             ${
+                               hasJudged
+                                 ? isCorrect
+                                   ? 'border-green-500 bg-green-50 text-green-700'
+                                   : 'border-red-500 bg-red-50 text-red-700'
+                                 : isCurrent
+                                   ? 'border-primary bg-primary/10 text-primary'
+                                   : 'border-border bg-background text-muted-foreground hover:bg-muted'
+                             }`}
+                      aria-label={`${t('Câu', 'Pregunta')} ${index + 1}`}
+                    >
+                      {String(index + 1).padStart(2, '0')}
+                    </button>
+                  );
+                })}
+              </div>
+            </>
+          ) : (
+            <div
+              className="grid gap-1
                          grid-cols-10
                          sm:grid-cols-15
                          md:grid-cols-18
                          lg:grid-cols-20
                          xl:grid-cols-25"
-          >
-            {questions.map((item, index) => {
-              const isCurrent = index === currentIndex;
-              const hasSelected = Boolean(selectedAnswers[item.id]);
+            >
+              {questions.map((item, index) => {
+                const isCurrent = index === currentIndex;
+                const detail = detailsMap[item.id];
+                const hasJudged = Boolean(detail);
+                const isCorrect = Boolean(detail?.is_correct);
 
-              return (
-                <button
-                  key={item.id}
-                  onClick={() => setCurrentIndex(index)}
-                  className={`rounded-md border font-bold transition-colors
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => setCurrentIndex(index)}
+                    className={`rounded-md border font-bold transition-colors
                              h-8 text-sm
                              md:h-9 md:text-base
                              lg:h-10 lg:text-lg
                              xl:h-11 xl:text-xl
                              ${
-                               isCurrent
-                                 ? 'border-[#7a2038] bg-[#f5d6df] text-[#6b1b31]'
-                                 : hasSelected
-                                   ? 'border-[#c58ea1] bg-[#f9e7ec] text-[#762239]'
-                                   : 'border-[#d9c2c9] bg-white text-[#5f5f5f] hover:bg-[#f0f0f0]'
+                               hasJudged
+                                 ? isCorrect
+                                   ? 'border-green-500 bg-green-50 text-green-700'
+                                   : 'border-red-500 bg-red-50 text-red-700'
+                                 : isCurrent
+                                   ? 'border-primary bg-primary/10 text-primary'
+                                   : 'border-border bg-background text-muted-foreground hover:bg-muted'
                              }`}
-                  aria-label={`${t('Câu', 'Pregunta')} ${index + 1}`}
-                >
-                  {String(index + 1).padStart(2, '0')}
-                </button>
-              );
-            })}
-          </div>
+                    aria-label={`${t('Câu', 'Pregunta')} ${index + 1}`}
+                  >
+                    {String(index + 1).padStart(2, '0')}
+                  </button>
+                );
+              })}
+            </div>
+          )}
 
           {/* Legend and counter - responsive layout */}
           <div
-            className="mt-3 pt-3 border-t border-[#f1d8e0]
+            className="mt-3 pt-3 border-t border-border
                          flex flex-wrap items-center justify-between gap-2
                          text-xs md:text-sm lg:text-base"
           >
@@ -643,18 +780,6 @@ const QuizTake = () => {
 
               <div className="flex items-center gap-1.5">
                 <span
-                  className="inline-block rounded-full border border-[#c58ea1] bg-[#f9e7ec]
-                               h-2.5 w-6
-                               md:h-3 md:w-7
-                               lg:h-3.5 lg:w-8"
-                />
-                <span className="text-xs md:text-sm lg:text-base">
-                  {t('đã trả lời', 'contestada')}
-                </span>
-              </div>
-
-              <div className="flex items-center gap-1.5">
-                <span
                   className="inline-block rounded-full border border-[#bcbcbc] bg-white
                                h-2.5 w-6
                                md:h-3 md:w-7
@@ -666,25 +791,26 @@ const QuizTake = () => {
               </div>
 
               <div className="flex items-center gap-1.5">
-                <span className="text-xs md:text-sm lg:text-base">{t('Cỡ chữ', 'Fuente')}</span>
-                <input
-                  type="range"
-                  min={12}
-                  max={22}
-                  value={16}
-                  readOnly
-                  className="w-20 accent-gray-400"
+                <span
+                  className="inline-block rounded-full border border-green-500 bg-green-100
+                               h-2.5 w-6
+                               md:h-3 md:w-7
+                               lg:h-3.5 lg:w-8"
                 />
+                <span className="text-xs md:text-sm lg:text-base">{t('đúng', 'correcta')}</span>
+              </div>
+
+              <div className="flex items-center gap-1.5">
+                <span
+                  className="inline-block rounded-full border border-red-500 bg-red-100
+                               h-2.5 w-6
+                               md:h-3 md:w-7
+                               lg:h-3.5 lg:w-8"
+                />
+                <span className="text-xs md:text-sm lg:text-base">{t('sai', 'incorrecta')}</span>
               </div>
             </div>
 
-            {/* Question counter */}
-            <div
-              className="font-semibold
-                           text-sm md:text-base lg:text-lg"
-            >
-              {t('Câu', 'Pregunta')} {currentIndex + 1}/{questions.length}
-            </div>
           </div>
         </div>
       </div>

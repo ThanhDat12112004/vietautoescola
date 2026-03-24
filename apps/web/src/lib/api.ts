@@ -6,7 +6,7 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8
 type RequestOptions = {
   method?: 'GET' | 'POST' | 'PATCH' | 'DELETE';
   body?: unknown;
-  auth?: boolean;
+  auth?: boolean | 'optional';
 };
 
 async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
@@ -14,12 +14,19 @@ async function apiRequest<T>(path: string, options: RequestOptions = {}): Promis
     'Content-Type': 'application/json',
   };
 
-  if (options.auth) {
+  if (options.auth === true) {
     const stored = getStoredAuth();
     if (!stored?.token) {
       throw new Error('Vui long dang nhap');
     }
     headers.Authorization = `Bearer ${stored.token}`;
+  }
+
+  if (options.auth === 'optional') {
+    const stored = getStoredAuth();
+    if (stored?.token) {
+      headers.Authorization = `Bearer ${stored.token}`;
+    }
   }
 
   const response = await fetch(`${API_BASE_URL}${path}`, {
@@ -61,6 +68,9 @@ export type QuizListItem = {
   title: string;
   description: string | null;
   category_name: string | null;
+  has_completed?: boolean;
+  best_percentage?: number | null;
+  best_score?: number | null;
 };
 
 export type QuizAnswer = {
@@ -201,13 +211,59 @@ export type AdminQuizType = {
   updated_at: string;
 };
 
+export type AdminQuizDetailAnswer = {
+  id: number;
+  question_id: number;
+  order_number: number;
+  is_correct: boolean;
+  answer_text_vi: string;
+  answer_text_es: string;
+};
+
+export type AdminQuizDetailQuestion = {
+  id: number;
+  order_number: number;
+  points: number;
+  question_text_vi: string;
+  question_text_es: string;
+  explanation_vi: string | null;
+  explanation_es: string | null;
+  image_url: string | null;
+  answers: AdminQuizDetailAnswer[];
+};
+
+export type AdminQuizDetail = {
+  id: number;
+  category_id: number | null;
+  quiz_type: string;
+  title_vi: string;
+  title_es: string;
+  description_vi: string | null;
+  description_es: string | null;
+  instructions_vi: string | null;
+  instructions_es: string | null;
+  duration_minutes: number;
+  total_questions: number;
+  passing_score: number;
+  is_active: boolean;
+  created_at: string;
+  questions: AdminQuizDetailQuestion[];
+};
+
 export type MaterialItem = {
   id: number;
-  lang_code: string;
   title: string;
   description: string | null;
   file_path: string;
   file_size_mb: number | null;
+  title_vi: string;
+  title_es: string;
+  description_vi: string | null;
+  description_es: string | null;
+  file_path_vi: string;
+  file_path_es: string;
+  file_size_mb_vi: number | null;
+  file_size_mb_es: number | null;
   uploaded_at: string;
 };
 
@@ -241,7 +297,7 @@ export async function logout() {
 }
 
 export async function getQuizzes(lang: Language) {
-  return apiRequest<QuizListItem[]>(`/api/quizzes?lang=${lang}`);
+  return apiRequest<QuizListItem[]>(`/api/quizzes?lang=${lang}`, { auth: 'optional' });
 }
 
 export async function getQuizCategories(lang: Language) {
@@ -293,6 +349,12 @@ export async function getHomeSummary() {
 
 export async function getMyDashboard(lang: Language) {
   return apiRequest<DashboardResponse>(`/stats/me/dashboard?lang=${lang}`, {
+    auth: true,
+  });
+}
+
+export async function getAdminUserDashboard(userId: number, lang: Language) {
+  return apiRequest<DashboardResponse>(`/stats/users/${userId}/dashboard?lang=${lang}`, {
     auth: true,
   });
 }
@@ -516,6 +578,45 @@ export async function updateAdminQuiz(id: number, payload: any) {
   });
 }
 
+export async function getAdminQuizDetail(id: number) {
+  return apiRequest<AdminQuizDetail>(`/api/admin/quizzes/${id}/detail`, {
+    auth: true,
+  });
+}
+
+export async function updateAdminQuizDetail(id: number, payload: {
+  category_id?: number | null;
+  quiz_type: string | number;
+  title_vi: string;
+  title_es: string;
+  description_vi?: string | null;
+  description_es?: string | null;
+  instructions_vi?: string | null;
+  instructions_es?: string | null;
+  passing_score: number;
+  is_active: boolean;
+  questions: Array<{
+    id: number;
+    question_text_vi: string;
+    question_text_es: string;
+    explanation_vi?: string | null;
+    explanation_es?: string | null;
+    image_url?: string | null;
+    answers: Array<{
+      id: number;
+      answer_text_vi: string;
+      answer_text_es: string;
+      is_correct: boolean;
+    }>;
+  }>;
+}) {
+  return apiRequest<{ id: number }>(`/api/admin/quizzes/${id}/detail`, {
+    method: 'PATCH',
+    body: payload,
+    auth: true,
+  });
+}
+
 export async function deleteAdminQuiz(id: number) {
   return apiRequest<{ message: string }>(`/api/admin/quizzes/${id}`, {
     method: 'DELETE',
@@ -523,24 +624,24 @@ export async function deleteAdminQuiz(id: number) {
   });
 }
 
-export async function updateAdminMaterial(id: number, payload: any, lang: Language) {
-  return apiRequest<{ message: string }>(`/materials/materials/${id}?lang=${lang}`, {
+export async function updateAdminMaterial(id: number, payload: any) {
+  return apiRequest<{ message: string }>(`/materials/materials/${id}`, {
     method: 'PATCH',
     body: payload,
     auth: true,
   });
 }
 
-export async function deleteAdminMaterial(id: number, lang: Language) {
-  return apiRequest<{ message: string }>(`/materials/materials/${id}?lang=${lang}`, {
+export async function deleteAdminMaterial(id: number) {
+  return apiRequest<{ message: string }>(`/materials/materials/${id}`, {
     method: 'DELETE',
     auth: true,
   });
 }
 
-export async function createBilingualMaterial(subjectId: number, payload: any, lang: Language) {
+export async function createBilingualMaterial(subjectId: number, payload: any) {
   return apiRequest<{ id: number }>(
-    `/materials/subjects/${subjectId}/materials/bilingual?lang=${lang}`,
+    `/materials/subjects/${subjectId}/materials/bilingual`,
     { method: 'POST', body: payload, auth: true }
   );
 }
@@ -548,12 +649,13 @@ export async function createBilingualMaterial(subjectId: number, payload: any, l
 export async function uploadMaterialFile(file: File, langCode: string) {
   const formData = new FormData();
   formData.append('file', file);
+  formData.append('lang_code', langCode);
   const stored = getStoredAuth();
   const headers: Record<string, string> = {};
   if (stored?.token) {
     headers.Authorization = `Bearer ${stored.token}`;
   }
-  const response = await fetch(`${API_BASE_URL}/media/upload-material?lang=${langCode}`, {
+  const response = await fetch(`${API_BASE_URL}/media/upload-material`, {
     method: 'POST',
     headers,
     body: formData,

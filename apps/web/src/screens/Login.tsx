@@ -46,15 +46,15 @@ const Login = () => {
   };
 
   return (
-    <div className="app-page min-h-screen flex flex-col">
+    <div className="app-page min-h-screen flex flex-col bg-[radial-gradient(circle_at_15%_20%,rgba(255,214,224,0.45),transparent_42%),radial-gradient(circle_at_85%_10%,rgba(255,228,171,0.45),transparent_35%),linear-gradient(180deg,#f9edf1_0%,#f4f7ff_55%,#f7eef5_100%)]">
       <Navbar />
-      <div className="flex-1 flex items-center justify-center bg-hero-pattern py-12 px-4">
-        <Card className="w-full max-w-md border-border/50 shadow-xl">
+      <div className="flex-1 flex items-center justify-center px-4 py-12">
+        <Card className="w-full max-w-md border border-primary/20 bg-[linear-gradient(160deg,rgba(255,255,255,0.96)_0%,rgba(255,247,250,0.88)_50%,rgba(255,249,235,0.8)_100%)] shadow-[0_18px_42px_rgba(95,20,40,0.14)]">
           <CardHeader className="text-center pb-2">
             <div className="flex justify-center mb-4">
               <BrandLogo imageClassName="h-16" />
             </div>
-            <h1 className="font-display text-2xl font-800">{t('Đăng nhập', 'Iniciar sesión')}</h1>
+            <h1 className="font-display text-2xl font-800 text-[#64172f]">{t('Đăng nhập', 'Iniciar sesión')}</h1>
             <p className="text-sm text-muted-foreground mt-1">
               {t('Đăng nhập để tiếp tục luyện thi', 'Inicia sesión para seguir practicando')}
             </p>
@@ -83,6 +83,7 @@ const Login = () => {
                   <Input
                     id="password"
                     type="password"
+                    autoComplete="current-password"
                     placeholder="••••••••"
                     className="pl-10"
                     value={password}
@@ -91,7 +92,7 @@ const Login = () => {
                   />
                 </div>
               </div>
-              <Button type="submit" className="w-full font-semibold" size="lg">
+              <Button type="submit" className="w-full bg-[linear-gradient(135deg,#7a2038_0%,#b23d58_65%,#ca8a04_100%)] font-semibold text-white hover:opacity-95" size="lg">
                 {isSubmitting
                   ? t('Đang xử lý...', 'Procesando...')
                   : t('Đăng nhập', 'Iniciar sesión')}
