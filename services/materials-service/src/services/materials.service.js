@@ -60,7 +60,7 @@ async function createReferenceMaterial(payload) {
     return { id };
   } catch (error) {
     if (error.code === 'ER_DUP_ENTRY') {
-      const appError = new Error('Material already exists for this subject/language');
+      const appError = new Error('Material already exists for this subject');
       appError.status = 409;
       throw appError;
     }
@@ -75,7 +75,7 @@ async function createReferenceMaterialsBilingual(payload) {
     return ids;
   } catch (error) {
     if (error.code === 'ER_DUP_ENTRY') {
-      const appError = new Error('Material already exists for this subject/language');
+      const appError = new Error('Material already exists for this subject');
       appError.status = 409;
       throw appError;
     }

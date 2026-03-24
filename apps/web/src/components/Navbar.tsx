@@ -1,5 +1,16 @@
 import BrandLogo from '@/components/BrandLogo';
 import {
+  BookOpen,
+  FileText,
+  Home,
+  LogOut,
+  Menu,
+  ShieldCheck,
+  Trophy,
+  User,
+  X,
+} from '@/components/BrandIcons';
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -11,18 +22,6 @@ import { useLanguage } from '@/hooks/useLanguage';
 import { logout } from '@/lib/api';
 import { clearAuth, getStoredAuth, type AuthUser } from '@/lib/auth';
 import { AnimatePresence, motion } from 'framer-motion';
-import {
-  BookOpen,
-  FileText,
-  Globe,
-  Home,
-  LogOut,
-  Menu,
-  ShieldCheck,
-  Trophy,
-  User,
-  X,
-} from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 
@@ -210,7 +209,7 @@ const Navbar = () => {
                     padding: '16px 16px',
                     borderRadius: 8,
                     fontSize: 20,
-                    fontWeight: active ? 600 : 400,
+                    fontWeight: active ? 800 : 700,
                     letterSpacing: '0.01em',
                     color: active ? '#8b1e2d' : '#6b4a4f',
                     textDecoration: 'none',
@@ -239,27 +238,25 @@ const Navbar = () => {
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: 5,
-                padding: '7px 13px',
-                borderRadius: 8,
-                border: '1px solid rgba(139,30,45,0.28)',
-                background: 'rgba(139,30,45,0.05)',
-                color: '#7a4b53',
-                fontSize: 14.5,
-                fontWeight: 500,
+                gap: 6,
+                padding: '0',
+                border: 'none',
+                background: 'transparent',
+                color: '#8b1e2d',
+                fontSize: 15,
+                fontWeight: 700,
                 cursor: 'pointer',
-                transition: 'all 0.2s',
+                transition: 'opacity 0.2s, transform 0.2s',
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.borderColor = 'rgba(139,30,45,0.55)';
-                e.currentTarget.style.color = '#8b1e2d';
+                e.currentTarget.style.opacity = '0.82';
+                e.currentTarget.style.transform = 'translateY(-1px)';
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.borderColor = 'rgba(139,30,45,0.28)';
-                e.currentTarget.style.color = '#7a4b53';
+                e.currentTarget.style.opacity = '1';
+                e.currentTarget.style.transform = 'none';
               }}
             >
-              <Globe style={{ width: 15, height: 15 }} />
               {lang === 'vi' ? '🇻🇳 VI' : '🇪🇸 ES'}
             </button>
 
@@ -492,15 +489,16 @@ const Navbar = () => {
             <button
               onClick={() => setLang(lang === 'vi' ? 'es' : 'vi')}
               style={{
-                padding: '5px 10px',
-                borderRadius: 7,
-                border: '1px solid rgba(139,30,45,0.28)',
+                padding: '0',
+                border: 'none',
                 background: 'transparent',
-                fontSize: 17,
+                fontSize: 15,
+                fontWeight: 700,
+                color: '#8b1e2d',
                 cursor: 'pointer',
               }}
             >
-              {lang === 'vi' ? '🇻🇳' : '🇪🇸'}
+              {lang === 'vi' ? '🇻🇳 VI' : '🇪🇸 ES'}
             </button>
             <button
               onClick={() => setMobileOpen(!mobileOpen)}

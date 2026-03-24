@@ -87,7 +87,7 @@ async function findUserAttemptHistory(userId, lang, limit = 30) {
     `SELECT
        a.id,
        a.quiz_id,
-       q.code AS quiz_code,
+       CAST(a.quiz_id AS CHAR) AS quiz_code,
        q.${lang === 'es' ? 'title_es' : 'title_vi'} AS quiz_title,
        a.score,
        a.percentage,

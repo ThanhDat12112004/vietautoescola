@@ -1,4 +1,4 @@
-// File: /Users/devduongthanhdat/frelancer/Bản sao viet_acosla 3/apps/web/src/app/layout.js
+// File: /Users/devduongthanhdat/frelancer/Bản sao viet_acosla 3.worktrees/viet-autoescola/21h23_03_2025/vietautoescola/apps/web/src/app/layout.js
 import * as entry from '../../../src/app/layout.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 

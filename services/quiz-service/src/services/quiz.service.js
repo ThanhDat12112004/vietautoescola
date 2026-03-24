@@ -1,19 +1,25 @@
 const quizRepository = require('../repositories/quiz.repository');
 
-function normalizeTypeCode(value) {
-  const noAccent = String(value || '')
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '');
+function normalizeQuizTypeId(value) {
+  const numeric = Number(value);
+  if (Number.isFinite(numeric) && numeric > 0) {
+    return Math.trunc(numeric);
+  }
 
-  return noAccent
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9\s_-]/g, '')
-    .replace(/\s+/g, '_');
+  // Backward-compatible mapping for legacy string values.
+  const legacyMap = {
+    general: 1,
+    bien_bao: 2,
+    cao_toc: 3,
+    ly_thuyet: 4,
+    an_toan: 5,
+    sa_hinh: 6,
+  };
+  return legacyMap[String(value || '').trim().toLowerCase()] || 1;
 }
 
-async function listQuizzes(lang) {
-  return quizRepository.findAllActiveQuizzes(lang);
+async function listQuizzes(lang, userId = null) {
+  return quizRepository.findAllActiveQuizzes(lang, userId);
 }
 
 async function listCategories(lang) {
@@ -33,22 +39,12 @@ async function listTypesForAdmin() {
 }
 
 async function createType(payload) {
-  const code = normalizeTypeCode(payload.name_vi || payload.name_es);
-  if (!code) {
-    const appError = new Error('Type code is invalid');
-    appError.status = 400;
-    throw appError;
-  }
-
   try {
-    const id = await quizRepository.createType({
-      ...payload,
-      code,
-    });
-    return { id, code };
+    const id = await quizRepository.createType(payload);
+    return { id };
   } catch (error) {
     if (error.code === 'ER_DUP_ENTRY') {
-      const appError = new Error('Type code already exists');
+      const appError = new Error('Type already exists');
       appError.status = 409;
       throw appError;
     }
@@ -66,20 +62,17 @@ async function updateType(typeId, payload) {
   }
 
   try {
-    const affected = await quizRepository.updateTypeById(typeId, {
-      ...payload,
-      code: existing.code,
-    });
+    const affected = await quizRepository.updateTypeById(typeId, payload);
     if (!affected) {
       const appError = new Error('Type not found');
       appError.status = 404;
       throw appError;
     }
 
-    return { id: typeId, code: existing.code };
+    return { id: typeId };
   } catch (error) {
     if (error.code === 'ER_DUP_ENTRY') {
-      const appError = new Error('Type code already exists');
+      const appError = new Error('Type already exists');
       appError.status = 409;
       throw appError;
     }
@@ -96,7 +89,7 @@ async function deleteType(typeId) {
     throw appError;
   }
 
-  const usedCount = await quizRepository.countQuizzesByTypeCode(existing.code);
+  const usedCount = await quizRepository.countQuizzesByTypeId(existing.id);
   if (usedCount > 0) {
     const appError = new Error('Cannot delete type because it is being used');
     appError.status = 409;
@@ -212,10 +205,13 @@ async function getQuizDetail(quizId, lang) {
 
 async function createManualQuiz(payload) {
   try {
-    return await quizRepository.createManualQuiz(payload);
+    return await quizRepository.createManualQuiz({
+      ...payload,
+      quiz_type_id: normalizeQuizTypeId(payload.quiz_type_id ?? payload.quiz_type),
+    });
   } catch (error) {
     if (error.code === 'ER_DUP_ENTRY') {
-      const appError = new Error('Quiz code already exists');
+      const appError = new Error('Quiz already exists');
       appError.status = 409;
       throw appError;
     }
@@ -229,7 +225,39 @@ async function listQuizzesForAdmin() {
 }
 
 async function updateQuiz(quizId, payload) {
-  const affected = await quizRepository.updateQuizById(quizId, payload);
+  const normalizedPayload = {
+    ...payload,
+    quiz_type_id: normalizeQuizTypeId(payload.quiz_type_id ?? payload.quiz_type),
+  };
+
+  const affected = await quizRepository.updateQuizById(quizId, normalizedPayload);
+  if (!affected) {
+    const appError = new Error('Quiz not found');
+    appError.status = 404;
+    throw appError;
+  }
+
+  return { id: quizId };
+}
+
+async function getQuizDetailForAdmin(quizId) {
+  const detail = await quizRepository.findQuizDetailForAdmin(quizId);
+  if (!detail) {
+    const appError = new Error('Quiz not found');
+    appError.status = 404;
+    throw appError;
+  }
+
+  return detail;
+}
+
+async function updateQuizDetail(quizId, payload) {
+  const normalizedPayload = {
+    ...payload,
+    quiz_type_id: normalizeQuizTypeId(payload.quiz_type_id ?? payload.quiz_type),
+  };
+
+  const affected = await quizRepository.updateQuizDetailById(quizId, normalizedPayload);
   if (!affected) {
     const appError = new Error('Quiz not found');
     appError.status = 404;
@@ -265,6 +293,8 @@ module.exports = {
   getQuizDetail,
   createManualQuiz,
   listQuizzesForAdmin,
+  getQuizDetailForAdmin,
+  updateQuizDetail,
   updateQuiz,
   deleteQuiz,
 };

@@ -1,15 +1,6 @@
 SET NAMES utf8mb4;
 SET FOREIGN_KEY_CHECKS = 0;
 
-CREATE TABLE languages (
-    code    CHAR(2) PRIMARY KEY,
-    name    VARCHAR(50) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-INSERT INTO languages (code, name) VALUES
-('vi', 'Tieng Viet'),
-('es', 'Espanol');
-
 CREATE TABLE users (
     id                  BIGINT PRIMARY KEY AUTO_INCREMENT,
     username            VARCHAR(50) UNIQUE NOT NULL,
@@ -48,7 +39,6 @@ CREATE TABLE quiz_categories (
 
 CREATE TABLE quiz_types (
     id              BIGINT PRIMARY KEY AUTO_INCREMENT,
-    code            VARCHAR(80) UNIQUE NOT NULL,
     name_vi         VARCHAR(150) NOT NULL,
     name_es         VARCHAR(150) NOT NULL,
     description_vi  TEXT,
@@ -71,26 +61,27 @@ CREATE TABLE material_types (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='Phan loai tai lieu';
 
 CREATE TABLE reference_materials (
-    id              BIGINT PRIMARY KEY AUTO_INCREMENT,
+    id               BIGINT PRIMARY KEY AUTO_INCREMENT,
     material_type_id BIGINT NOT NULL,
-    lang_code       CHAR(2) NOT NULL,
-    title           VARCHAR(200) NOT NULL,
-    description     TEXT,
-    file_path       VARCHAR(255) NOT NULL,
-    file_size_mb    DECIMAL(6,2) DEFAULT NULL,
-    uploaded_by     BIGINT NOT NULL,
-    uploaded_at     DATETIME DEFAULT CURRENT_TIMESTAMP,
+    title_vi         VARCHAR(200) NOT NULL,
+    title_es         VARCHAR(200) NOT NULL,
+    description_vi   TEXT,
+    description_es   TEXT,
+    file_path_vi     VARCHAR(255) NOT NULL,
+    file_path_es     VARCHAR(255) NOT NULL,
+    file_size_mb_vi  DECIMAL(6,2) DEFAULT NULL,
+    file_size_mb_es  DECIMAL(6,2) DEFAULT NULL,
+    uploaded_by      BIGINT NOT NULL,
+    uploaded_at      DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (material_type_id) REFERENCES material_types(id) ON DELETE CASCADE,
-    FOREIGN KEY (lang_code)   REFERENCES languages(code),
     FOREIGN KEY (uploaded_by) REFERENCES users(id),
-    INDEX idx_material_type_lang (material_type_id, lang_code)
+    INDEX idx_material_type (material_type_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='Tai lieu hoc PDF';
 
 CREATE TABLE quizzes (
     id                  BIGINT PRIMARY KEY AUTO_INCREMENT,
     category_id         BIGINT DEFAULT NULL,
-    code                VARCHAR(50) UNIQUE NOT NULL,
-    quiz_type           VARCHAR(100) NOT NULL DEFAULT 'general',
+    quiz_type_id        BIGINT NOT NULL DEFAULT 1,
     title_vi            VARCHAR(200) NOT NULL,
     title_es            VARCHAR(200) NOT NULL,
     description_vi      TEXT,
@@ -105,9 +96,10 @@ CREATE TABLE quizzes (
     created_at          DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at          DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (category_id)  REFERENCES quiz_categories(id) ON DELETE SET NULL,
+    FOREIGN KEY (quiz_type_id) REFERENCES quiz_types(id) ON DELETE RESTRICT,
     FOREIGN KEY (created_by)   REFERENCES users(id) ON DELETE CASCADE,
     INDEX idx_category (category_id),
-    INDEX idx_code (code),
+    INDEX idx_quiz_type (quiz_type_id),
     INDEX idx_created_by (created_by)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='Bai kiem tra';
 
@@ -185,14 +177,14 @@ VALUES (
 )
 ON DUPLICATE KEY UPDATE id = id;
 
-INSERT INTO quiz_types (id, code, name_vi, name_es, description_vi, description_es, is_active)
+INSERT INTO quiz_types (id, name_vi, name_es, description_vi, description_es, is_active)
 VALUES
-(1, 'general', 'De tong hop', 'Examen general', 'Bo cau hoi tong hop nhieu nhom noi dung.', 'Coleccion de preguntas mixtas de varias areas.', TRUE),
-(2, 'bien_bao', 'Bien bao giao thong', 'Senales de trafico', 'Tap trung vao nhan biet va xu ly bien bao.', 'Enfocado en reconocimiento y uso de senales.', TRUE),
-(3, 'cao_toc', 'Duong cao toc', 'Autopista', 'Cau hoi ve nhap lan, toc do va an toan tren cao toc.', 'Preguntas sobre incorporacion, velocidad y seguridad en autopista.', TRUE),
-(4, 'ly_thuyet', 'Ly thuyet', 'Teoria', 'Nhom cau hoi ly thuyet co ban de on thi.', 'Preguntas teoricas basicas para practicar.', TRUE),
-(5, 'an_toan', 'An toan lai xe', 'Seguridad vial', 'Kien thuc va tinh huong lai xe an toan.', 'Conocimientos y situaciones de conduccion segura.', TRUE),
-(6, 'sa_hinh', 'Sa hinh', 'Pista', 'Bai tap tinh huong sa hinh va thao tac xe.', 'Ejercicios de circuito y maniobras del vehiculo.', TRUE)
+(1, 'De tong hop', 'Examen general', 'Bo cau hoi tong hop nhieu nhom noi dung.', 'Coleccion de preguntas mixtas de varias areas.', TRUE),
+(2, 'Bien bao giao thong', 'Senales de trafico', 'Tap trung vao nhan biet va xu ly bien bao.', 'Enfocado en reconocimiento y uso de senales.', TRUE),
+(3, 'Duong cao toc', 'Autopista', 'Cau hoi ve nhap lan, toc do va an toan tren cao toc.', 'Preguntas sobre incorporacion, velocidad y seguridad en autopista.', TRUE),
+(4, 'Ly thuyet', 'Teoria', 'Nhom cau hoi ly thuyet co ban de on thi.', 'Preguntas teoricas basicas para practicar.', TRUE),
+(5, 'An toan lai xe', 'Seguridad vial', 'Kien thuc va tinh huong lai xe an toan.', 'Conocimientos y situaciones de conduccion segura.', TRUE),
+(6, 'Sa hinh', 'Pista', 'Bai tap tinh huong sa hinh va thao tac xe.', 'Ejercicios de circuito y maniobras del vehiculo.', TRUE)
 ON DUPLICATE KEY UPDATE id = id;
 
 INSERT INTO material_types (id, code, name_vi, name_es, description_vi, description_es, created_by)
@@ -209,30 +201,39 @@ ON DUPLICATE KEY UPDATE id = id;
 
 INSERT INTO reference_materials (
     material_type_id,
-    lang_code,
-    title,
-    description,
-    file_path,
-    file_size_mb,
+    title_vi,
+    title_es,
+    description_vi,
+    description_es,
+    file_path_vi,
+    file_path_es,
+    file_size_mb_vi,
+    file_size_mb_es,
     uploaded_by
 )
 VALUES
-(1, 'vi', 'Ly thuyet giao thong co ban', 'Tai lieu PDF tong hop ly thuyet can nho.', '/docs/vi/ly-thuyet-co-ban.pdf', 2.40, 1),
-(1, 'vi', 'Cau truc de thi co ban', 'Tong hop cau truc de thi va meo lam bai.', '/docs/vi/cau-truc-de-thi-co-ban.pdf', 2.10, 1),
-(1, 'vi', 'Meo nho bien bao', 'Tai lieu tong hop cac nhom bien bao thuong gap.', '/docs/vi/meo-nho-bien-bao.pdf', 2.05, 1),
-(1, 'es', 'Teoria basica de trafico', 'Documento PDF con teoria esencial del examen.', '/docs/es/teoria-basica.pdf', 2.55, 1),
-(1, 'es', 'Estructura del examen base', 'Resumen de estructura y consejos para el examen.', '/docs/es/estructura-examen-base.pdf', 2.20, 1)
-ON DUPLICATE KEY UPDATE title = VALUES(title), description = VALUES(description), file_path = VALUES(file_path), file_size_mb = VALUES(file_size_mb);
+(1, 'Ly thuyet giao thong co ban', 'Teoria basica de trafico', 'Tai lieu PDF tong hop ly thuyet can nho.', 'Documento PDF con teoria esencial del examen.', '/docs/vi/ly-thuyet-co-ban.pdf', '/docs/es/teoria-basica.pdf', 2.40, 2.55, 1),
+(1, 'Cau truc de thi co ban', 'Estructura del examen base', 'Tong hop cau truc de thi va meo lam bai.', 'Resumen de estructura y consejos para el examen.', '/docs/vi/cau-truc-de-thi-co-ban.pdf', '/docs/es/estructura-examen-base.pdf', 2.10, 2.20, 1),
+(1, 'Meo nho bien bao', 'Guia rapida de senales', 'Tai lieu tong hop cac nhom bien bao thuong gap.', 'Material de referencia con grupos de senales frecuentes.', '/docs/vi/meo-nho-bien-bao.pdf', '/docs/es/guia-rapida-senales.pdf', 2.05, 2.05, 1)
+ON DUPLICATE KEY UPDATE
+title_vi = VALUES(title_vi),
+title_es = VALUES(title_es),
+description_vi = VALUES(description_vi),
+description_es = VALUES(description_es),
+file_path_vi = VALUES(file_path_vi),
+file_path_es = VALUES(file_path_es),
+file_size_mb_vi = VALUES(file_size_mb_vi),
+file_size_mb_es = VALUES(file_size_mb_es);
 
 INSERT INTO quizzes (
-    id, category_id, code, quiz_type,
+    id, category_id, quiz_type_id,
     title_vi, title_es,
     description_vi, description_es,
     instructions_vi, instructions_es,
     duration_minutes, total_questions, passing_score, is_active, created_by
 )
 VALUES (
-    1, 1, 'QUIZ-000001', 'general',
+    1, 1, 1,
     'De thi mo phong DGT 30 cau',
     'Simulador DGT 30 preguntas',
     'De mo phong cho nguoi hoc thi bang lai tai Tay Ban Nha',
@@ -376,46 +377,44 @@ FROM (
 LEFT JOIN material_types mt ON mt.code = gen_mat.code
 WHERE mt.id IS NULL;
 
-INSERT INTO reference_materials (material_type_id, lang_code, title, description, file_path, file_size_mb, uploaded_by)
+INSERT INTO reference_materials (
+    material_type_id,
+    title_vi,
+    title_es,
+    description_vi,
+    description_es,
+    file_path_vi,
+    file_path_es,
+    file_size_mb_vi,
+    file_size_mb_es,
+    uploaded_by
+)
 SELECT
     mt.id,
-    doc.lang_code,
-    CASE
-        WHEN doc.lang_code = 'vi' THEN CONCAT('Tai lieu ', mt.code, ' (VI) - Phan ', doc.doc_no)
-        ELSE CONCAT('Material ', mt.code, ' (ES) - Parte ', doc.doc_no)
-    END AS title,
-    CASE
-        WHEN doc.lang_code = 'vi' THEN CONCAT('Mo ta chi tiet phan ', doc.doc_no, ' cho ', mt.code)
-        ELSE CONCAT('Descripcion detallada parte ', doc.doc_no, ' para ', mt.code)
-    END AS description,
-    CASE
-        WHEN doc.lang_code = 'vi' THEN CONCAT('/docs/vi/', LOWER(mt.code), '-p', doc.doc_no, '.pdf')
-        ELSE CONCAT('/docs/es/', LOWER(mt.code), '-p', doc.doc_no, '.pdf')
-    END AS file_path,
-    ROUND(1 + ((mt.id + doc.doc_no) % 11) * 0.27, 2) AS file_size_mb,
+    CONCAT('Tai lieu ', mt.code, ' (VI) - Phan ', doc.doc_no) AS title_vi,
+    CONCAT('Material ', mt.code, ' (ES) - Parte ', doc.doc_no) AS title_es,
+    CONCAT('Mo ta chi tiet phan ', doc.doc_no, ' cho ', mt.code) AS description_vi,
+    CONCAT('Descripcion detallada parte ', doc.doc_no, ' para ', mt.code) AS description_es,
+    CONCAT('/docs/vi/', LOWER(mt.code), '-p', doc.doc_no, '.pdf') AS file_path_vi,
+    CONCAT('/docs/es/', LOWER(mt.code), '-p', doc.doc_no, '.pdf') AS file_path_es,
+    ROUND(1 + ((mt.id + doc.doc_no) % 11) * 0.27, 2) AS file_size_mb_vi,
+    ROUND(1 + ((mt.id + doc.doc_no + 3) % 11) * 0.27, 2) AS file_size_mb_es,
     1
 FROM material_types mt
 JOIN (
-    SELECT 'vi' AS lang_code, 1 AS doc_no
-    UNION ALL SELECT 'vi', 2
-    UNION ALL SELECT 'vi', 3
-    UNION ALL SELECT 'es', 1
-    UNION ALL SELECT 'es', 2
+    SELECT 1 AS doc_no
+    UNION ALL SELECT 2
+    UNION ALL SELECT 3
 ) doc
 LEFT JOIN reference_materials rm
     ON rm.material_type_id = mt.id
- AND rm.lang_code = doc.lang_code
- AND rm.file_path = CASE
-        WHEN doc.lang_code = 'vi' THEN CONCAT('/docs/vi/', LOWER(mt.code), '-p', doc.doc_no, '.pdf')
-        ELSE CONCAT('/docs/es/', LOWER(mt.code), '-p', doc.doc_no, '.pdf')
-    END
+ AND rm.file_path_vi = CONCAT('/docs/vi/', LOWER(mt.code), '-p', doc.doc_no, '.pdf')
 WHERE rm.id IS NULL
     AND mt.code LIKE 'DGT_BULK_%';
 
 INSERT INTO quizzes (
     category_id,
-    code,
-    quiz_type,
+    quiz_type_id,
     title_vi,
     title_es,
     description_vi,
@@ -430,15 +429,14 @@ INSERT INTO quizzes (
 )
 SELECT
     ((n - 1) % 8) + 1 AS category_id,
-    CONCAT('QUIZ-BULK-', LPAD(n, 6, '0')) AS code,
     CASE ((n - 1) % 6)
-        WHEN 0 THEN 'general'
-        WHEN 1 THEN 'bien_bao'
-        WHEN 2 THEN 'cao_toc'
-        WHEN 3 THEN 'ly_thuyet'
-        WHEN 4 THEN 'an_toan'
-        ELSE 'sa_hinh'
-    END AS quiz_type,
+        WHEN 0 THEN 1
+        WHEN 1 THEN 2
+        WHEN 2 THEN 3
+        WHEN 3 THEN 4
+        WHEN 4 THEN 5
+        ELSE 6
+    END AS quiz_type_id,
     CONCAT('De thi tong hop so ', LPAD(n, 6, '0')) AS title_vi,
     CONCAT('Examen de practica ', LPAD(n, 6, '0')) AS title_es,
     CONCAT('Mo ta de thi so ', LPAD(n, 6, '0')) AS description_vi,
@@ -459,7 +457,7 @@ FROM (
         CROSS JOIN
         (SELECT 0 AS n UNION ALL SELECT 1 UNION ALL SELECT 2 UNION ALL SELECT 3 UNION ALL SELECT 4) hundreds
 ) s
-LEFT JOIN quizzes q ON q.code = CONCAT('QUIZ-BULK-', LPAD(s.n, 6, '0'))
+LEFT JOIN quizzes q ON q.title_vi = CONCAT('De thi tong hop so ', LPAD(s.n, 6, '0'))
 WHERE s.n BETWEEN 1 AND 420
     AND q.id IS NULL;
 
@@ -477,10 +475,10 @@ SELECT
     q.id,
     o.n,
     0.50,
-    CONCAT('Cau hoi ', o.n, ' cua ', q.code, ' (VI)') AS question_text_vi,
-    CONCAT('Pregunta ', o.n, ' de ', q.code, ' (ES)') AS question_text_es,
-    CONCAT('Giai thich cho cau ', o.n, ' cua ', q.code) AS explanation_vi,
-    CONCAT('Explicacion para pregunta ', o.n, ' de ', q.code) AS explanation_es,
+    CONCAT('Cau hoi ', o.n, ' cua de ', q.id, ' (VI)') AS question_text_vi,
+    CONCAT('Pregunta ', o.n, ' del examen ', q.id, ' (ES)') AS question_text_es,
+    CONCAT('Giai thich cho cau ', o.n, ' cua de ', q.id) AS explanation_vi,
+    CONCAT('Explicacion para pregunta ', o.n, ' del examen ', q.id) AS explanation_es,
     NULL
 FROM quizzes q
 JOIN (
@@ -494,7 +492,7 @@ JOIN (
 LEFT JOIN questions qq
     ON qq.quiz_id = q.id
  AND qq.order_number = o.n
-WHERE q.code LIKE 'QUIZ-BULK-%'
+WHERE q.title_vi LIKE 'De thi tong hop so %'
     AND qq.id IS NULL;
 
 INSERT INTO answers (
@@ -508,8 +506,8 @@ SELECT
     qq.id,
     ans.order_number,
     CASE WHEN ans.order_number = 1 THEN TRUE ELSE FALSE END AS is_correct,
-    CONCAT('Dap an ', ans.label, ' cho cau ', qq.order_number, ' - ', q.code) AS answer_text_vi,
-    CONCAT('Respuesta ', ans.label, ' para pregunta ', qq.order_number, ' - ', q.code) AS answer_text_es
+    CONCAT('Dap an ', ans.label, ' cho cau ', qq.order_number, ' - de ', q.id) AS answer_text_vi,
+    CONCAT('Respuesta ', ans.label, ' para pregunta ', qq.order_number, ' - examen ', q.id) AS answer_text_es
 FROM questions qq
 JOIN quizzes q ON q.id = qq.quiz_id
 JOIN (
@@ -522,7 +520,7 @@ JOIN (
 LEFT JOIN answers aa
     ON aa.question_id = qq.id
  AND aa.order_number = ans.order_number
-WHERE q.code LIKE 'QUIZ-BULK-%'
+WHERE q.title_vi LIKE 'De thi tong hop so %'
     AND aa.id IS NULL;
 
 SET FOREIGN_KEY_CHECKS = 1;

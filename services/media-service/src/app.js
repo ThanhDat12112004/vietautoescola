@@ -18,6 +18,12 @@ const app = express();
 app.use(
 	helmet({
 		crossOriginResourcePolicy: { policy: 'cross-origin' },
+		frameguard: false,
+		contentSecurityPolicy: {
+			directives: {
+				frameAncestors: ["'self'", 'http://localhost:3000', 'http://127.0.0.1:3000'],
+			},
+		},
 	})
 );
 app.use(cors());

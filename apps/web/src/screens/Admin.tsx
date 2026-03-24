@@ -15,7 +15,6 @@ import { useLanguage } from '@/hooks/useLanguage';
 import {
   createAdminQuizType,
   createAdminSubject,
-  createAdminUser,
   createBilingualMaterial,
   createManualQuiz,
   deleteAdminMaterial,
@@ -25,14 +24,18 @@ import {
   deleteAdminUser,
   getAdminQuizTypes,
   getAdminQuizzes,
+  getAdminQuizDetail,
   getAdminSubjects,
+  getAdminUserDashboard,
   getAdminUsers,
   getMaterialsBySubject,
+  resolveMediaUrl,
   getSubjects,
   lockAdminUser,
   unlockAdminUser,
   updateAdminMaterial,
   updateAdminQuiz,
+  updateAdminQuizDetail,
   updateAdminQuizType,
   updateAdminSubject,
   updateAdminUser,
@@ -40,11 +43,11 @@ import {
   uploadQuestionImage,
   type AdminQuizType,
   type AdminSubject,
+  type DashboardResponse,
   type MaterialItem,
   type Subject,
 } from '@/lib/api';
 import { getStoredAuth } from '@/lib/auth';
-import type { Language } from '@/lib/data';
 import {
   BookOpen,
   CheckCircle2,
@@ -78,6 +81,36 @@ function createEmptyQuestionDraft() {
   };
 }
 
+function createEmptyEditQuestionDraft() {
+  return {
+    question_text_vi: '',
+    question_text_es: '',
+    explanation_vi: '',
+    explanation_es: '',
+    image_url: '',
+    answers: [
+      {
+        order_number: 1,
+        answer_text_vi: '',
+        answer_text_es: '',
+        is_correct: true,
+      },
+      {
+        order_number: 2,
+        answer_text_vi: '',
+        answer_text_es: '',
+        is_correct: false,
+      },
+      {
+        order_number: 3,
+        answer_text_vi: '',
+        answer_text_es: '',
+        is_correct: false,
+      },
+    ],
+  };
+}
+
 const DEFAULT_QUIZ_TYPE_CODE = 'general';
 
 export default function Admin() {
@@ -92,7 +125,17 @@ export default function Admin() {
   const [auth, setAuth] = useState(() => getStoredAuth());
 
   const [users, setUsers] = useState<any[]>([]);
+  const [userSearch, setUserSearch] = useState('');
+  const [userCreatedFrom, setUserCreatedFrom] = useState('');
+  const [userCreatedTo, setUserCreatedTo] = useState('');
+  const [userCreatedSort, setUserCreatedSort] = useState<'desc' | 'asc'>('desc');
+  const [materialSearch, setMaterialSearch] = useState('');
+  const [quizSearch, setQuizSearch] = useState('');
   const [editingUserId, setEditingUserId] = useState<number | null>(null);
+  const [viewingUserId, setViewingUserId] = useState<number | null>(null);
+  const [viewingUserDashboard, setViewingUserDashboard] = useState<DashboardResponse | null>(null);
+  const [viewingUserLoading, setViewingUserLoading] = useState(false);
+  const [viewingUserError, setViewingUserError] = useState('');
   const [editUserForm, setEditUserForm] = useState({
     username: '',
     email: '',
@@ -100,13 +143,6 @@ export default function Admin() {
     role: 'student',
     is_active: true,
     password: '',
-  });
-  const [newUser, setNewUser] = useState({
-    username: '',
-    email: '',
-    password: '',
-    full_name: '',
-    role: 'student',
   });
 
   const [subjects, setSubjects] = useState<Subject[]>([]);
@@ -125,16 +161,23 @@ export default function Admin() {
     description_es: '',
   });
   const [selectedSubjectId, setSelectedSubjectId] = useState<number | null>(null);
-  const [materialLang, setMaterialLang] = useState<Language>('vi');
   const [materials, setMaterials] = useState<MaterialItem[]>([]);
   const [editingMaterialId, setEditingMaterialId] = useState<number | null>(null);
   const [editMaterialForm, setEditMaterialForm] = useState({
-    title: '',
-    description: '',
-    file_path: '',
-    file_size_mb: '',
+    title_vi: '',
+    title_es: '',
+    description_vi: '',
+    description_es: '',
+    file_path_vi: '',
+    file_path_es: '',
+    file_size_mb_vi: '',
+    file_size_mb_es: '',
   });
   const [materialFiles, setMaterialFiles] = useState<{ vi: File | null; es: File | null }>({
+    vi: null,
+    es: null,
+  });
+  const [editMaterialFiles, setEditMaterialFiles] = useState<{ vi: File | null; es: File | null }>({
     vi: null,
     es: null,
   });
@@ -149,6 +192,7 @@ export default function Admin() {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [questionDrafts, setQuestionDrafts] = useState([createEmptyQuestionDraft()]);
   const [questionImageFiles, setQuestionImageFiles] = useState<(File | null)[]>([null]);
+  const [currentQuestionImagePreview, setCurrentQuestionImagePreview] = useState('');
   const [creatingQuiz, setCreatingQuiz] = useState(false);
   const [quizForm, setQuizForm] = useState({
     quiz_type: 'general',
@@ -175,6 +219,7 @@ export default function Admin() {
     is_active: true,
   });
   const [adminQuizzes, setAdminQuizzes] = useState<any[]>([]);
+  const [selectedQuizTypeFilter, setSelectedQuizTypeFilter] = useState<string>('all');
   const [editingQuizId, setEditingQuizId] = useState<number | null>(null);
   const [editQuizForm, setEditQuizForm] = useState({
     quiz_type: 'general',
@@ -186,14 +231,99 @@ export default function Admin() {
     instructions_es: '',
     is_active: true,
   });
+  const [editQuizQuestions, setEditQuizQuestions] = useState<any[]>([]);
+  const [editQuizQuestionImageFiles, setEditQuizQuestionImageFiles] = useState<(File | null)[]>([]);
+  const [currentEditQuestionIndex, setCurrentEditQuestionIndex] = useState(0);
+  const [currentEditQuestionImagePreview, setCurrentEditQuestionImagePreview] = useState('');
+  const [loadingEditQuizDetail, setLoadingEditQuizDetail] = useState(false);
+  const [savingEditQuizDetail, setSavingEditQuizDetail] = useState(false);
 
   const currentQuestionDraft = questionDrafts[currentQuestionIndex] || createEmptyQuestionDraft();
   const currentQuestionImageFile = questionImageFiles[currentQuestionIndex] || null;
+  const currentEditQuestion = editQuizQuestions[currentEditQuestionIndex] || null;
+  const currentEditQuestionImageFile = editQuizQuestionImageFiles[currentEditQuestionIndex] || null;
+
+  useEffect(() => {
+    if (!currentQuestionImageFile) {
+      setCurrentQuestionImagePreview('');
+      return;
+    }
+
+    const previewUrl = URL.createObjectURL(currentQuestionImageFile);
+    setCurrentQuestionImagePreview(previewUrl);
+    return () => URL.revokeObjectURL(previewUrl);
+  }, [currentQuestionImageFile]);
+
+  useEffect(() => {
+    setCurrentEditQuestionIndex((prev) => {
+      if (!editQuizQuestions.length) return 0;
+      return Math.min(prev, editQuizQuestions.length - 1);
+    });
+  }, [editQuizQuestions.length]);
+
+  useEffect(() => {
+    if (!currentEditQuestionImageFile) {
+      setCurrentEditQuestionImagePreview('');
+      return;
+    }
+
+    const previewUrl = URL.createObjectURL(currentEditQuestionImageFile);
+    setCurrentEditQuestionImagePreview(previewUrl);
+    return () => URL.revokeObjectURL(previewUrl);
+  }, [currentEditQuestionImageFile]);
 
   const activeQuizTypes = useMemo(() => quizTypes.filter((item) => item.is_active), [quizTypes]);
 
   function getQuizTypeLabel(typeItem: AdminQuizType) {
     return lang === 'es' ? typeItem.name_es : typeItem.name_vi;
+  }
+
+  function getQuizTypeFilterKey(item: any) {
+    if (item.quiz_type_id != null) return String(item.quiz_type_id);
+
+    const byCode = quizTypes.find((typeItem) => typeItem.code === String(item.quiz_type || ''));
+    if (byCode) return String(byCode.id);
+
+    return String(item.quiz_type || '');
+  }
+
+  function getQuizTypeDisplayName(item: any) {
+    if (lang === 'es' && item.quiz_type_name_es) return item.quiz_type_name_es;
+    if (lang === 'vi' && item.quiz_type_name_vi) return item.quiz_type_name_vi;
+
+    const byId = quizTypes.find((typeItem) => String(typeItem.id) === getQuizTypeFilterKey(item));
+    if (byId) return getQuizTypeLabel(byId);
+
+    return item.quiz_type || '-';
+  }
+
+  function getQuizDisplayTitle(item: any) {
+    if (lang === 'es') return item.title_es || item.title_vi || item.code || '-';
+    return item.title_vi || item.title_es || item.code || '-';
+  }
+
+  function getQuizDisplayDescription(item: any) {
+    if (lang === 'es') return item.description_es || item.description_vi || '-';
+    return item.description_vi || item.description_es || '-';
+  }
+
+  function parseDateSafe(value: unknown) {
+    if (!value) return null;
+    const parsed = new Date(String(value));
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  }
+
+  function formatDateTime(value: unknown) {
+    const parsed = parseDateSafe(value);
+    if (!parsed) return '-';
+
+    return parsed.toLocaleString(lang === 'vi' ? 'vi-VN' : 'es-ES', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
   }
 
   function ensureQuizTypeSelected() {
@@ -209,6 +339,88 @@ export default function Admin() {
   }
 
   const isAdmin = useMemo(() => auth?.user?.role === 'admin', [auth]);
+  const selectedSubject = useMemo(
+    () => subjects.find((item) => item.id === selectedSubjectId) || null,
+    [subjects, selectedSubjectId]
+  );
+  const filteredAdminQuizzes = useMemo(
+    () => {
+      const byType =
+        selectedQuizTypeFilter === 'all'
+          ? adminQuizzes
+          : adminQuizzes.filter(
+              (quizItem) => getQuizTypeFilterKey(quizItem) === selectedQuizTypeFilter
+            );
+
+      const keyword = quizSearch.trim().toLowerCase();
+      if (!keyword) return byType;
+
+      return byType.filter((item) =>
+        [
+          String(item.id || ''),
+          String(item.title_vi || ''),
+          String(item.title_es || ''),
+          String(getQuizTypeDisplayName(item) || ''),
+        ]
+          .join(' ')
+          .toLowerCase()
+          .includes(keyword)
+      );
+    },
+    [adminQuizzes, selectedQuizTypeFilter, quizTypes, lang, quizSearch]
+  );
+
+  const filteredUsers = useMemo(() => {
+    const keyword = userSearch.trim().toLowerCase();
+    const fromDate = userCreatedFrom ? new Date(`${userCreatedFrom}T00:00:00`) : null;
+    const toDate = userCreatedTo ? new Date(`${userCreatedTo}T23:59:59`) : null;
+
+    const filtered = users.filter((item) => {
+      const matchesKeyword = keyword
+        ? [
+            String(item.username || ''),
+            String(item.email || ''),
+            String(item.full_name || ''),
+            String(item.role || ''),
+          ]
+            .join(' ')
+            .toLowerCase()
+            .includes(keyword)
+        : true;
+
+      if (!matchesKeyword) return false;
+
+      const createdAt = parseDateSafe(item.created_at);
+      if (!createdAt) return true;
+      if (fromDate && createdAt < fromDate) return false;
+      if (toDate && createdAt > toDate) return false;
+
+      return true;
+    });
+
+    return filtered.sort((a, b) => {
+      const aTime = parseDateSafe(a.created_at)?.getTime() ?? 0;
+      const bTime = parseDateSafe(b.created_at)?.getTime() ?? 0;
+      return userCreatedSort === 'desc' ? bTime - aTime : aTime - bTime;
+    });
+  }, [users, userSearch, userCreatedFrom, userCreatedTo, userCreatedSort]);
+
+  const filteredMaterials = useMemo(() => {
+    const keyword = materialSearch.trim().toLowerCase();
+    if (!keyword) return materials;
+
+    return materials.filter((item) =>
+      [
+        String(item.title_vi || ''),
+        String(item.title_es || ''),
+        String(item.description_vi || ''),
+        String(item.description_es || ''),
+      ]
+        .join(' ')
+        .toLowerCase()
+        .includes(keyword)
+    );
+  }, [materials, materialSearch]);
 
   useEffect(() => {
     const syncAuth = () => {
@@ -256,8 +468,8 @@ export default function Admin() {
 
   useEffect(() => {
     if (!auth?.token || !selectedSubjectId || !isAdmin) return;
-    loadMaterials(selectedSubjectId, materialLang);
-  }, [selectedSubjectId, materialLang, auth?.token, isAdmin]);
+    loadMaterials(selectedSubjectId);
+  }, [selectedSubjectId, lang, auth?.token, isAdmin]);
 
   async function loadAll() {
     try {
@@ -282,24 +494,12 @@ export default function Admin() {
     }
   }
 
-  async function loadMaterials(subjectId: number, langCode: Language) {
+  async function loadMaterials(subjectId: number) {
     try {
-      const rows = await getMaterialsBySubject(subjectId, langCode);
+      const rows = await getMaterialsBySubject(subjectId, lang);
       setMaterials(rows);
     } catch (error) {
       showError(error instanceof Error ? error.message : 'Error loading materials');
-    }
-  }
-
-  async function onCreateUser(event: React.FormEvent) {
-    event.preventDefault();
-    try {
-      await createAdminUser(newUser);
-      setNewUser({ username: '', email: '', password: '', full_name: '', role: 'student' });
-      await loadAll();
-      showSuccess('Tạo user thành công', 'Usuario creado correctamente');
-    } catch (error) {
-      showError(error instanceof Error ? error.message : 'Error');
     }
   }
 
@@ -365,6 +565,29 @@ export default function Admin() {
       await loadAll();
     } catch (error) {
       showError(error instanceof Error ? error.message : 'Error');
+    }
+  }
+
+  async function onViewUserDashboard(item: any) {
+    if (viewingUserId === item.id) {
+      setViewingUserId(null);
+      setViewingUserDashboard(null);
+      setViewingUserError('');
+      return;
+    }
+
+    setViewingUserId(item.id);
+    setViewingUserDashboard(null);
+    setViewingUserError('');
+    setViewingUserLoading(true);
+
+    try {
+      const data = await getAdminUserDashboard(item.id, lang);
+      setViewingUserDashboard(data);
+    } catch (error) {
+      setViewingUserError(error instanceof Error ? error.message : 'Error loading dashboard');
+    } finally {
+      setViewingUserLoading(false);
     }
   }
 
@@ -441,12 +664,11 @@ export default function Admin() {
           file_size_mb_es: uploadedEs.size
             ? Number((uploadedEs.size / (1024 * 1024)).toFixed(2))
             : null,
-        },
-        lang
+        }
       );
       setMaterialForm({ title_vi: '', description_vi: '', title_es: '', description_es: '' });
       setMaterialFiles({ vi: null, es: null });
-      await loadMaterials(selectedSubjectId, materialLang);
+      await loadMaterials(selectedSubjectId);
       showSuccess('Đã thêm tài liệu song ngữ', 'Material bilingüe agregado');
     } catch (error) {
       showError(error instanceof Error ? error.message : 'Error');
@@ -455,39 +677,68 @@ export default function Admin() {
 
   function onStartEditMaterial(item: any) {
     setEditingMaterialId(item.id);
+    setEditMaterialFiles({ vi: null, es: null });
     setEditMaterialForm({
-      title: item.title || '',
-      description: item.description || '',
-      file_path: item.file_path || '',
-      file_size_mb: item.file_size_mb == null ? '' : String(item.file_size_mb),
+      title_vi: item.title_vi || '',
+      title_es: item.title_es || '',
+      description_vi: item.description_vi || '',
+      description_es: item.description_es || '',
+      file_path_vi: item.file_path_vi || '',
+      file_path_es: item.file_path_es || '',
+      file_size_mb_vi: item.file_size_mb_vi == null ? '' : String(item.file_size_mb_vi),
+      file_size_mb_es: item.file_size_mb_es == null ? '' : String(item.file_size_mb_es),
     });
   }
 
   function onCancelEditMaterial() {
     setEditingMaterialId(null);
+    setEditMaterialFiles({ vi: null, es: null });
     setEditMaterialForm({
-      title: '',
-      description: '',
-      file_path: '',
-      file_size_mb: '',
+      title_vi: '',
+      title_es: '',
+      description_vi: '',
+      description_es: '',
+      file_path_vi: '',
+      file_path_es: '',
+      file_size_mb_vi: '',
+      file_size_mb_es: '',
     });
   }
 
   async function onSaveEditMaterial(item: any) {
     try {
-      await updateAdminMaterial(
-        item.id,
-        {
-          title: editMaterialForm.title,
-          description: editMaterialForm.description,
-          file_path: editMaterialForm.file_path,
-          file_size_mb: editMaterialForm.file_size_mb
-            ? Number(editMaterialForm.file_size_mb)
-            : null,
-        },
-        lang
-      );
-      await loadMaterials(selectedSubjectId!, materialLang);
+      let filePathVi = editMaterialForm.file_path_vi;
+      let filePathEs = editMaterialForm.file_path_es;
+      let fileSizeVi = editMaterialForm.file_size_mb_vi
+        ? Number(editMaterialForm.file_size_mb_vi)
+        : null;
+      let fileSizeEs = editMaterialForm.file_size_mb_es
+        ? Number(editMaterialForm.file_size_mb_es)
+        : null;
+
+      if (editMaterialFiles.vi) {
+        const uploadedVi = await uploadMaterialFile(editMaterialFiles.vi, 'vi');
+        filePathVi = uploadedVi.cdn_url;
+        fileSizeVi = uploadedVi.size ? Number((uploadedVi.size / (1024 * 1024)).toFixed(2)) : null;
+      }
+
+      if (editMaterialFiles.es) {
+        const uploadedEs = await uploadMaterialFile(editMaterialFiles.es, 'es');
+        filePathEs = uploadedEs.cdn_url;
+        fileSizeEs = uploadedEs.size ? Number((uploadedEs.size / (1024 * 1024)).toFixed(2)) : null;
+      }
+
+      await updateAdminMaterial(item.id, {
+        title_vi: editMaterialForm.title_vi,
+        title_es: editMaterialForm.title_es,
+        description_vi: editMaterialForm.description_vi,
+        description_es: editMaterialForm.description_es,
+        file_path_vi: filePathVi,
+        file_path_es: filePathEs,
+        file_size_mb_vi: fileSizeVi,
+        file_size_mb_es: fileSizeEs,
+      });
+      await loadMaterials(selectedSubjectId!);
       onCancelEditMaterial();
       showSuccess('Đã cập nhật tài liệu', 'Material actualizado');
     } catch (error) {
@@ -496,10 +747,20 @@ export default function Admin() {
   }
 
   async function onDeleteMaterial(item: any) {
-    if (!window.confirm(`Xóa tài liệu ${item.title}?`)) return;
+    const materialName =
+      (lang === 'vi' ? item.title_vi : item.title_es) || item.id;
+    if (
+      !window.confirm(
+        lang === 'vi'
+          ? `Xóa tài liệu ${materialName}?`
+          : `¿Eliminar el material ${materialName}?`
+      )
+    ) {
+      return;
+    }
     try {
-      await deleteAdminMaterial(item.id, lang);
-      await loadMaterials(selectedSubjectId!, materialLang);
+      await deleteAdminMaterial(item.id);
+      await loadMaterials(selectedSubjectId!);
     } catch (error) {
       showError(error instanceof Error ? error.message : 'Error');
     }
@@ -621,7 +882,80 @@ export default function Admin() {
     }
   }
 
-  function onStartEditQuiz(item: any) {
+  function mapEditDetailQuestions(detailQuestions: any[] = []) {
+    return detailQuestions.map((question: any) => ({
+      id: question.id,
+      order_number: question.order_number,
+      question_text_vi: question.question_text_vi || '',
+      question_text_es: question.question_text_es || '',
+      explanation_vi: question.explanation_vi || '',
+      explanation_es: question.explanation_es || '',
+      image_url: question.image_url || '',
+      answers: [...(question.answers || [])]
+        .sort((a: any, b: any) => Number(a.order_number) - Number(b.order_number))
+        .map((answer: any) => ({
+          id: answer.id,
+          order_number: answer.order_number,
+          answer_text_vi: answer.answer_text_vi || '',
+          answer_text_es: answer.answer_text_es || '',
+          is_correct: Boolean(answer.is_correct),
+        })),
+    }));
+  }
+
+  function updateEditQuestionField(questionIndex: number, field: string, value: string) {
+    setEditQuizQuestions((prev) => {
+      const next = [...prev];
+      next[questionIndex] = { ...next[questionIndex], [field]: value };
+      return next;
+    });
+  }
+
+  function updateEditAnswerField(
+    questionIndex: number,
+    answerIndex: number,
+    field: string,
+    value: string
+  ) {
+    setEditQuizQuestions((prev) => {
+      const next = [...prev];
+      const answers = [...(next[questionIndex]?.answers || [])];
+      answers[answerIndex] = { ...answers[answerIndex], [field]: value };
+      next[questionIndex] = { ...next[questionIndex], answers };
+      return next;
+    });
+  }
+
+  function setEditCorrectAnswer(questionIndex: number, correctAnswerIndex: number) {
+    setEditQuizQuestions((prev) => {
+      const next = [...prev];
+      const answers = [...(next[questionIndex]?.answers || [])].map((answer, index) => ({
+        ...answer,
+        is_correct: index === correctAnswerIndex,
+      }));
+      next[questionIndex] = { ...next[questionIndex], answers };
+      return next;
+    });
+  }
+
+  function updateEditQuestionImage(questionIndex: number, file: File | null) {
+    setEditQuizQuestionImageFiles((prev) => {
+      const next = [...prev];
+      next[questionIndex] = file;
+      return next;
+    });
+  }
+
+  function onAddEditQuestion() {
+    setEditQuizQuestions((prev) => {
+      const next = [...prev, createEmptyEditQuestionDraft()];
+      setCurrentEditQuestionIndex(next.length - 1);
+      return next;
+    });
+    setEditQuizQuestionImageFiles((prev) => [...prev, null]);
+  }
+
+  async function onStartEditQuiz(item: any) {
     setEditingQuizId(item.id);
     setEditQuizForm({
       quiz_type: item.quiz_type || 'general',
@@ -633,6 +967,32 @@ export default function Admin() {
       instructions_es: item.instructions_es || '',
       is_active: Boolean(item.is_active),
     });
+    setLoadingEditQuizDetail(true);
+    setEditQuizQuestions([]);
+    setEditQuizQuestionImageFiles([]);
+    setCurrentEditQuestionIndex(0);
+
+    try {
+      const detail = await getAdminQuizDetail(item.id);
+      setEditQuizForm({
+        quiz_type: String(detail.quiz_type || item.quiz_type || 'general'),
+        title_vi: detail.title_vi || '',
+        title_es: detail.title_es || '',
+        description_vi: detail.description_vi || '',
+        description_es: detail.description_es || '',
+        instructions_vi: detail.instructions_vi || '',
+        instructions_es: detail.instructions_es || '',
+        is_active: Boolean(detail.is_active),
+      });
+      const mappedQuestions = mapEditDetailQuestions(detail.questions || []);
+      setEditQuizQuestions(mappedQuestions);
+      setEditQuizQuestionImageFiles(Array(mappedQuestions.length).fill(null));
+      setCurrentEditQuestionIndex(0);
+    } catch (error) {
+      showError(error instanceof Error ? error.message : 'Error');
+    } finally {
+      setLoadingEditQuizDetail(false);
+    }
   }
 
   function onCancelEditQuiz() {
@@ -647,33 +1007,152 @@ export default function Admin() {
       instructions_es: '',
       is_active: true,
     });
+    setEditQuizQuestions([]);
+    setEditQuizQuestionImageFiles([]);
+    setCurrentEditQuestionIndex(0);
+    setLoadingEditQuizDetail(false);
+    setSavingEditQuizDetail(false);
   }
 
   async function onSaveEditQuiz(item: any) {
+    if (savingEditQuizDetail) return;
+
     try {
-      await updateAdminQuiz(item.id, {
-        ...item,
+      setSavingEditQuizDetail(true);
+
+      if (!editQuizQuestions.length) {
+        await updateAdminQuiz(item.id, {
+          ...item,
+          quiz_type: editQuizForm.quiz_type,
+          title_vi: editQuizForm.title_vi,
+          title_es: editQuizForm.title_es,
+          description_vi: editQuizForm.description_vi,
+          description_es: editQuizForm.description_es,
+          instructions_vi: editQuizForm.instructions_vi,
+          instructions_es: editQuizForm.instructions_es,
+          passing_score: 10,
+          is_active: editQuizForm.is_active,
+        });
+        await loadAll();
+        onCancelEditQuiz();
+        showSuccess('Đã cập nhật đề thi', 'Examen actualizado');
+        return;
+      }
+
+      for (let questionIndex = 0; questionIndex < editQuizQuestions.length; questionIndex += 1) {
+        const question = editQuizQuestions[questionIndex];
+        if (!String(question.question_text_vi || '').trim() || !String(question.question_text_es || '').trim()) {
+          showError(
+            lang === 'vi'
+              ? `Câu ${questionIndex + 1} thiếu nội dung`
+              : `La pregunta ${questionIndex + 1} no está completa`
+          );
+          return;
+        }
+
+        const answers = question.answers || [];
+        if (answers.length !== 3) {
+          showError(
+            lang === 'vi'
+              ? `Câu ${questionIndex + 1} phải có đúng 3 đáp án`
+              : `La pregunta ${questionIndex + 1} debe tener 3 respuestas`
+          );
+          return;
+        }
+
+        const hasMissingAnswer = answers.some(
+          (answer: any) =>
+            !String(answer.answer_text_vi || '').trim() || !String(answer.answer_text_es || '').trim()
+        );
+        if (hasMissingAnswer) {
+          showError(
+            lang === 'vi'
+              ? `Câu ${questionIndex + 1} thiếu đáp án`
+              : `Faltan respuestas en la pregunta ${questionIndex + 1}`
+          );
+          return;
+        }
+
+        const correctCount = answers.filter((answer: any) => answer.is_correct).length;
+        if (correctCount !== 1) {
+          showError(
+            lang === 'vi'
+              ? `Câu ${questionIndex + 1} phải có đúng 1 đáp án đúng`
+              : `La pregunta ${questionIndex + 1} debe tener 1 respuesta correcta`
+          );
+          return;
+        }
+      }
+
+      const preparedQuestions: any[] = [];
+      for (let questionIndex = 0; questionIndex < editQuizQuestions.length; questionIndex += 1) {
+        const question = editQuizQuestions[questionIndex];
+        const imageFile = editQuizQuestionImageFiles[questionIndex] || null;
+        let imageUrl = question.image_url || null;
+
+        if (imageFile) {
+          const uploaded = await uploadQuestionImage(imageFile);
+          imageUrl = uploaded.cdn_url || null;
+        }
+
+        const preparedQuestion: any = {
+          question_text_vi: question.question_text_vi,
+          question_text_es: question.question_text_es,
+          explanation_vi: question.explanation_vi || null,
+          explanation_es: question.explanation_es || null,
+          image_url: imageUrl || null,
+          answers: (question.answers || []).map((answer: any) => {
+            const preparedAnswer: any = {
+              answer_text_vi: answer.answer_text_vi,
+              answer_text_es: answer.answer_text_es,
+              is_correct: Boolean(answer.is_correct),
+            };
+
+            if (Number.isInteger(Number(answer.id)) && Number(answer.id) > 0) {
+              preparedAnswer.id = Number(answer.id);
+            }
+
+            return preparedAnswer;
+          }),
+        };
+
+        if (Number.isInteger(Number(question.id)) && Number(question.id) > 0) {
+          preparedQuestion.id = Number(question.id);
+        }
+
+        preparedQuestions.push(preparedQuestion);
+      }
+
+      await updateAdminQuizDetail(item.id, {
+        category_id: item.category_id || null,
         quiz_type: editQuizForm.quiz_type,
         title_vi: editQuizForm.title_vi,
         title_es: editQuizForm.title_es,
-        description_vi: editQuizForm.description_vi,
-        description_es: editQuizForm.description_es,
-        instructions_vi: editQuizForm.instructions_vi,
-        instructions_es: editQuizForm.instructions_es,
+        description_vi: editQuizForm.description_vi || null,
+        description_es: editQuizForm.description_es || null,
+        instructions_vi: editQuizForm.instructions_vi || null,
+        instructions_es: editQuizForm.instructions_es || null,
         passing_score: 10,
         is_active: editQuizForm.is_active,
+        questions: preparedQuestions,
       });
+
       await loadAll();
       onCancelEditQuiz();
       showSuccess('Đã cập nhật đề thi', 'Examen actualizado');
     } catch (error) {
       showError(error instanceof Error ? error.message : 'Error');
+    } finally {
+      setSavingEditQuizDetail(false);
     }
   }
 
   async function onToggleQuiz(item: any) {
     try {
-      await updateAdminQuiz(item.id, { ...item, is_active: !item.is_active });
+      await updateAdminQuiz(item.id, {
+        ...item,
+        is_active: !item.is_active,
+      });
       await loadAll();
     } catch (error) {
       showError(error instanceof Error ? error.message : 'Error');
@@ -779,10 +1258,10 @@ export default function Admin() {
   ];
 
   return (
-    <div className="app-page min-h-screen flex flex-col">
+    <div className="app-page min-h-screen flex flex-col bg-[radial-gradient(circle_at_15%_20%,rgba(255,214,224,0.45),transparent_42%),radial-gradient(circle_at_85%_10%,rgba(255,228,171,0.45),transparent_35%),linear-gradient(180deg,#f9edf1_0%,#f4f7ff_55%,#f7eef5_100%)]">
       <Navbar />
       <main className="flex-1 px-2 md:px-4 py-3 md:py-4">
-        <div className="w-full min-h-full bg-transparent p-0">
+        <div className="w-full min-h-full rounded-2xl border border-[#7a2038]/12 bg-[linear-gradient(160deg,rgba(255,255,255,0.92)_0%,rgba(255,247,250,0.84)_45%,rgba(255,249,235,0.74)_100%)] p-3 shadow-[0_14px_34px_rgba(95,20,40,0.12)] md:p-4">
           {/* Notice */}
           {notice.text && (
             <div
@@ -800,7 +1279,7 @@ export default function Admin() {
           )}
 
           <div className="flex flex-col sm:flex-row gap-2">
-            <aside className="border border-[#dbe3ee] bg-white/82 backdrop-blur-sm rounded-2xl shadow-sm p-3 sm:w-56 sm:shrink-0">
+            <aside className="rounded-2xl border border-[#7a2038]/18 bg-white/90 p-3 shadow-sm backdrop-blur-sm sm:w-56 sm:shrink-0">
               <div className="space-y-1">
                 {tabButtons.map((tab) => {
                   const Icon = tab.icon;
@@ -823,102 +1302,79 @@ export default function Admin() {
             </aside>
 
             {/* Content */}
-            <div className="flex-1 border border-[#dbe3ee] bg-white/82 backdrop-blur-sm rounded-2xl shadow-sm p-3 md:p-4 lg:p-5 overflow-auto">
+            <div className="flex-1 overflow-auto rounded-2xl border border-[#7a2038]/18 bg-white/90 p-3 shadow-sm backdrop-blur-sm md:p-4 lg:p-5">
               {activeTab === 'users' && (
                 <div className="space-y-4">
-                  {/* Add User Form */}
-                  <div className="border border-[#dbe3ee] bg-white rounded-2xl shadow-sm p-4 md:p-5">
-                    <h3 className="font-bold text-[#5a1428] mb-3 text-base md:text-lg">
-                      {lang === 'vi' ? 'Thêm người dùng mới' : 'Agregar usuario'}
-                    </h3>
-                    <form
-                      onSubmit={onCreateUser}
-                      className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3"
-                    >
-                      <div>
-                        <Label className="text-xs text-[#5b5b5b]">Username</Label>
-                        <Input
-                          value={newUser.username}
-                          onChange={(e) => setNewUser({ ...newUser, username: e.target.value })}
-                          required
-                          className="border-[#d2d2d2] bg-white h-9"
-                        />
-                      </div>
-                      <div>
-                        <Label className="text-xs text-[#5b5b5b]">Email</Label>
-                        <Input
-                          type="email"
-                          value={newUser.email}
-                          onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
-                          required
-                          className="border-[#d2d2d2] bg-white h-9"
-                        />
-                      </div>
-                      <div>
-                        <Label className="text-xs text-[#5b5b5b]">
-                          {lang === 'vi' ? 'Mật khẩu' : 'Contraseña'}
-                        </Label>
-                        <Input
-                          type="password"
-                          value={newUser.password}
-                          onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
-                          required
-                          className="border-[#d2d2d2] bg-white h-9"
-                        />
-                      </div>
-                      <div>
-                        <Label className="text-xs text-[#5b5b5b]">
-                          {lang === 'vi' ? 'Họ tên' : 'Nombre'}
-                        </Label>
-                        <Input
-                          value={newUser.full_name}
-                          onChange={(e) => setNewUser({ ...newUser, full_name: e.target.value })}
-                          className="border-[#d2d2d2] bg-white h-9"
-                        />
-                      </div>
-                      <div>
-                        <Label className="text-xs text-[#5b5b5b]">
-                          {lang === 'vi' ? 'Vai trò' : 'Rol'}
-                        </Label>
-                        <Select
-                          value={newUser.role}
-                          onValueChange={(v) => setNewUser({ ...newUser, role: v })}
-                        >
-                          <SelectTrigger className="border-[#d2d2d2] bg-white h-9">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="student">
-                              {lang === 'vi' ? 'Học viên' : 'Estudiante'}
-                            </SelectItem>
-                            <SelectItem value="teacher">
-                              {lang === 'vi' ? 'Giáo viên' : 'Profesor'}
-                            </SelectItem>
-                            <SelectItem value="admin">
-                              {lang === 'vi' ? 'Quản trị' : 'Admin'}
-                            </SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="flex items-end">
-                        <Button
-                          type="submit"
-                          className="h-9 bg-[#7a2038] hover:bg-[#5a1428] text-white font-bold"
-                        >
-                          {lang === 'vi' ? 'Thêm' : 'Agregar'}
-                        </Button>
-                      </div>
-                    </form>
-                  </div>
-
                   {/* Users List */}
                   <div className="border border-[#dbe3ee] bg-white rounded-2xl shadow-sm p-4 md:p-5">
                     <h3 className="font-bold text-[#5a1428] mb-3 text-base md:text-lg">
-                      {lang === 'vi' ? 'Danh sách người dùng' : 'Lista de usuarios'} ({users.length}
-                      )
+                      {lang === 'vi' ? 'Danh sách người dùng' : 'Lista de usuarios'} (
+                      {filteredUsers.length})
                     </h3>
+                    <div className="mb-3">
+                      <Input
+                        value={userSearch}
+                        onChange={(e) => setUserSearch(e.target.value)}
+                        placeholder={
+                          lang === 'vi'
+                            ? 'Tìm theo username, email, họ tên, vai trò...'
+                            : 'Buscar por usuario, email, nombre, rol...'
+                        }
+                        className="h-9 border-[#d2d2d2] bg-white"
+                      />
+                    </div>
+                    <div className="mb-3 grid grid-cols-1 md:grid-cols-3 gap-2">
+                      <Input
+                        type="date"
+                        value={userCreatedFrom}
+                        onChange={(e) => setUserCreatedFrom(e.target.value)}
+                        aria-label={lang === 'vi' ? 'Từ ngày đăng ký' : 'Desde fecha de registro'}
+                        className="h-9 border-[#d2d2d2] bg-white"
+                      />
+                      <Input
+                        type="date"
+                        value={userCreatedTo}
+                        onChange={(e) => setUserCreatedTo(e.target.value)}
+                        aria-label={lang === 'vi' ? 'Đến ngày đăng ký' : 'Hasta fecha de registro'}
+                        className="h-9 border-[#d2d2d2] bg-white"
+                      />
+                      <Select
+                        value={userCreatedSort}
+                        onValueChange={(value: 'asc' | 'desc') => setUserCreatedSort(value)}
+                      >
+                        <SelectTrigger className="h-9 border-[#d2d2d2] bg-white">
+                          <SelectValue
+                            placeholder={
+                              lang === 'vi' ? 'Sắp xếp theo ngày đăng ký' : 'Ordenar por fecha'
+                            }
+                          />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="desc">
+                            {lang === 'vi' ? 'Mới nhất trước' : 'Mas recientes primero'}
+                          </SelectItem>
+                          <SelectItem value="asc">
+                            {lang === 'vi' ? 'Cũ nhất trước' : 'Mas antiguos primero'}
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="mb-3 flex justify-end">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="h-8 border-[#d2d2d2] bg-white hover:bg-[#fdf5f8]"
+                        onClick={() => {
+                          setUserCreatedFrom('');
+                          setUserCreatedTo('');
+                          setUserCreatedSort('desc');
+                        }}
+                      >
+                        {lang === 'vi' ? 'Xóa bộ lọc ngày' : 'Limpiar filtro de fecha'}
+                      </Button>
+                    </div>
                     <div className="space-y-2">
-                      {users.map((item: any) => (
+                      {filteredUsers.map((item: any) => (
                         <div
                           key={item.id}
                           className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 border border-[#d2d2d2] bg-white rounded-sm"
@@ -944,8 +1400,20 @@ export default function Admin() {
                             <div className="text-xs text-[#5b5b5b] mt-1">
                               {item.email} | {item.full_name || '-'}
                             </div>
+                            <div className="text-xs text-[#5b5b5b] mt-1">
+                              {lang === 'vi' ? 'Ngày đăng ký' : 'Fecha de registro'}:{' '}
+                              {formatDateTime(item.created_at)}
+                            </div>
                           </div>
                           <div className="flex gap-1 flex-wrap">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => onViewUserDashboard(item)}
+                              className="h-8 border-[#d2d2d2] bg-white hover:bg-[#fdf5f8]"
+                            >
+                              <Eye className="h-3.5 w-3.5" />
+                            </Button>
                             <Button
                               variant="outline"
                               size="sm"
@@ -975,6 +1443,64 @@ export default function Admin() {
                               <Trash2 className="h-3.5 w-3.5" />
                             </Button>
                           </div>
+                          {viewingUserId === item.id && (
+                            <div className="w-full mt-2 border border-[#d2d2d2] bg-[#f9f9f9] p-3 rounded-sm">
+                              {viewingUserLoading && (
+                                <div className="text-sm text-[#5b5b5b]">
+                                  {lang === 'vi' ? 'Đang tải hồ sơ...' : 'Cargando perfil...'}
+                                </div>
+                              )}
+                              {!viewingUserLoading && viewingUserError && (
+                                <div className="text-sm text-destructive">{viewingUserError}</div>
+                              )}
+                              {!viewingUserLoading && !viewingUserError && viewingUserDashboard && (
+                                <div className="space-y-3">
+                                  <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
+                                    <div className="border border-[#d2d2d2] rounded-sm bg-white p-2">
+                                      <div className="text-xs text-[#5b5b5b]">{lang === 'vi' ? 'Tổng điểm' : 'Puntos'}</div>
+                                      <div className="font-bold text-[#5a1428]">{Number(viewingUserDashboard.stats.total_score || 0).toFixed(2)}</div>
+                                    </div>
+                                    <div className="border border-[#d2d2d2] rounded-sm bg-white p-2">
+                                      <div className="text-xs text-[#5b5b5b]">{lang === 'vi' ? 'Số đề' : 'Exámenes'}</div>
+                                      <div className="font-bold text-[#5a1428]">{viewingUserDashboard.stats.total_quizzes || 0}</div>
+                                    </div>
+                                    <div className="border border-[#d2d2d2] rounded-sm bg-white p-2">
+                                      <div className="text-xs text-[#5b5b5b]">{lang === 'vi' ? 'Đúng' : 'Correctas'}</div>
+                                      <div className="font-bold text-[#5a1428]">{viewingUserDashboard.stats.total_correct || 0}</div>
+                                    </div>
+                                    <div className="border border-[#d2d2d2] rounded-sm bg-white p-2">
+                                      <div className="text-xs text-[#5b5b5b]">{lang === 'vi' ? 'Tổng câu' : 'Total preg.'}</div>
+                                      <div className="font-bold text-[#5a1428]">{viewingUserDashboard.stats.total_questions || 0}</div>
+                                    </div>
+                                    <div className="border border-[#d2d2d2] rounded-sm bg-white p-2">
+                                      <div className="text-xs text-[#5b5b5b]">{lang === 'vi' ? 'TB %' : 'Prom %'}</div>
+                                      <div className="font-bold text-[#5a1428]">{Number(viewingUserDashboard.stats.average_percentage || 0).toFixed(2)}%</div>
+                                    </div>
+                                  </div>
+                                  <div>
+                                    <div className="text-xs text-[#5b5b5b] mb-1">
+                                      {lang === 'vi' ? 'Lịch sử làm bài gần nhất' : 'Historial reciente'}
+                                    </div>
+                                    <div className="max-h-56 overflow-auto space-y-1">
+                                      {viewingUserDashboard.history.slice(0, 10).map((h) => (
+                                        <div
+                                          key={h.id}
+                                          className="text-xs border border-[#d2d2d2] bg-white rounded-sm p-2 flex flex-wrap gap-2 justify-between"
+                                        >
+                                          <span className="text-[#5a1428] font-semibold">{h.quiz_title}</span>
+                                          <span>{Number(h.percentage || 0).toFixed(2)}%</span>
+                                          <span>{Number(h.score || 0).toFixed(2)}</span>
+                                          <span>
+                                            {h.correct_count}/{h.total_questions}
+                                          </span>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          )}
                           {editingUserId === item.id && (
                             <div className="w-full mt-2 border border-[#d2d2d2] bg-[#f9f9f9] p-3 rounded-sm grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
                               <div>
@@ -1067,6 +1593,7 @@ export default function Admin() {
                                 </Label>
                                 <Input
                                   type="password"
+                                  autoComplete="new-password"
                                   value={editUserForm.password}
                                   onChange={(e) =>
                                     setEditUserForm({ ...editUserForm, password: e.target.value })
@@ -1307,23 +1834,6 @@ export default function Admin() {
                             </SelectContent>
                           </Select>
                         </div>
-                        <div>
-                          <Label className="text-xs text-[#5b5b5b]">
-                            {lang === 'vi' ? 'Ngôn ngữ' : 'Idioma'}
-                          </Label>
-                          <Select
-                            value={materialLang}
-                            onValueChange={(v) => setMaterialLang(v as Language)}
-                          >
-                            <SelectTrigger className="border-[#d2d2d2] bg-white h-9">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="vi">Tiếng Việt</SelectItem>
-                              <SelectItem value="es">Español</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
                       </div>
                       <form
                         onSubmit={onCreateBilingualMaterial}
@@ -1444,19 +1954,65 @@ export default function Admin() {
                     <div className="border border-[#dbe3ee] bg-white rounded-2xl shadow-sm p-4 md:p-5">
                       <h3 className="font-bold text-[#5a1428] mb-3 text-base md:text-lg">
                         {lang === 'vi' ? 'Danh sách tài liệu' : 'Lista de materiales'} (
-                        {materials.length})
+                        {filteredMaterials.length})
                       </h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+                        <div>
+                          <Label className="text-xs text-[#5b5b5b]">
+                            {lang === 'vi' ? 'Chủ đề tài liệu' : 'Tema de material'}
+                          </Label>
+                          <Select
+                            value={String(selectedSubjectId)}
+                            onValueChange={(v) => setSelectedSubjectId(Number(v))}
+                          >
+                            <SelectTrigger className="border-[#d2d2d2] bg-white h-9">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {subjects.map((s: any) => (
+                                <SelectItem key={s.id} value={String(s.id)}>
+                                  {s.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="text-xs text-[#5b5b5b] md:self-end">
+                          {lang === 'vi' ? 'Đang hiển thị theo chủ đề:' : 'Mostrando por tema:'}{' '}
+                          <span className="font-semibold text-[#5a1428]">
+                            {selectedSubject?.name || '-'}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="mb-3">
+                        <Input
+                          value={materialSearch}
+                          onChange={(e) => setMaterialSearch(e.target.value)}
+                          placeholder={
+                            lang === 'vi'
+                              ? 'Tìm theo tiêu đề, mô tả VI/ES...'
+                              : 'Buscar por título, descripción VI/ES...'
+                          }
+                          className="h-9 border-[#d2d2d2] bg-white"
+                        />
+                      </div>
                       <div className="space-y-2">
-                        {materials.map((item: any) => (
+                        {filteredMaterials.map((item: any) => (
                           <div
                             key={item.id}
                             className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 border border-[#d2d2d2] bg-white rounded-sm"
                           >
                             <div className="min-w-0">
-                              <div className="font-bold text-[#5a1428]">{item.title}</div>
+                              <div className="font-bold text-[#5a1428]">
+                                {lang === 'vi' ? item.title_vi || '-' : item.title_es || '-'}
+                              </div>
                               <div className="text-xs text-[#5b5b5b]">
-                                {item.description || '-'}{' '}
-                                {item.file_size_mb && `(${item.file_size_mb}MB)`}
+                                {lang === 'vi'
+                                  ? item.description_vi || '-'
+                                  : item.description_es || '-'}{' '}
+                                {lang === 'vi'
+                                  ? item.file_size_mb_vi && `(${item.file_size_mb_vi}MB)`
+                                  : item.file_size_mb_es && `(${item.file_size_mb_es}MB)`}
                               </div>
                             </div>
                             <div className="flex gap-1">
@@ -1466,7 +2022,11 @@ export default function Admin() {
                                 asChild
                                 className="h-8 border-[#d2d2d2] bg-white hover:bg-[#fdf5f8]"
                               >
-                                <a href={item.file_path} target="_blank" rel="noreferrer">
+                                <a
+                                  href={lang === 'vi' ? item.file_path_vi : item.file_path_es}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                >
                                   <Download className="h-3.5 w-3.5" />
                                 </a>
                               </Button>
@@ -1490,43 +2050,39 @@ export default function Admin() {
                             {editingMaterialId === item.id && (
                               <div className="w-full mt-2 border border-[#d2d2d2] bg-[#f9f9f9] p-3 rounded-sm grid grid-cols-1 md:grid-cols-2 gap-2">
                                 <div>
-                                  <Label className="text-xs text-[#5b5b5b]">
-                                    {lang === 'vi' ? 'Tiêu đề' : 'Título'}
-                                  </Label>
+                                  <Label className="text-xs text-[#5b5b5b]">Tiêu đề (VI)</Label>
                                   <Input
-                                    value={editMaterialForm.title}
+                                    value={editMaterialForm.title_vi}
                                     onChange={(e) =>
                                       setEditMaterialForm({
                                         ...editMaterialForm,
-                                        title: e.target.value,
+                                        title_vi: e.target.value,
                                       })
                                     }
                                     className="h-9 border-[#d2d2d2] bg-white"
                                   />
                                 </div>
                                 <div>
-                                  <Label className="text-xs text-[#5b5b5b]">URL</Label>
+                                  <Label className="text-xs text-[#5b5b5b]">Título (ES)</Label>
                                   <Input
-                                    value={editMaterialForm.file_path}
+                                    value={editMaterialForm.title_es}
                                     onChange={(e) =>
                                       setEditMaterialForm({
                                         ...editMaterialForm,
-                                        file_path: e.target.value,
+                                        title_es: e.target.value,
                                       })
                                     }
                                     className="h-9 border-[#d2d2d2] bg-white"
                                   />
                                 </div>
                                 <div>
-                                  <Label className="text-xs text-[#5b5b5b]">
-                                    {lang === 'vi' ? 'Mô tả' : 'Descripción'}
-                                  </Label>
+                                  <Label className="text-xs text-[#5b5b5b]">Mô tả (VI)</Label>
                                   <Textarea
-                                    value={editMaterialForm.description}
+                                    value={editMaterialForm.description_vi}
                                     onChange={(e) =>
                                       setEditMaterialForm({
                                         ...editMaterialForm,
-                                        description: e.target.value,
+                                        description_vi: e.target.value,
                                       })
                                     }
                                     rows={2}
@@ -1534,18 +2090,92 @@ export default function Admin() {
                                   />
                                 </div>
                                 <div>
-                                  <Label className="text-xs text-[#5b5b5b]">Size (MB)</Label>
-                                  <Input
-                                    type="number"
-                                    value={editMaterialForm.file_size_mb}
+                                  <Label className="text-xs text-[#5b5b5b]">Descripción (ES)</Label>
+                                  <Textarea
+                                    value={editMaterialForm.description_es}
                                     onChange={(e) =>
                                       setEditMaterialForm({
                                         ...editMaterialForm,
-                                        file_size_mb: e.target.value,
+                                        description_es: e.target.value,
+                                      })
+                                    }
+                                    rows={2}
+                                    className="border-[#d2d2d2] bg-white"
+                                  />
+                                </div>
+                                <div>
+                                  <Label className="text-xs text-[#5b5b5b]">
+                                    {lang === 'vi' ? 'File mới (VI)' : 'Archivo nuevo (VI)'}
+                                  </Label>
+                                  <Input
+                                    type="file"
+                                    onChange={(e) =>
+                                      setEditMaterialFiles({
+                                        ...editMaterialFiles,
+                                        vi: e.target.files?.[0] || null,
                                       })
                                     }
                                     className="h-9 border-[#d2d2d2] bg-white"
                                   />
+                                  <div className="text-xs text-[#5b5b5b] mt-1">
+                                    {editMaterialFiles.vi
+                                      ? editMaterialFiles.vi.name
+                                      : lang === 'vi'
+                                        ? 'Để trống nếu giữ file hiện tại'
+                                        : 'Dejar vacío para mantener archivo actual'}
+                                  </div>
+                                </div>
+                                <div>
+                                  <Label className="text-xs text-[#5b5b5b]">
+                                    {lang === 'vi' ? 'File mới (ES)' : 'Archivo nuevo (ES)'}
+                                  </Label>
+                                  <Input
+                                    type="file"
+                                    onChange={(e) =>
+                                      setEditMaterialFiles({
+                                        ...editMaterialFiles,
+                                        es: e.target.files?.[0] || null,
+                                      })
+                                    }
+                                    className="h-9 border-[#d2d2d2] bg-white"
+                                  />
+                                  <div className="text-xs text-[#5b5b5b] mt-1">
+                                    {editMaterialFiles.es
+                                      ? editMaterialFiles.es.name
+                                      : lang === 'vi'
+                                        ? 'Để trống nếu giữ file hiện tại'
+                                        : 'Dejar vacío para mantener archivo actual'}
+                                  </div>
+                                </div>
+                                <div>
+                                  <Label className="text-xs text-[#5b5b5b]">URL (VI)</Label>
+                                  <a
+                                    href={editMaterialForm.file_path_vi}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="text-xs text-[#7a2038] underline break-all"
+                                  >
+                                    {editMaterialForm.file_path_vi || '-'}
+                                  </a>
+                                  <div className="text-xs text-[#5b5b5b] mt-1">
+                                    {lang === 'vi' ? 'Dung lượng' : 'Tamaño'}:{' '}
+                                    {editMaterialForm.file_size_mb_vi || '-'} MB
+                                  </div>
+                                </div>
+                                <div>
+                                  <Label className="text-xs text-[#5b5b5b]">URL (ES)</Label>
+                                  <a
+                                    href={editMaterialForm.file_path_es}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="text-xs text-[#7a2038] underline break-all"
+                                  >
+                                    {editMaterialForm.file_path_es || '-'}
+                                  </a>
+                                  <div className="text-xs text-[#5b5b5b] mt-1">
+                                    {lang === 'vi' ? 'Dung lượng' : 'Tamaño'}:{' '}
+                                    {editMaterialForm.file_size_mb_es || '-'} MB
+                                  </div>
                                 </div>
                                 <div className="md:col-span-2 flex gap-2">
                                   <Button
@@ -1900,7 +2530,7 @@ export default function Admin() {
                               <h5 className="font-semibold text-[#5a1428] mb-2 text-sm">
                                 🇻🇳 Tiếng Việt
                               </h5>
-                              <div className="space-y-2">
+                              <div className="space-y-3">
                                 <Textarea
                                   placeholder="Nội dung câu hỏi"
                                   value={currentQuestionDraft.question_text_vi}
@@ -1920,40 +2550,42 @@ export default function Admin() {
                                   rows={2}
                                   className="border-[#d2d2d2] bg-white"
                                 />
-                                <Input
-                                  placeholder="Đáp án A"
-                                  value={currentQuestionDraft.answer_vi_1}
-                                  onChange={(e) =>
-                                    updateCurrentQuestionField('answer_vi_1', e.target.value)
-                                  }
-                                  required
-                                  className="border-[#d2d2d2] bg-white h-8"
-                                />
-                                <Input
-                                  placeholder="Đáp án B"
-                                  value={currentQuestionDraft.answer_vi_2}
-                                  onChange={(e) =>
-                                    updateCurrentQuestionField('answer_vi_2', e.target.value)
-                                  }
-                                  required
-                                  className="border-[#d2d2d2] bg-white h-8"
-                                />
-                                <Input
-                                  placeholder="Đáp án C"
-                                  value={currentQuestionDraft.answer_vi_3}
-                                  onChange={(e) =>
-                                    updateCurrentQuestionField('answer_vi_3', e.target.value)
-                                  }
-                                  required
-                                  className="border-[#d2d2d2] bg-white h-8"
-                                />
+                                <div className="space-y-2.5 pt-1">
+                                  <Input
+                                    placeholder="Đáp án A"
+                                    value={currentQuestionDraft.answer_vi_1}
+                                    onChange={(e) =>
+                                      updateCurrentQuestionField('answer_vi_1', e.target.value)
+                                    }
+                                    required
+                                    className="border-[#d2d2d2] bg-white h-9"
+                                  />
+                                  <Input
+                                    placeholder="Đáp án B"
+                                    value={currentQuestionDraft.answer_vi_2}
+                                    onChange={(e) =>
+                                      updateCurrentQuestionField('answer_vi_2', e.target.value)
+                                    }
+                                    required
+                                    className="border-[#d2d2d2] bg-white h-9"
+                                  />
+                                  <Input
+                                    placeholder="Đáp án C"
+                                    value={currentQuestionDraft.answer_vi_3}
+                                    onChange={(e) =>
+                                      updateCurrentQuestionField('answer_vi_3', e.target.value)
+                                    }
+                                    required
+                                    className="border-[#d2d2d2] bg-white h-9"
+                                  />
+                                </div>
                               </div>
                             </div>
                             <div className="border border-[#d2d2d2] bg-[#f9f9f9] p-3 rounded-sm">
                               <h5 className="font-semibold text-[#5a1428] mb-2 text-sm">
                                 🇪🇸 Español
                               </h5>
-                              <div className="space-y-2">
+                              <div className="space-y-3">
                                 <Textarea
                                   placeholder="Texto de pregunta"
                                   value={currentQuestionDraft.question_text_es}
@@ -1973,33 +2605,35 @@ export default function Admin() {
                                   rows={2}
                                   className="border-[#d2d2d2] bg-white"
                                 />
-                                <Input
-                                  placeholder="Respuesta A"
-                                  value={currentQuestionDraft.answer_es_1}
-                                  onChange={(e) =>
-                                    updateCurrentQuestionField('answer_es_1', e.target.value)
-                                  }
-                                  required
-                                  className="border-[#d2d2d2] bg-white h-8"
-                                />
-                                <Input
-                                  placeholder="Respuesta B"
-                                  value={currentQuestionDraft.answer_es_2}
-                                  onChange={(e) =>
-                                    updateCurrentQuestionField('answer_es_2', e.target.value)
-                                  }
-                                  required
-                                  className="border-[#d2d2d2] bg-white h-8"
-                                />
-                                <Input
-                                  placeholder="Respuesta C"
-                                  value={currentQuestionDraft.answer_es_3}
-                                  onChange={(e) =>
-                                    updateCurrentQuestionField('answer_es_3', e.target.value)
-                                  }
-                                  required
-                                  className="border-[#d2d2d2] bg-white h-8"
-                                />
+                                <div className="space-y-2.5 pt-1">
+                                  <Input
+                                    placeholder="Respuesta A"
+                                    value={currentQuestionDraft.answer_es_1}
+                                    onChange={(e) =>
+                                      updateCurrentQuestionField('answer_es_1', e.target.value)
+                                    }
+                                    required
+                                    className="border-[#d2d2d2] bg-white h-9"
+                                  />
+                                  <Input
+                                    placeholder="Respuesta B"
+                                    value={currentQuestionDraft.answer_es_2}
+                                    onChange={(e) =>
+                                      updateCurrentQuestionField('answer_es_2', e.target.value)
+                                    }
+                                    required
+                                    className="border-[#d2d2d2] bg-white h-9"
+                                  />
+                                  <Input
+                                    placeholder="Respuesta C"
+                                    value={currentQuestionDraft.answer_es_3}
+                                    onChange={(e) =>
+                                      updateCurrentQuestionField('answer_es_3', e.target.value)
+                                    }
+                                    required
+                                    className="border-[#d2d2d2] bg-white h-9"
+                                  />
+                                </div>
                               </div>
                             </div>
                           </div>
@@ -2028,6 +2662,15 @@ export default function Admin() {
                               <Label className="text-xs text-[#5b5b5b]">
                                 {lang === 'vi' ? 'Hình ảnh' : 'Imagen'}
                               </Label>
+                              {currentQuestionImagePreview && (
+                                <div className="mb-2 rounded-sm border border-[#d2d2d2] bg-white p-2">
+                                  <img
+                                    src={currentQuestionImagePreview}
+                                    alt={lang === 'vi' ? 'Xem trước ảnh câu hỏi' : 'Vista previa de imagen'}
+                                    className="h-36 w-full rounded-sm object-contain bg-[#f9f9f9]"
+                                  />
+                                </div>
+                              )}
                               <Input
                                 key={`img-${currentQuestionIndex}`}
                                 type="file"
@@ -2062,18 +2705,67 @@ export default function Admin() {
                     <div className="border border-[#dbe3ee] bg-white rounded-2xl shadow-sm p-4 md:p-5">
                       <h3 className="font-bold text-[#5a1428] mb-3 text-base md:text-lg">
                         {lang === 'vi' ? 'Danh sách đề thi' : 'Lista de exámenes'} (
-                        {adminQuizzes.length})
+                        {filteredAdminQuizzes.length})
                       </h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+                        <div>
+                          <Label className="text-xs text-[#5b5b5b]">
+                            {lang === 'vi' ? 'Loại đề thi' : 'Tipo de examen'}
+                          </Label>
+                          <Select
+                            value={selectedQuizTypeFilter}
+                            onValueChange={setSelectedQuizTypeFilter}
+                          >
+                            <SelectTrigger className="border-[#d2d2d2] bg-white h-9">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="all">
+                                {lang === 'vi' ? 'Tất cả loại đề' : 'Todos los tipos'}
+                              </SelectItem>
+                              {quizTypes.map((typeItem) => (
+                                <SelectItem key={typeItem.id} value={String(typeItem.id)}>
+                                  {getQuizTypeLabel(typeItem)}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div>
+                          <Label className="text-xs text-[#5b5b5b]">
+                            {lang === 'vi' ? 'Tìm kiếm đề thi' : 'Buscar examen'}
+                          </Label>
+                          <Input
+                            value={quizSearch}
+                            onChange={(e) => setQuizSearch(e.target.value)}
+                            placeholder={
+                              lang === 'vi'
+                                ? 'Tìm theo tên đề, loại đề, mã...'
+                                : 'Buscar por título, tipo o código...'
+                            }
+                            className="h-9 border-[#d2d2d2] bg-white"
+                          />
+                        </div>
+                      </div>
                       <div className="space-y-2">
-                        {adminQuizzes.map((item: any) => (
+                        {filteredAdminQuizzes.map((item: any) => (
                           <div
                             key={item.id}
                             className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 border border-[#d2d2d2] bg-white rounded-sm"
                           >
                             <div className="min-w-0">
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <span className="font-bold text-[#5a1428]">{item.code}</span>
-                                <span className="text-xs text-[#5b5b5b]">{item.title_vi}</span>
+                              <div className="font-bold text-[#5a1428]">
+                                {getQuizDisplayTitle(item)}
+                              </div>
+                              <div className="text-xs text-[#5b5b5b] mt-0.5">
+                                {getQuizDisplayDescription(item)}
+                              </div>
+                              <div className="mt-1 flex items-center gap-2 flex-wrap">
+                                <span className="text-xs text-[#5b5b5b]">{item.code}</span>
+                                <span className="text-xs text-[#5b5b5b]">{getQuizTypeDisplayName(item)}</span>
+                                <span className="text-xs text-[#5b5b5b]">
+                                  {item.total_questions} {lang === 'vi' ? 'câu' : 'preg'}
+                                </span>
                                 <span
                                   className={`text-xs px-2 py-0.5 rounded border ${item.is_active ? 'border-green-300 bg-green-50 text-green-700' : 'border-gray-300 bg-gray-100 text-gray-600'}`}
                                 >
@@ -2083,10 +2775,6 @@ export default function Admin() {
                                     <EyeOff className="h-3 w-3 inline" />
                                   )}
                                 </span>
-                              </div>
-                              <div className="text-xs text-[#5b5b5b]">
-                                {item.title_es} | {item.quiz_type} | {item.total_questions}{' '}
-                                {lang === 'vi' ? 'câu' : 'preg'}
                               </div>
                             </div>
                             <div className="flex gap-1">
@@ -2263,19 +2951,331 @@ export default function Admin() {
                                     </SelectContent>
                                   </Select>
                                 </div>
+                                <div className="md:col-span-2 border border-[#d2d2d2] bg-white rounded-sm p-3 space-y-3">
+                                  <div className="text-sm font-semibold text-[#5a1428]">
+                                    {lang === 'vi'
+                                      ? 'Sửa chi tiết câu hỏi, đáp án và ảnh'
+                                      : 'Editar preguntas, respuestas e imagen'}
+                                  </div>
+
+                                  {loadingEditQuizDetail ? (
+                                    <div className="text-xs text-[#5b5b5b]">
+                                      {lang === 'vi'
+                                        ? 'Đang tải chi tiết đề thi...'
+                                        : 'Cargando detalle del examen...'}
+                                    </div>
+                                  ) : (
+                                    <div className="space-y-3">
+                                      {editQuizQuestions.length > 0 && (
+                                        <>
+                                          <div className="flex flex-wrap items-center justify-between gap-2">
+                                            <span className="text-xs text-[#5b5b5b]">
+                                              {lang === 'vi' ? 'Câu' : 'Pregunta'} {currentEditQuestionIndex + 1}/
+                                              {editQuizQuestions.length}
+                                            </span>
+                                            <div className="flex gap-1 flex-wrap">
+                                              <Button
+                                                type="button"
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={onAddEditQuestion}
+                                                className="h-7 border-[#d2d2d2] bg-white px-2 text-xs"
+                                              >
+                                                {lang === 'vi' ? 'Thêm câu' : 'Agregar pregunta'}
+                                              </Button>
+                                              <Button
+                                                type="button"
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() =>
+                                                  setCurrentEditQuestionIndex((prev) => Math.max(0, prev - 1))
+                                                }
+                                                disabled={currentEditQuestionIndex === 0}
+                                                className="h-7 border-[#d2d2d2] bg-white px-2 text-xs"
+                                              >
+                                                {lang === 'vi' ? 'Trước' : 'Prev'}
+                                              </Button>
+                                              <Button
+                                                type="button"
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() =>
+                                                  setCurrentEditQuestionIndex((prev) =>
+                                                    Math.min(editQuizQuestions.length - 1, prev + 1)
+                                                  )
+                                                }
+                                                disabled={currentEditQuestionIndex >= editQuizQuestions.length - 1}
+                                                className="h-7 border-[#d2d2d2] bg-white px-2 text-xs"
+                                              >
+                                                {lang === 'vi' ? 'Sau' : 'Next'}
+                                              </Button>
+                                            </div>
+                                          </div>
+
+                                          <div className="flex flex-wrap gap-1">
+                                            {editQuizQuestions.map((_, idx) => (
+                                              <button
+                                                key={`edit-q-${idx}`}
+                                                type="button"
+                                                onClick={() => setCurrentEditQuestionIndex(idx)}
+                                                className={`h-7 w-7 text-xs font-bold rounded-sm border transition-colors ${idx === currentEditQuestionIndex ? 'border-[#7a2038] bg-[#f5d6df] text-[#6b1b31]' : 'border-[#bcbcbc] bg-white text-[#5f5f5f] hover:bg-[#f0f0f0]'}`}
+                                              >
+                                                {idx + 1}
+                                              </button>
+                                            ))}
+                                          </div>
+                                        </>
+                                      )}
+
+                                      {currentEditQuestion && (
+                                        <div
+                                          key={`edit-question-${currentEditQuestion.id ?? currentEditQuestionIndex}`}
+                                          className="border border-[#d2d2d2] rounded-sm p-3 bg-[#fcfcfc]"
+                                        >
+                                          <div className="text-xs font-bold text-[#7a2038] mb-2">
+                                            {lang === 'vi' ? 'Câu' : 'Pregunta'} {currentEditQuestionIndex + 1}
+                                          </div>
+
+                                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                            <div className="space-y-2">
+                                              <Label className="text-xs text-[#5b5b5b]">VI</Label>
+                                              <Textarea
+                                                value={currentEditQuestion.question_text_vi}
+                                                onChange={(e) =>
+                                                  updateEditQuestionField(
+                                                    currentEditQuestionIndex,
+                                                    'question_text_vi',
+                                                    e.target.value
+                                                  )
+                                                }
+                                                rows={2}
+                                                className="border-[#d2d2d2] bg-white"
+                                              />
+                                              <Textarea
+                                                value={currentEditQuestion.explanation_vi}
+                                                onChange={(e) =>
+                                                  updateEditQuestionField(
+                                                    currentEditQuestionIndex,
+                                                    'explanation_vi',
+                                                    e.target.value
+                                                  )
+                                                }
+                                                rows={2}
+                                                placeholder={
+                                                  lang === 'vi' ? 'Giải thích VI' : 'Explicación VI'
+                                                }
+                                                className="border-[#d2d2d2] bg-white"
+                                              />
+                                            </div>
+
+                                            <div className="space-y-2">
+                                              <Label className="text-xs text-[#5b5b5b]">ES</Label>
+                                              <Textarea
+                                                value={currentEditQuestion.question_text_es}
+                                                onChange={(e) =>
+                                                  updateEditQuestionField(
+                                                    currentEditQuestionIndex,
+                                                    'question_text_es',
+                                                    e.target.value
+                                                  )
+                                                }
+                                                rows={2}
+                                                className="border-[#d2d2d2] bg-white"
+                                              />
+                                              <Textarea
+                                                value={currentEditQuestion.explanation_es}
+                                                onChange={(e) =>
+                                                  updateEditQuestionField(
+                                                    currentEditQuestionIndex,
+                                                    'explanation_es',
+                                                    e.target.value
+                                                  )
+                                                }
+                                                rows={2}
+                                                placeholder={
+                                                  lang === 'vi' ? 'Giải thích ES' : 'Explicación ES'
+                                                }
+                                                className="border-[#d2d2d2] bg-white"
+                                              />
+                                            </div>
+                                          </div>
+
+                                          <div className="mt-3 space-y-2">
+                                            {(currentEditQuestion.answers || []).map(
+                                              (answer: any, answerIndex: number) => (
+                                                <div
+                                                  key={`edit-answer-${currentEditQuestionIndex}-${answer.id ?? answerIndex}`}
+                                                  className="grid grid-cols-1 md:grid-cols-12 gap-2"
+                                                >
+                                                  <div className="md:col-span-1 text-xs font-semibold text-[#7a2038] flex items-center">
+                                                    {String.fromCharCode(65 + answerIndex)}
+                                                  </div>
+                                                  <Input
+                                                    value={answer.answer_text_vi}
+                                                    onChange={(e) =>
+                                                      updateEditAnswerField(
+                                                        currentEditQuestionIndex,
+                                                        answerIndex,
+                                                        'answer_text_vi',
+                                                        e.target.value
+                                                      )
+                                                    }
+                                                    placeholder="VI"
+                                                    className="md:col-span-5 h-9 border-[#d2d2d2] bg-white"
+                                                  />
+                                                  <Input
+                                                    value={answer.answer_text_es}
+                                                    onChange={(e) =>
+                                                      updateEditAnswerField(
+                                                        currentEditQuestionIndex,
+                                                        answerIndex,
+                                                        'answer_text_es',
+                                                        e.target.value
+                                                      )
+                                                    }
+                                                    placeholder="ES"
+                                                    className="md:col-span-5 h-9 border-[#d2d2d2] bg-white"
+                                                  />
+                                                  <div className="md:col-span-1 flex items-center justify-end">
+                                                    <input
+                                                      type="radio"
+                                                      checked={answer.is_correct}
+                                                      onChange={() =>
+                                                        setEditCorrectAnswer(
+                                                          currentEditQuestionIndex,
+                                                          answerIndex
+                                                        )
+                                                      }
+                                                      className="h-4 w-4 accent-[#7a2038]"
+                                                    />
+                                                  </div>
+                                                </div>
+                                              )
+                                            )}
+                                          </div>
+
+                                          <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
+                                            <div>
+                                              <Label className="text-xs text-[#5b5b5b]">
+                                                {lang === 'vi' ? 'Đáp án đúng' : 'Respuesta correcta'}
+                                              </Label>
+                                              <Select
+                                                value={String(
+                                                  ((currentEditQuestion.answers || []).findIndex(
+                                                    (answer: any) => answer.is_correct
+                                                  ) >=
+                                                  0
+                                                    ? (currentEditQuestion.answers || []).findIndex(
+                                                        (answer: any) => answer.is_correct
+                                                      )
+                                                    : 0) + 1
+                                                )}
+                                                onValueChange={(value) =>
+                                                  setEditCorrectAnswer(
+                                                    currentEditQuestionIndex,
+                                                    Number(value) - 1
+                                                  )
+                                                }
+                                              >
+                                                <SelectTrigger className="h-9 border-[#d2d2d2] bg-white">
+                                                  <SelectValue />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                  <SelectItem value="1">A</SelectItem>
+                                                  <SelectItem value="2">B</SelectItem>
+                                                  <SelectItem value="3">C</SelectItem>
+                                                </SelectContent>
+                                              </Select>
+                                            </div>
+
+                                            <div>
+                                              <Label className="text-xs text-[#5b5b5b]">
+                                                {lang === 'vi' ? 'Ảnh câu hỏi' : 'Imagen de pregunta'}
+                                              </Label>
+                                              {currentEditQuestionImagePreview && (
+                                                <div className="mb-2 rounded-sm border border-[#d2d2d2] bg-white p-2">
+                                                  <img
+                                                    src={currentEditQuestionImagePreview}
+                                                    alt={
+                                                      lang === 'vi'
+                                                        ? 'Xem trước ảnh mới'
+                                                        : 'Vista previa de nueva imagen'
+                                                    }
+                                                    className="h-28 w-full rounded-sm object-contain bg-[#f9f9f9]"
+                                                  />
+                                                </div>
+                                              )}
+                                              {currentEditQuestion.image_url && (
+                                                <div className="mb-2 rounded-sm border border-[#d2d2d2] bg-white p-2">
+                                                  <img
+                                                    src={resolveMediaUrl(currentEditQuestion.image_url)}
+                                                    alt={lang === 'vi' ? 'Ảnh câu hỏi' : 'Imagen de pregunta'}
+                                                    className="h-28 w-full rounded-sm object-contain bg-[#f9f9f9]"
+                                                  />
+                                                </div>
+                                              )}
+                                              <Input
+                                                key={`edit-img-${currentEditQuestionIndex}`}
+                                                type="file"
+                                                accept="image/*"
+                                                onChange={(e) =>
+                                                  updateEditQuestionImage(
+                                                    currentEditQuestionIndex,
+                                                    e.target.files?.[0] || null
+                                                  )
+                                                }
+                                                className="h-9 border-[#d2d2d2] bg-white"
+                                              />
+                                              {currentEditQuestionImageFile && (
+                                                <div className="mt-1 text-xs text-[#5b5b5b]">
+                                                  {currentEditQuestionImageFile.name}
+                                                </div>
+                                              )}
+                                              {currentEditQuestion.image_url && (
+                                                <Button
+                                                  type="button"
+                                                  variant="outline"
+                                                  size="sm"
+                                                  onClick={() =>
+                                                    updateEditQuestionField(
+                                                      currentEditQuestionIndex,
+                                                      'image_url',
+                                                      ''
+                                                    )
+                                                  }
+                                                  className="mt-2 h-8 border-[#d2d2d2] bg-white"
+                                                >
+                                                  {lang === 'vi' ? 'Xóa ảnh' : 'Quitar imagen'}
+                                                </Button>
+                                              )}
+                                            </div>
+                                          </div>
+                                        </div>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
                                 <div className="md:col-span-2 flex gap-2">
                                   <Button
                                     size="sm"
                                     onClick={() => onSaveEditQuiz(item)}
                                     className="h-9 bg-[#7a2038] hover:bg-[#5a1428] text-white"
+                                    disabled={loadingEditQuizDetail || savingEditQuizDetail}
                                   >
-                                    {lang === 'vi' ? 'Lưu' : 'Guardar'}
+                                    {savingEditQuizDetail
+                                      ? lang === 'vi'
+                                        ? 'Đang lưu...'
+                                        : 'Guardando...'
+                                      : lang === 'vi'
+                                        ? 'Lưu'
+                                        : 'Guardar'}
                                   </Button>
                                   <Button
                                     size="sm"
                                     variant="outline"
                                     onClick={onCancelEditQuiz}
                                     className="h-9 border-[#d2d2d2] bg-white"
+                                    disabled={savingEditQuizDetail}
                                   >
                                     {lang === 'vi' ? 'Hủy' : 'Cancelar'}
                                   </Button>

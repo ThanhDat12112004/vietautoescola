@@ -117,15 +117,38 @@ async function refreshUserStats(connection, userId) {
     `UPDATE users u
      JOIN (
        SELECT
-         user_id,
-         COALESCE(SUM(score), 0) AS total_score,
+         best.user_id,
+         COALESCE(SUM(best.score), 0) AS total_score,
          COUNT(*) AS total_quizzes,
-         COALESCE(SUM(correct_count), 0) AS total_correct,
-         COALESCE(SUM(total_questions), 0) AS total_questions,
-         COALESCE(AVG(percentage), 0) AS average_percentage
-       FROM user_quiz_attempts
-       WHERE user_id = ? AND status = 'completed'
-       GROUP BY user_id
+         COALESCE(SUM(best.correct_count), 0) AS total_correct,
+         COALESCE(SUM(best.total_questions), 0) AS total_questions,
+         COALESCE(AVG(best.percentage), 0) AS average_percentage
+       FROM (
+         SELECT
+           ranked.user_id,
+           ranked.quiz_id,
+           ranked.score,
+           ranked.correct_count,
+           ranked.total_questions,
+           ranked.percentage
+         FROM (
+           SELECT
+             a.user_id,
+             a.quiz_id,
+             a.score,
+             a.correct_count,
+             a.total_questions,
+             a.percentage,
+             ROW_NUMBER() OVER (
+               PARTITION BY a.quiz_id
+               ORDER BY a.percentage DESC, a.score DESC, COALESCE(a.completed_at, a.started_at) DESC
+             ) AS rn
+           FROM user_quiz_attempts a
+           WHERE a.user_id = ? AND a.status = 'completed'
+         ) ranked
+         WHERE ranked.rn = 1
+       ) best
+       GROUP BY best.user_id
      ) t ON t.user_id = u.id
      SET u.total_score = t.total_score,
          u.total_quizzes = t.total_quizzes,
@@ -133,6 +156,22 @@ async function refreshUserStats(connection, userId) {
          u.total_questions = t.total_questions,
          u.average_percentage = t.average_percentage
      WHERE u.id = ?`,
+    [userId, userId]
+  );
+
+  await connection.execute(
+    `UPDATE users
+     SET total_score = 0,
+         total_quizzes = 0,
+         total_correct = 0,
+         total_questions = 0,
+         average_percentage = 0
+     WHERE id = ?
+       AND NOT EXISTS (
+         SELECT 1
+         FROM user_quiz_attempts a
+         WHERE a.user_id = ? AND a.status = 'completed'
+       )`,
     [userId, userId]
   );
 }

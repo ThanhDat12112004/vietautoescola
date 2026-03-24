@@ -1,10 +1,10 @@
 const express = require('express');
 const quizController = require('../../controllers/quiz.controller');
-const { authRequired, requireRoles } = require('../../middleware/auth.middleware');
+const { authRequired, authOptional, requireRoles } = require('../../middleware/auth.middleware');
 
 const router = express.Router();
 
-router.get('/quizzes', quizController.listQuizzes);
+router.get('/quizzes', authOptional, quizController.listQuizzes);
 router.get('/categories', quizController.listCategories);
 router.get('/types', quizController.listTypes);
 router.get('/quizzes/:id', quizController.getQuizDetail);
@@ -38,7 +38,19 @@ router.delete(
   quizController.deleteCategory
 );
 router.get('/admin/quizzes', authRequired, requireRoles('admin'), quizController.listAdminQuizzes);
+router.get(
+  '/admin/quizzes/:id/detail',
+  authRequired,
+  requireRoles('admin'),
+  quizController.getAdminQuizDetail
+);
 router.patch('/admin/quizzes/:id', authRequired, requireRoles('admin'), quizController.updateQuiz);
+router.patch(
+  '/admin/quizzes/:id/detail',
+  authRequired,
+  requireRoles('admin'),
+  quizController.updateQuizDetail
+);
 router.delete('/admin/quizzes/:id', authRequired, requireRoles('admin'), quizController.deleteQuiz);
 
 module.exports = router;
