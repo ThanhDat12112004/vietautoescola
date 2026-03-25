@@ -51,9 +51,14 @@ async function saveImageFile(file) {
   return saveFile(file, path.join('questions', String(year)), 'jpg');
 }
 
+async function saveAvatarFile(file) {
+  const year = new Date().getFullYear();
+  return saveFile(file, path.join('avatars', String(year)), 'jpg');
+}
+
 async function saveMaterialFile(file, langCode) {
   const year = new Date().getFullYear();
   return saveFile(file, path.join('materials', langCode, String(year)), 'pdf');
 }
 
-module.exports = { saveImageFile, saveMaterialFile };
+module.exports = { saveImageFile, saveAvatarFile, saveMaterialFile };

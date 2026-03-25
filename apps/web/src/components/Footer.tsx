@@ -28,10 +28,8 @@ const Footer = () => {
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap');
-
         .ft-root {
-          font-family: 'DM Sans', sans-serif;
+          font-family: 'Manrope', sans-serif;
           background: #fff8f9;
           color: #67434a;
           border-top: 1px solid rgba(139, 30, 45, 0.2);
@@ -134,7 +132,7 @@ const Footer = () => {
         }
 
         .ft-col-title {
-          font-family: 'DM Serif Display', serif;
+          font-family: 'Sora', sans-serif;
           font-size: 18px;
           color: #2f171b;
           letter-spacing: 0.01em;

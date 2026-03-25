@@ -1,4 +1,4 @@
-const { saveImageFile, saveMaterialFile } = require('./storage.service');
+const { saveImageFile, saveAvatarFile, saveMaterialFile } = require('./storage.service');
 
 const allowedMaterialMimeTypes = new Set([
   'application/pdf',
@@ -19,6 +19,17 @@ async function uploadQuestionImage(file) {
   }
 
   const uploaded = await saveImageFile(file);
+  return { key: uploaded.key, cdn_url: uploaded.cdnUrl, size: uploaded.size };
+}
+
+async function uploadAvatarImage(file) {
+  if (!file) {
+    const appError = new Error("File is required with field name 'image'");
+    appError.status = 400;
+    throw appError;
+  }
+
+  const uploaded = await saveAvatarFile(file);
   return { key: uploaded.key, cdn_url: uploaded.cdnUrl, size: uploaded.size };
 }
 
@@ -45,4 +56,4 @@ async function uploadMaterialFile(file, langCode) {
   return { key: uploaded.key, cdn_url: uploaded.cdnUrl, size: uploaded.size };
 }
 
-module.exports = { uploadQuestionImage, uploadMaterialFile };
+module.exports = { uploadQuestionImage, uploadAvatarImage, uploadMaterialFile };

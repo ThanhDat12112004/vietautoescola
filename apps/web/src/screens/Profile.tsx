@@ -111,7 +111,7 @@ const Profile = () => {
 
   if (loading) {
     return (
-      <div className="app-page min-h-screen flex flex-col bg-[radial-gradient(circle_at_15%_20%,rgba(255,214,224,0.45),transparent_42%),radial-gradient(circle_at_85%_10%,rgba(255,228,171,0.45),transparent_35%),linear-gradient(180deg,#f9edf1_0%,#f4f7ff_55%,#f7eef5_100%)]">
+      <div className="app-page min-h-screen flex flex-col bg-[radial-gradient(circle_at_12%_18%,rgba(255,206,220,0.52),transparent_40%),radial-gradient(circle_at_86%_8%,rgba(255,224,160,0.48),transparent_32%),linear-gradient(180deg,#f9edf1_0%,#f4f7ff_58%,#f8eff6_100%)]">
         <Navbar />
         <div className="px-2 md:px-4 py-4 flex-1">
           <div className="container section-panel py-5 md:py-6">
@@ -125,7 +125,7 @@ const Profile = () => {
 
   if (!dashboard) {
     return (
-      <div className="app-page min-h-screen flex flex-col bg-[radial-gradient(circle_at_15%_20%,rgba(255,214,224,0.45),transparent_42%),radial-gradient(circle_at_85%_10%,rgba(255,228,171,0.45),transparent_35%),linear-gradient(180deg,#f9edf1_0%,#f4f7ff_55%,#f7eef5_100%)]">
+      <div className="app-page min-h-screen flex flex-col bg-[radial-gradient(circle_at_12%_18%,rgba(255,206,220,0.52),transparent_40%),radial-gradient(circle_at_86%_8%,rgba(255,224,160,0.48),transparent_32%),linear-gradient(180deg,#f9edf1_0%,#f4f7ff_58%,#f8eff6_100%)]">
         <Navbar />
         <div className="px-2 md:px-4 py-4 flex-1">
           <div className="container section-panel py-5 md:py-6">
@@ -324,7 +324,7 @@ const Profile = () => {
   };
 
   return (
-    <div className="app-page min-h-screen flex flex-col bg-[radial-gradient(circle_at_15%_20%,rgba(255,214,224,0.45),transparent_42%),radial-gradient(circle_at_85%_10%,rgba(255,228,171,0.45),transparent_35%),linear-gradient(180deg,#f9edf1_0%,#f4f7ff_55%,#f7eef5_100%)]">
+    <div className="app-page min-h-screen flex flex-col bg-[radial-gradient(circle_at_12%_18%,rgba(255,206,220,0.52),transparent_40%),radial-gradient(circle_at_86%_8%,rgba(255,224,160,0.48),transparent_32%),linear-gradient(180deg,#f9edf1_0%,#f4f7ff_58%,#f8eff6_100%)]">
       <Navbar />
 
       <div className="px-2 md:px-4 pt-3 md:pt-4">
@@ -420,16 +420,16 @@ const Profile = () => {
           {error && <p className="text-sm text-destructive mb-3">{error}</p>}
 
           <Tabs defaultValue="info" className="w-full">
-            <TabsList className="mb-4 bg-card border border-border w-full sm:w-auto grid grid-cols-3 sm:inline-flex">
-              <TabsTrigger value="info" className="gap-1 text-xs">
+            <TabsList className="mb-4 w-full grid grid-cols-3 rounded-xl border border-[#7a2038]/15 bg-white/70 p-1 shadow-[0_8px_20px_rgba(95,20,40,0.06)] sm:w-auto sm:inline-flex">
+              <TabsTrigger value="info" className="gap-1 rounded-lg text-xs data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm">
                 <User className="h-3.5 w-3.5" />
                 <span className="hidden sm:inline">{t('Thông tin', 'Info')}</span>
               </TabsTrigger>
-              <TabsTrigger value="history" className="gap-1 text-xs">
+              <TabsTrigger value="history" className="gap-1 rounded-lg text-xs data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm">
                 <Clock className="h-3.5 w-3.5" />
                 <span className="hidden sm:inline">{t('Lịch sử', 'Historial')}</span>
               </TabsTrigger>
-              <TabsTrigger value="ranking" className="gap-1 text-xs">
+              <TabsTrigger value="ranking" className="gap-1 rounded-lg text-xs data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm">
                 <Trophy className="h-3.5 w-3.5" />
                 <span className="hidden sm:inline">{t('Xếp hạng', 'Ranking')}</span>
               </TabsTrigger>
@@ -438,7 +438,7 @@ const Profile = () => {
             <TabsContent value="info">
               <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
                 <div className="grid gap-4 md:grid-cols-2">
-                  <Card className="border-border/50">
+                  <Card className="border-border/40 bg-white/72 shadow-[0_10px_24px_rgba(95,20,40,0.08)]">
                     <CardHeader className="pb-2 px-4 pt-4 flex items-center justify-between gap-2">
                       <h3 className="font-display font-bold text-sm">
                         {t('Chỉnh sửa tài khoản', 'Editar cuenta')}
@@ -493,7 +493,7 @@ const Profile = () => {
                           )}
                         </form>
 
-                        <div className="rounded-md border border-border/70 bg-muted/30 px-3 py-2 text-sm">
+                        <div className="rounded-xl border border-[#7a2038]/15 bg-white/75 px-3 py-2 text-sm shadow-[inset_0_1px_0_rgba(255,255,255,0.4)]">
                           <p>
                             <span className="text-muted-foreground">Username: </span>
                             <span className="font-medium">{stats.username}</span>
@@ -563,7 +563,7 @@ const Profile = () => {
                     </CardContent>
                   </Card>
 
-                  <Card className="border-border/50">
+                  <Card className="border-border/40 bg-white/72 shadow-[0_10px_24px_rgba(95,20,40,0.08)]">
                     <CardHeader className="pb-2 px-4 pt-4">
                       <h3 className="font-display font-bold text-sm">
                         {t('Thống kê học tập', 'Estadísticas')}
@@ -593,7 +593,7 @@ const Profile = () => {
                             icon: Medal,
                           },
                         ].map((item, i) => (
-                          <div key={i} className="bg-muted rounded-lg p-3 flex items-center gap-2">
+                          <div key={i} className="rounded-xl border border-[#7a2038]/12 bg-white/80 p-3 shadow-[0_6px_14px_rgba(95,20,40,0.06)] flex items-center gap-2">
                             <item.icon className="h-4 w-4 text-primary shrink-0" />
                             <div>
                               <div className="text-[10px] text-muted-foreground">{item.label}</div>
@@ -623,12 +623,12 @@ const Profile = () => {
 
             <TabsContent value="history">
               <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-                <Card className="border-border/50">
+                <Card className="border-border/40 bg-white/74 shadow-[0_10px_24px_rgba(95,20,40,0.08)]">
                   <CardContent className="p-0">
                     <div className="overflow-x-auto">
                       <table className="w-full text-sm">
                         <thead>
-                          <tr className="border-b border-border bg-muted/50">
+                          <tr className="border-b border-border/60 bg-[#f8f1f4]/70">
                             <th className="px-4 py-2.5 text-left font-semibold text-xs">
                               {t('Bài thi', 'Examen')}
                             </th>
@@ -650,7 +650,7 @@ const Profile = () => {
                           {attempts.map((attempt) => (
                             <tr
                               key={attempt.id}
-                              className="border-b border-border/50 hover:bg-muted/30"
+                              className="border-b border-border/40 transition-colors hover:bg-[#f8f1f4]/65"
                             >
                               <td className="px-4 py-2.5 flex items-center gap-2">
                                 <BookOpen className="h-3.5 w-3.5 text-primary shrink-0" />
@@ -705,7 +705,7 @@ const Profile = () => {
 
             <TabsContent value="ranking">
               <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-                <Card className="border-border/50">
+                <Card className="border-border/40 bg-white/74 shadow-[0_10px_24px_rgba(95,20,40,0.08)]">
                   <CardHeader className="pb-2 px-4 pt-4">
                     <h3 className="font-display font-bold text-sm">
                       {t('Vị trí của bạn', 'Tu posición')}
@@ -723,8 +723,8 @@ const Profile = () => {
                         <div
                           key={user.id}
                           className={`flex items-center gap-3 px-4 py-3 ${
-                            i !== leaderboard.length - 1 ? 'border-b border-border/50' : ''
-                          } ${isMe ? 'bg-primary/5 border-l-3 border-l-primary' : ''}`}
+                            i !== leaderboard.length - 1 ? 'border-b border-border/40' : ''
+                          } ${isMe ? 'bg-primary/5 border-l-[3px] border-l-primary' : ''}`}
                         >
                           <div
                             className={`flex h-7 w-7 items-center justify-center rounded-full font-display font-bold text-xs ${
@@ -743,7 +743,7 @@ const Profile = () => {
                             <div className="font-medium text-xs truncate">
                               {user.full_name}
                               {isMe && (
-                                <span className="ml-1.5 text-[10px] bg-primary text-primary-foreground px-1 py-0.5 rounded">
+                                <span className="ml-1.5 rounded-md bg-primary px-1.5 py-0.5 text-[10px] text-primary-foreground">
                                   {t('Bạn', 'Tú')}
                                 </span>
                               )}

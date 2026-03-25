@@ -13,6 +13,15 @@ async function uploadImage(req, res, next) {
   }
 }
 
+async function uploadAvatar(req, res, next) {
+  try {
+    const result = await mediaService.uploadAvatarImage(req.file);
+    return res.status(201).json(result);
+  } catch (error) {
+    return next(error);
+  }
+}
+
 async function uploadMaterial(req, res, next) {
   try {
     const langCode = req.body?.lang_code;
@@ -23,4 +32,4 @@ async function uploadMaterial(req, res, next) {
   }
 }
 
-module.exports = { health, uploadImage, uploadMaterial };
+module.exports = { health, uploadImage, uploadAvatar, uploadMaterial };

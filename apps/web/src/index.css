@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Montserrat:wght@500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Sora:wght@500;600;700;800&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -114,6 +114,7 @@
     position: relative;
     min-height: 100vh;
     overflow-x: hidden;
+    letter-spacing: 0.002em;
   }
 
   body::before {
@@ -125,8 +126,8 @@
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
-    filter: blur(10px);
-    transform: scale(1.06);
+    filter: blur(8px);
+    transform: scale(1.04);
     pointer-events: none;
   }
 
@@ -135,7 +136,7 @@
     position: fixed;
     inset: 0;
     z-index: -1;
-    background: rgba(248, 251, 255, 0.72);
+    background: linear-gradient(180deg, rgba(249, 251, 255, 0.68) 0%, rgba(255, 245, 248, 0.7) 100%);
     pointer-events: none;
   }
 
@@ -159,7 +160,13 @@
   h4,
   h5,
   h6 {
-    font-family: 'Montserrat', sans-serif;
+    font-family: 'Sora', sans-serif;
+    letter-spacing: -0.015em;
+  }
+
+  ::selection {
+    background: rgba(139, 30, 45, 0.16);
+    color: hsl(var(--foreground));
   }
 }
 
@@ -262,5 +269,11 @@
       inset 0 1px 0 rgba(255, 255, 255, 0.8);
     backdrop-filter: blur(8px);
     border-radius: 1rem;
+  }
+
+  .surface-soft {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(255, 249, 251, 0.88));
+    border: 1px solid rgba(139, 30, 45, 0.14);
+    box-shadow: 0 12px 30px rgba(95, 20, 40, 0.1);
   }
 }

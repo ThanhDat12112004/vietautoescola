@@ -64,25 +64,31 @@ const Leaderboard = () => {
   const podiumIndexes = [1, 0, 2].filter((idx) => idx < ranked.length);
 
   return (
-    <div className="app-page min-h-screen flex flex-col bg-[radial-gradient(circle_at_15%_20%,rgba(255,214,224,0.45),transparent_42%),radial-gradient(circle_at_85%_10%,rgba(255,228,171,0.45),transparent_35%),linear-gradient(180deg,#f9edf1_0%,#f4f7ff_55%,#f7eef5_100%)]">
+    <div className="app-page relative min-h-screen overflow-x-clip flex flex-col bg-[radial-gradient(circle_at_12%_18%,rgba(255,206,220,0.52),transparent_40%),radial-gradient(circle_at_86%_8%,rgba(255,224,160,0.48),transparent_32%),linear-gradient(180deg,#f9edf1_0%,#f4f7ff_58%,#f8eff6_100%)]">
       <Navbar />
-      <div className="px-2 py-4 md:px-4 md:py-6">
-        <div className="container section-panel">
-        <div>
-          <div className="flex items-center gap-3 mb-2">
-            <Trophy className="h-8 w-8 text-gold" />
-            <h1 className="font-display text-3xl md:text-4xl font-800 text-[#64172f]">
-              {t('Bảng xếp hạng', 'Clasificación')}
-            </h1>
+
+      <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 left-0 hidden xl:block w-[86px] border-r border-white/35 bg-[linear-gradient(180deg,rgba(82,96,113,0.22)_0%,rgba(102,119,138,0.18)_45%,rgba(82,96,113,0.20)_100%)]" />
+      <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 right-0 hidden xl:block w-[86px] border-l border-white/35 bg-[linear-gradient(180deg,rgba(82,96,113,0.22)_0%,rgba(102,119,138,0.18)_45%,rgba(82,96,113,0.20)_100%)]" />
+      <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 left-[42px] hidden xl:block border-l-2 border-dashed border-white/65" />
+      <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 right-[42px] hidden xl:block border-l-2 border-dashed border-white/65" />
+
+      <div className="relative z-10 px-2 py-4 md:px-4 md:py-6">
+        <div className="mx-auto w-full max-w-[1500px] section-panel">
+          <div>
+            <div className="flex items-center gap-3 mb-2">
+              <Trophy className="h-8 w-8 text-gold" />
+              <h1 className="font-display text-3xl md:text-4xl font-800 text-[#64172f]">
+                {t('Bảng xếp hạng', 'Clasificación')}
+              </h1>
+            </div>
+            <p className="text-muted-foreground">
+              {t('Top học viên có điểm số cao nhất', 'Los estudiantes con mejor puntuación')}
+            </p>
           </div>
-          <p className="text-muted-foreground">
-            {t('Top học viên có điểm số cao nhất', 'Los estudiantes con mejor puntuación')}
-          </p>
-        </div>
         </div>
       </div>
 
-      <div className="container py-10 flex-1">
+      <div className="relative z-10 mx-auto w-full max-w-[1500px] py-8 md:py-10 px-2 md:px-4 flex-1">
         {loading && (
           <p className="text-sm text-muted-foreground">{t('Đang tải...', 'Cargando...')}</p>
         )}
@@ -90,7 +96,7 @@ const Leaderboard = () => {
 
         {!loading && !error && ranked.length > 0 && (
           <>
-            <div className="grid grid-cols-3 gap-4 mb-10 max-w-lg mx-auto">
+            <div className="grid grid-cols-3 gap-4 mb-10 max-w-2xl mx-auto">
               {podiumIndexes.map((idx) => {
                 const user = ranked[idx];
                 const isFirst = idx === 0;
@@ -101,10 +107,10 @@ const Leaderboard = () => {
                     initial="hidden"
                     animate="visible"
                     variants={fadeUp}
-                    className={`text-center ${isFirst ? '-mt-4' : 'mt-4'}`}
+                    className={`text-center ${isFirst ? '-mt-5' : 'mt-4'}`}
                   >
                     <div
-                      className={`mx-auto flex h-16 w-16 items-center justify-center rounded-full mb-2 ${
+                      className={`mx-auto flex h-16 w-16 items-center justify-center rounded-full mb-2 shadow-[0_8px_20px_rgba(95,20,40,0.12)] ${
                         idx === 0
                           ? 'bg-gold/20 ring-4 ring-gold'
                           : idx === 1
@@ -144,8 +150,8 @@ const Leaderboard = () => {
                             : 'text-secondary'
                       }`}
                     />
-                    <p className="font-display font-bold text-sm truncate">{getDisplayName(user)}</p>
-                    <p className="font-display font-900 text-primary text-lg">
+                    <p className="font-display font-semibold text-sm truncate">{getDisplayName(user)}</p>
+                    <p className="font-display font-bold text-primary text-xl">
                       {Number(user.total_score || 0).toFixed(1)}
                     </p>
                   </motion.div>
@@ -153,7 +159,7 @@ const Leaderboard = () => {
               })}
             </div>
 
-            <Card className="max-w-2xl mx-auto border border-primary/20 bg-[linear-gradient(160deg,rgba(255,255,255,0.96)_0%,rgba(255,247,250,0.86)_50%,rgba(255,249,235,0.76)_100%)] shadow-[0_12px_30px_rgba(95,20,40,0.12)]">
+            <Card className="mx-auto max-w-5xl border border-primary/20 bg-[linear-gradient(160deg,rgba(255,255,255,0.96)_0%,rgba(255,247,250,0.88)_55%,rgba(255,249,235,0.78)_100%)] shadow-[0_16px_36px_rgba(95,20,40,0.16)]">
               <CardContent className="p-0">
                 {ranked.map((user, i) => (
                   <motion.div
@@ -162,9 +168,9 @@ const Leaderboard = () => {
                     initial="hidden"
                     animate="visible"
                     variants={fadeUp}
-                    className={`flex items-center gap-4 px-5 py-4 ${
-                      i !== ranked.length - 1 ? 'border-b border-border/50' : ''
-                    } ${i < 3 ? 'bg-gold/5' : ''}`}
+                    className={`flex items-center gap-4 px-5 py-4 transition-colors ${
+                      i !== ranked.length - 1 ? 'border-b border-border/40' : ''
+                    } ${i < 3 ? 'bg-gold/10' : 'hover:bg-primary/6'}`}
                   >
                     <div
                       className={`flex h-9 w-9 items-center justify-center rounded-full font-display font-bold text-sm ${
@@ -179,7 +185,7 @@ const Leaderboard = () => {
                     >
                       {i < 3 ? <Medal className="h-4 w-4" /> : user.rank}
                     </div>
-                    <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-primary/10">
+                    <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border border-primary/10 bg-primary/10">
                       {getAvatarSrc(user) ? (
                         <img
                           src={getAvatarSrc(user) || ''}
@@ -196,7 +202,7 @@ const Leaderboard = () => {
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="font-medium truncate">{getDisplayName(user)}</div>
+                      <div className="font-semibold truncate">{getDisplayName(user)}</div>
                       <div className="text-xs text-muted-foreground">
                         {user.total_quizzes} {t('bài thi đã hoàn thành', 'exámenes completados')}
                       </div>

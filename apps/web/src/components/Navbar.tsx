@@ -85,14 +85,12 @@ const Navbar = () => {
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap');
-
         .navbar-root {
-          font-family: 'DM Sans', sans-serif;
+          font-family: 'Manrope', sans-serif;
         }
 
         .navbar-logo-text {
-          font-family: 'DM Serif Display', serif;
+          font-family: 'Sora', sans-serif;
         }
 
         .nav-link-pill {
@@ -105,7 +103,7 @@ const Navbar = () => {
           bottom: -2px;
           left: 50%;
           transform: translateX(-50%) scaleX(0);
-          width: 20px;
+          width: 24px;
           height: 2px;
           border-radius: 99px;
           background: var(--nav-accent, #8b1e2d);
@@ -134,7 +132,7 @@ const Navbar = () => {
         }
 
         .mobile-nav-item {
-          transition: background 0.18s, transform 0.18s;
+          transition: background 0.18s, transform 0.18s, border-color 0.18s;
         }
 
         .mobile-nav-item:hover {
@@ -142,7 +140,7 @@ const Navbar = () => {
         }
 
         .mobile-nav-item.active {
-          background: linear-gradient(90deg, rgba(139, 30, 45, 0.12) 0%, transparent 100%);
+          background: linear-gradient(90deg, rgba(139, 30, 45, 0.14) 0%, transparent 100%);
           border-left: 3px solid #8b1e2d;
         }
 
@@ -159,13 +157,13 @@ const Navbar = () => {
         className="navbar-root sticky top-0 z-50"
         style={
           {
-            background: scrolled ? 'rgba(255,250,250,0.96)' : 'rgba(255,252,252,0.9)',
+            background: scrolled ? 'rgba(255,250,250,0.96)' : 'rgba(255,252,252,0.88)',
             backdropFilter: 'blur(14px)',
             borderBottom: scrolled
               ? '1px solid rgba(139,30,45,0.2)'
               : '1px solid rgba(139,30,45,0.08)',
             transition: 'background 0.3s, border-color 0.3s, box-shadow 0.3s',
-            boxShadow: scrolled ? '0 8px 28px rgba(139,30,45,0.12)' : 'none',
+            boxShadow: scrolled ? '0 10px 28px rgba(139,30,45,0.14)' : 'none',
             '--nav-accent': '#8b1e2d',
           } as React.CSSProperties
         }
@@ -174,7 +172,7 @@ const Navbar = () => {
           style={{
             width: '100%',
             padding: '0 clamp(12px, 2.8vw, 32px)',
-            height: 72,
+            height: 74,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
@@ -206,9 +204,9 @@ const Navbar = () => {
                   to={item.path}
                   className={`nav-link-pill${active ? ' active' : ''}`}
                   style={{
-                    padding: '16px 16px',
-                    borderRadius: 8,
-                    fontSize: 20,
+                    padding: '14px 14px',
+                    borderRadius: 10,
+                    fontSize: 17,
                     fontWeight: active ? 800 : 700,
                     letterSpacing: '0.01em',
                     color: active ? '#8b1e2d' : '#6b4a4f',
@@ -323,12 +321,12 @@ const Navbar = () => {
                     </div>
                     <span
                       style={{
-                        maxWidth: 120,
+                        maxWidth: 132,
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',
                         whiteSpace: 'nowrap',
-                        fontSize: 14,
-                        fontWeight: 600,
+                        fontSize: 13,
+                        fontWeight: 700,
                         color: '#2f171b',
                         lineHeight: 1.1,
                       }}
@@ -431,7 +429,7 @@ const Navbar = () => {
                 <Link to="/login" style={{ textDecoration: 'none' }}>
                   <button
                     style={{
-                      padding: '7px 16px',
+                      padding: '8px 16px',
                       borderRadius: 8,
                       border: '1px solid rgba(139,30,45,0.35)',
                       background: 'transparent',
@@ -457,7 +455,7 @@ const Navbar = () => {
                 <Link to="/register" style={{ textDecoration: 'none' }}>
                   <button
                     style={{
-                      padding: '7px 16px',
+                      padding: '8px 16px',
                       borderRadius: 8,
                       border: '1px solid #8b1e2d',
                       background: 'linear-gradient(135deg, #8b1e2d 0%, #b63b4f 100%)',
