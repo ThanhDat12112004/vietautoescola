@@ -120,6 +120,39 @@ const QuizTake = () => {
     return () => clearInterval(interval);
   }, [loading, showResult, showReview]);
 
+  useEffect(() => {
+    if (loading || showResult || showReview) return;
+
+    const blockEvent = (event: Event) => {
+      event.preventDefault();
+    };
+
+    const blockKeyboardShortcut = (event: KeyboardEvent) => {
+      if (!(event.ctrlKey || event.metaKey)) return;
+
+      const key = event.key.toLowerCase();
+      if (key === 'c' || key === 'x' || key === 'a' || key === 'p') {
+        event.preventDefault();
+      }
+    };
+
+    document.addEventListener('copy', blockEvent);
+    document.addEventListener('cut', blockEvent);
+    document.addEventListener('contextmenu', blockEvent);
+    document.addEventListener('selectstart', blockEvent);
+    document.addEventListener('dragstart', blockEvent);
+    document.addEventListener('keydown', blockKeyboardShortcut);
+
+    return () => {
+      document.removeEventListener('copy', blockEvent);
+      document.removeEventListener('cut', blockEvent);
+      document.removeEventListener('contextmenu', blockEvent);
+      document.removeEventListener('selectstart', blockEvent);
+      document.removeEventListener('dragstart', blockEvent);
+      document.removeEventListener('keydown', blockKeyboardShortcut);
+    };
+  }, [loading, showResult, showReview]);
+
   const questions = quiz?.questions || [];
   const question = questions[currentIndex];
   const selectedId = question ? selectedAnswers[question.id] : undefined;
@@ -372,7 +405,7 @@ const QuizTake = () => {
 
   return (
     <div
-      className="min-h-screen md:h-screen flex flex-col overflow-y-auto md:overflow-hidden bg-[radial-gradient(circle_at_12%_18%,rgba(255,206,220,0.52),transparent_40%),radial-gradient(circle_at_88%_8%,rgba(255,226,165,0.5),transparent_32%),linear-gradient(180deg,#f9edf1_0%,#f4f7ff_58%,#f8eff6_100%)]
+      className="min-h-screen md:h-screen flex flex-col overflow-y-auto md:overflow-hidden print:hidden select-none bg-[radial-gradient(circle_at_12%_18%,rgba(255,206,220,0.52),transparent_40%),radial-gradient(circle_at_88%_8%,rgba(255,226,165,0.5),transparent_32%),linear-gradient(180deg,#f9edf1_0%,#f4f7ff_58%,#f8eff6_100%)]
                    p-0"
     >
       <div

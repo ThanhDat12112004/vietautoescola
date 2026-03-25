@@ -2,7 +2,7 @@ const pool = require('../config/db');
 
 async function findUserSessionById(userId) {
   const [rows] = await pool.execute(
-    'SELECT id, is_active, current_session_id FROM users WHERE id = ? LIMIT 1',
+    'SELECT id, role, is_active, current_session_id FROM users WHERE id = ? LIMIT 1',
     [userId]
   );
 

@@ -13,11 +13,12 @@ import { Lock, Mail } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
-const toBilingual = (vi: string, es: string) => `${vi} / ${es}`;
-
-const getLoginErrorMessage = (error: unknown) => {
+const getLoginErrorMessage = (
+  error: unknown,
+  t: (vi: string, es: string) => string
+) => {
   if (!(error instanceof Error) || !error.message) {
-    return toBilingual('Có lỗi xảy ra, vui lòng thử lại.', 'Ha ocurrido un error, inténtalo de nuevo.');
+    return t('Có lỗi xảy ra, vui lòng thử lại.', 'Ha ocurrido un error, inténtalo de nuevo.');
   }
 
   const raw = error.message;
@@ -29,17 +30,24 @@ const getLoginErrorMessage = (error: unknown) => {
     message.includes('incorrect') ||
     message.includes('password')
   ) {
-    return toBilingual(
+    return t(
       'Email hoặc mật khẩu không đúng.',
       'El correo o la contraseña no son correctos.'
     );
   }
 
-  if (message.includes('network') || message.includes('fetch') || message.includes('timeout')) {
-    return toBilingual('Không kết nối được máy chủ.', 'No se pudo conectar con el servidor.');
+  if (message.includes('already logged in on another device')) {
+    return t(
+      'Tài khoản đang đăng nhập trên thiết bị khác. Hãy đăng xuất ở thiết bị đó trước.',
+      'La cuenta está activa en otro dispositivo. Cierra sesión allí primero.'
+    );
   }
 
-  return toBilingual(`Lỗi: ${raw}`, `Error: ${raw}`);
+  if (message.includes('network') || message.includes('fetch') || message.includes('timeout')) {
+    return t('Không kết nối được máy chủ.', 'No se pudo conectar con el servidor.');
+  }
+
+  return t(`Lỗi: ${raw}`, `Error: ${raw}`);
 };
 
 const Login = () => {
@@ -49,34 +57,27 @@ const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formError, setFormError] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     const emailValue = email.trim();
     const passwordValue = password.trim();
+    setFormError('');
 
     if (!emailValue || !passwordValue) {
-      toast({
-        title: toBilingual('Thiếu thông tin đăng nhập', 'Faltan datos de acceso'),
-        description: toBilingual(
+      setFormError(
+        t(
           'Vui lòng nhập đầy đủ email và mật khẩu.',
           'Introduce el correo y la contraseña completos.'
-        ),
-        variant: 'destructive',
-      });
+        )
+      );
       return;
     }
 
     if (!/^\S+@\S+\.\S+$/.test(emailValue)) {
-      toast({
-        title: toBilingual('Email chưa đúng định dạng', 'Formato de correo no válido'),
-        description: toBilingual(
-          'Ví dụ đúng: name@example.com',
-          'Ejemplo correcto: name@example.com'
-        ),
-        variant: 'destructive',
-      });
+      setFormError(t('Email chưa đúng định dạng.', 'Formato de correo no valido.'));
       return;
     }
 
@@ -86,19 +87,15 @@ const Login = () => {
       const result = await login({ email: emailValue, password: passwordValue });
       saveAuth(result.token, result.user);
       toast({
-        title: toBilingual('Đăng nhập thành công', 'Inicio de sesión exitoso'),
-        description: toBilingual(
+        title: t('Đăng nhập thành công', 'Inicio de sesion exitoso'),
+        description: t(
           'Chào mừng quay lại, đang chuyển đến trang bài thi.',
           'Bienvenido de nuevo, redirigiendo a la página de exámenes.'
         ),
       });
       navigate((result.user?.role || '').toLowerCase() === 'admin' ? '/admin' : '/quizzes');
     } catch (error) {
-      toast({
-        title: toBilingual('Đăng nhập thất bại', 'Error de inicio de sesión'),
-        description: getLoginErrorMessage(error),
-        variant: 'destructive',
-      });
+      setFormError(getLoginErrorMessage(error, t));
     } finally {
       setIsSubmitting(false);
     }
@@ -120,6 +117,11 @@ const Login = () => {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
+              {formError && (
+                <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-700">
+                  {formError}
+                </div>
+              )}
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
                 <div className="relative">

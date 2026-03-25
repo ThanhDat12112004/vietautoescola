@@ -12,36 +12,37 @@ import { Lock, Mail, User } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
-const toBilingual = (vi: string, es: string) => `${vi} / ${es}`;
-
-const getRegisterErrorMessage = (error: unknown) => {
+const getRegisterErrorMessage = (
+  error: unknown,
+  t: (vi: string, es: string) => string
+) => {
   if (!(error instanceof Error) || !error.message) {
-    return toBilingual('Có lỗi xảy ra, vui lòng thử lại.', 'Ha ocurrido un error, inténtalo de nuevo.');
+    return t('Có lỗi xảy ra, vui lòng thử lại.', 'Ha ocurrido un error, inténtalo de nuevo.');
   }
 
   const raw = error.message;
   const message = raw.toLowerCase();
 
   if (message.includes('email') && (message.includes('exist') || message.includes('duplicate'))) {
-    return toBilingual('Email đã được sử dụng.', 'El correo ya está en uso.');
+    return t('Email đã được sử dụng.', 'El correo ya está en uso.');
   }
 
   if (
     (message.includes('username') || message.includes('user name')) &&
     (message.includes('exist') || message.includes('duplicate'))
   ) {
-    return toBilingual('Tên đăng nhập đã tồn tại.', 'El nombre de usuario ya existe.');
+    return t('Tên đăng nhập đã tồn tại.', 'El nombre de usuario ya existe.');
   }
 
   if (message.includes('password') && (message.includes('weak') || message.includes('short'))) {
-    return toBilingual('Mật khẩu còn yếu hoặc quá ngắn.', 'La contraseña es débil o demasiado corta.');
+    return t('Mật khẩu còn yếu hoặc quá ngắn.', 'La contraseña es debil o demasiado corta.');
   }
 
   if (message.includes('network') || message.includes('fetch') || message.includes('timeout')) {
-    return toBilingual('Không kết nối được máy chủ.', 'No se pudo conectar con el servidor.');
+    return t('Không kết nối được máy chủ.', 'No se pudo conectar con el servidor.');
   }
 
-  return toBilingual(`Lỗi: ${raw}`, `Error: ${raw}`);
+  return t(`Lỗi: ${raw}`, `Error: ${raw}`);
 };
 
 const Register = () => {
@@ -50,6 +51,7 @@ const Register = () => {
   const navigate = useNavigate();
   const [form, setForm] = useState({ username: '', email: '', password: '', fullName: '' });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formError, setFormError] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -58,37 +60,27 @@ const Register = () => {
     const username = form.username.trim();
     const email = form.email.trim();
     const password = form.password.trim();
+    setFormError('');
 
     if (!fullName || !username || !email || !password) {
-      toast({
-        title: toBilingual('Thiếu thông tin đăng ký', 'Faltan datos de registro'),
-        description: toBilingual(
+      setFormError(
+        t(
           'Vui lòng nhập đầy đủ họ tên, tên đăng nhập, email và mật khẩu.',
-          'Introduce nombre, usuario, correo y contraseña completos.'
-        ),
-        variant: 'destructive',
-      });
+          'Introduce nombre, usuario, correo y contrasena completos.'
+        )
+      );
       return;
     }
 
     if (!/^\S+@\S+\.\S+$/.test(email)) {
-      toast({
-        title: toBilingual('Email chưa đúng định dạng', 'Formato de correo no válido'),
-        description: toBilingual(
-          'Ví dụ đúng: name@example.com',
-          'Ejemplo correcto: name@example.com'
-        ),
-        variant: 'destructive',
-      });
+      setFormError(t('Email chưa đúng định dạng.', 'Formato de correo no valido.'));
       return;
     }
 
     if (password.length < 6) {
-      toast({
-        title: toBilingual('Mật khẩu quá ngắn', 'Contraseña demasiado corta'),
-        description: toBilingual('Mật khẩu cần ít nhất 6 ký tự.', 'La contraseña debe tener al menos 6 caracteres.'),
-        variant: 'destructive',
-      });
+      setFormError(
+        t('Mật khẩu cần ít nhất 6 ký tự.', 'La contrasena debe tener al menos 6 caracteres.')
+      );
       return;
     }
 
@@ -103,19 +95,15 @@ const Register = () => {
       });
 
       toast({
-        title: toBilingual('Đăng ký thành công', 'Registro exitoso'),
-        description: toBilingual(
+        title: t('Đăng ký thành công', 'Registro exitoso'),
+        description: t(
           'Tài khoản đã được tạo. Vui lòng đăng nhập để bắt đầu luyện thi.',
           'La cuenta se creó correctamente. Inicia sesión para empezar a practicar.'
         ),
       });
       navigate('/login');
     } catch (error) {
-      toast({
-        title: toBilingual('Đăng ký thất bại', 'Error de registro'),
-        description: getRegisterErrorMessage(error),
-        variant: 'destructive',
-      });
+      setFormError(getRegisterErrorMessage(error, t));
     } finally {
       setIsSubmitting(false);
     }
@@ -142,6 +130,11 @@ const Register = () => {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
+              {formError && (
+                <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-700">
+                  {formError}
+                </div>
+              )}
               <div className="space-y-2">
                 <Label htmlFor="fullName">{t('Họ và tên', 'Nombre completo')}</Label>
                 <div className="relative">
