@@ -3,7 +3,6 @@ import Footer from '@/components/Footer';
 import Navbar from '@/components/Navbar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useLanguage } from '@/hooks/useLanguage';
 import {
   getMaterialsBySubject,
@@ -34,9 +33,6 @@ const Materials = () => {
   const [loadingSubjects, setLoadingSubjects] = useState(true);
   const [loadingMaterials, setLoadingMaterials] = useState(false);
   const [error, setError] = useState('');
-  const [pdfViewerOpen, setPdfViewerOpen] = useState(false);
-  const [selectedPdfUrl, setSelectedPdfUrl] = useState('');
-  const [selectedPdfTitle, setSelectedPdfTitle] = useState('');
 
   const readStorageKey = 'materials_read_ids_v1';
 
@@ -159,13 +155,35 @@ const Materials = () => {
     });
   }, [materials, readFilter, readMaterialSet]);
 
-  const openMaterialViewer = (material: MaterialItem, language: 'vi' | 'es') => {
+  const openMaterialViewer = async (material: MaterialItem, language: 'vi' | 'es') => {
     const filePath = language === 'es' ? material.file_path_es : material.file_path_vi;
-    const title = language === 'es' ? material.title_es : material.title_vi;
+    const directUrl = resolveMediaUrl(filePath);
+
     markMaterialAsRead(material.id);
-    setSelectedPdfUrl(resolveMediaUrl(filePath));
-    setSelectedPdfTitle(title);
-    setPdfViewerOpen(true);
+
+    try {
+      const headers: Record<string, string> = {};
+      if (directUrl.includes('ngrok-free.app')) {
+        headers['ngrok-skip-browser-warning'] = 'true';
+      }
+
+      const response = await fetch(directUrl, { headers });
+      if (!response.ok) {
+        throw new Error(`PDF fetch failed (${response.status})`);
+      }
+
+      const blob = await response.blob();
+      const blobType = (blob.type || '').toLowerCase();
+
+      if (blobType.includes('text/html')) {
+        throw new Error('Received HTML instead of PDF');
+      }
+
+      const blobUrl = URL.createObjectURL(blob);
+      window.location.assign(blobUrl);
+    } catch {
+      window.location.assign(directUrl);
+    }
   };
 
   const downloadMaterial = (material: MaterialItem, language: 'vi' | 'es') => {
@@ -352,39 +370,6 @@ const Materials = () => {
           </div>
         </div>
       </div>
-
-      <Dialog open={pdfViewerOpen} onOpenChange={setPdfViewerOpen}>
-        <DialogContent className="h-[85vh] max-w-6xl overflow-hidden border border-primary/20 p-0">
-          <DialogHeader className="border-b border-border/60 px-4 py-3">
-            <DialogTitle className="pr-8 font-display text-base font-bold text-[#64172f] md:text-lg">
-              {selectedPdfTitle || t('Xem tài liệu PDF', 'Ver material PDF')}
-            </DialogTitle>
-            <DialogDescription className="text-xs md:text-sm">
-              {t('Xem trực tiếp tài liệu ngay trên web', 'Visualiza el material directamente en la web')}
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="h-[calc(85vh-86px)] w-full bg-white">
-            {selectedPdfUrl ? (
-              <iframe
-                title={selectedPdfTitle || 'PDF viewer'}
-                src={selectedPdfUrl}
-                className="h-full w-full"
-              />
-            ) : null}
-          </div>
-
-          <div className="absolute bottom-3 right-3">
-            <Button
-              size="sm"
-              className="bg-[linear-gradient(135deg,#7a2038_0%,#b23d58_65%,#ca8a04_100%)] text-white hover:opacity-95"
-              onClick={() => selectedPdfUrl && window.open(selectedPdfUrl, '_blank', 'noopener,noreferrer')}
-            >
-              {t('Mở tab mới', 'Abrir en nueva pestaña')}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
 
       <Footer />
     </div>

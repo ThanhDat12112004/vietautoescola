@@ -19,7 +19,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useLanguage } from '@/hooks/useLanguage';
-import { logout } from '@/lib/api';
+import { logout, resolveMediaUrl } from '@/lib/api';
 import { clearAuth, getStoredAuth, type AuthUser } from '@/lib/auth';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useEffect, useState } from 'react';
@@ -71,7 +71,7 @@ const Navbar = () => {
   };
 
   const userDisplayName = authUser?.full_name || authUser?.username || 'User';
-  const userAvatarUrl = authUser?.avatar_url || null;
+  const userAvatarUrl = authUser?.avatar_url ? resolveMediaUrl(authUser.avatar_url) : null;
   const isAdmin = (authUser?.role || '').toLowerCase() === 'admin';
 
   const navItems = [

@@ -1,7 +1,38 @@
-import { getOrCreateDeviceId, getStoredAuth, type AuthUser } from '@/lib/auth';
+import { clearAuth, getOrCreateDeviceId, getStoredAuth, type AuthUser } from '@/lib/auth';
 import type { Language } from '@/lib/data';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8080';
+
+function shouldBypassNgrokWarning() {
+  return API_BASE_URL.includes('ngrok-free.app');
+}
+
+function withNgrokHeaders(headers: Record<string, string>) {
+  if (shouldBypassNgrokWarning()) {
+    headers['ngrok-skip-browser-warning'] = 'true';
+  }
+  return headers;
+}
+
+const MAX_UPLOAD_IMAGE_BYTES = 20 * 1024 * 1024;
+
+async function parseUploadError(response: Response, fallbackMessage: string) {
+  const rawText = await response.text();
+  let message = fallbackMessage;
+
+  if (rawText) {
+    try {
+      const payload = JSON.parse(rawText);
+      if (payload?.message) {
+        message = payload.message;
+      }
+    } catch {
+      message = rawText;
+    }
+  }
+
+  throw new Error(`${message} (${response.status})`);
+}
 
 type RequestOptions = {
   method?: 'GET' | 'POST' | 'PATCH' | 'DELETE';
@@ -10,9 +41,9 @@ type RequestOptions = {
 };
 
 async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
-  const headers: Record<string, string> = {
+  const headers: Record<string, string> = withNgrokHeaders({
     'Content-Type': 'application/json',
-  };
+  });
 
   if (options.auth === true) {
     const stored = getStoredAuth();
@@ -47,6 +78,12 @@ async function apiRequest<T>(path: string, options: RequestOptions = {}): Promis
   }
 
   if (!response.ok) {
+    if (response.status === 401 && (options.auth === true || options.auth === 'optional')) {
+      clearAuth();
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('auth-updated'));
+      }
+    }
     throw new Error(payload?.message || `Request failed (${response.status})`);
   }
 
@@ -407,12 +444,40 @@ export async function getMaterialsBySubject(subjectId: number, lang: Language) {
   return apiRequest<MaterialItem[]>(`/materials/subjects/${subjectId}/materials?lang=${lang}`);
 }
 
+function joinApiBase(pathname: string) {
+  const normalized = pathname.startsWith('/') ? pathname : `/${pathname}`;
+  return `${API_BASE_URL.replace(/\/+$/, '')}${normalized}`;
+}
+
 export function resolveMediaUrl(filePath: string) {
-  if (/^https?:\/\//i.test(filePath)) {
+  if (!filePath) {
     return filePath;
   }
 
-  const normalized = filePath.startsWith('/') ? filePath : `/${filePath}`;
+  const trimmedPath = String(filePath).trim();
+  if (!trimmedPath) {
+    return '';
+  }
+
+  if (trimmedPath.startsWith('/media/static/')) {
+    return joinApiBase(trimmedPath);
+  }
+
+  if (/^https?:\/\//i.test(trimmedPath)) {
+    try {
+      const sourceUrl = new URL(trimmedPath);
+
+      if (sourceUrl.pathname.startsWith('/media/static/')) {
+        return joinApiBase(`${sourceUrl.pathname}${sourceUrl.search}${sourceUrl.hash}`);
+      }
+    } catch {
+      return trimmedPath;
+    }
+
+    return trimmedPath;
+  }
+
+  const normalized = trimmedPath.startsWith('/') ? trimmedPath : `/${trimmedPath}`;
   return `${API_BASE_URL}${normalized}`;
 }
 
@@ -651,7 +716,7 @@ export async function uploadMaterialFile(file: File, langCode: string) {
   formData.append('file', file);
   formData.append('lang_code', langCode);
   const stored = getStoredAuth();
-  const headers: Record<string, string> = {};
+  const headers: Record<string, string> = withNgrokHeaders({});
   if (stored?.token) {
     headers.Authorization = `Bearer ${stored.token}`;
   }
@@ -661,16 +726,24 @@ export async function uploadMaterialFile(file: File, langCode: string) {
     body: formData,
   });
   if (!response.ok) {
-    throw new Error('Upload failed');
+    await parseUploadError(response, 'Upload material failed');
   }
   return response.json();
 }
 
 export async function uploadQuestionImage(file: File) {
+  if (!file.type.startsWith('image/')) {
+    throw new Error('Tep khong phai anh hop le');
+  }
+
+  if (file.size > MAX_UPLOAD_IMAGE_BYTES) {
+    throw new Error('Anh vuot qua gioi han 20MB');
+  }
+
   const formData = new FormData();
   formData.append('image', file);
   const stored = getStoredAuth();
-  const headers: Record<string, string> = {};
+  const headers: Record<string, string> = withNgrokHeaders({});
   if (stored?.token) {
     headers.Authorization = `Bearer ${stored.token}`;
   }
@@ -680,16 +753,24 @@ export async function uploadQuestionImage(file: File) {
     body: formData,
   });
   if (!response.ok) {
-    throw new Error('Upload failed');
+    await parseUploadError(response, 'Upload image failed');
   }
   return response.json();
 }
 
 export async function uploadAvatarImage(file: File) {
+  if (!file.type.startsWith('image/')) {
+    throw new Error('Tep khong phai anh hop le');
+  }
+
+  if (file.size > MAX_UPLOAD_IMAGE_BYTES) {
+    throw new Error('Anh vuot qua gioi han 20MB');
+  }
+
   const formData = new FormData();
   formData.append('image', file);
   const stored = getStoredAuth();
-  const headers: Record<string, string> = {};
+  const headers: Record<string, string> = withNgrokHeaders({});
   if (stored?.token) {
     headers.Authorization = `Bearer ${stored.token}`;
   }
@@ -699,7 +780,7 @@ export async function uploadAvatarImage(file: File) {
     body: formData,
   });
   if (!response.ok) {
-    throw new Error('Upload failed');
+    await parseUploadError(response, 'Upload avatar failed');
   }
   return response.json() as Promise<{ key: string; cdn_url: string; size: number }>;
 }

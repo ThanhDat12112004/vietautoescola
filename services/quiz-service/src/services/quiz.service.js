@@ -1,5 +1,26 @@
 const quizRepository = require('../repositories/quiz.repository');
 
+function normalizeMediaPath(value) {
+  if (!value) return null;
+
+  const raw = String(value).trim();
+  if (!raw) return null;
+
+  try {
+    const parsed = new URL(raw);
+    return `${parsed.pathname}${parsed.search}${parsed.hash}`;
+  } catch {
+    return raw.startsWith('/') ? raw : `/${raw}`;
+  }
+}
+
+function normalizeQuestionMediaRefs(questions = []) {
+  return questions.map((question) => ({
+    ...question,
+    image_url: normalizeMediaPath(question.image_url),
+  }));
+}
+
 function normalizeQuizTypeId(value) {
   const numeric = Number(value);
   if (Number.isFinite(numeric) && numeric > 0) {
@@ -208,6 +229,7 @@ async function createManualQuiz(payload) {
     return await quizRepository.createManualQuiz({
       ...payload,
       quiz_type_id: normalizeQuizTypeId(payload.quiz_type_id ?? payload.quiz_type),
+      questions: normalizeQuestionMediaRefs(payload.questions || []),
     });
   } catch (error) {
     if (error.code === 'ER_DUP_ENTRY') {
@@ -255,6 +277,7 @@ async function updateQuizDetail(quizId, payload) {
   const normalizedPayload = {
     ...payload,
     quiz_type_id: normalizeQuizTypeId(payload.quiz_type_id ?? payload.quiz_type),
+    questions: normalizeQuestionMediaRefs(payload.questions || []),
   };
 
   const affected = await quizRepository.updateQuizDetailById(quizId, normalizedPayload);

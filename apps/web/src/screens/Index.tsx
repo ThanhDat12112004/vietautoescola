@@ -16,6 +16,7 @@ import {
   getHomeSummary,
   getLeaderboard,
   getQuizzes,
+  resolveMediaUrl,
   getSubjects,
   type HomeSummary,
   type LeaderboardUser,
@@ -481,13 +482,13 @@ const Index = () => {
             viewport={{ once: true }}
             variants={fadeUp}
             custom={0}
-            className="mb-5 flex flex-wrap items-end justify-between gap-x-4 gap-y-3 border-b border-[#24324f]/15 pb-4"
+            className="mb-5 flex flex-wrap items-end justify-between gap-x-4 gap-y-3 border-b border-primary/20 pb-4"
           >
             <div className="max-w-3xl">
-              <h2 className="font-display text-[1.85rem] font-black leading-[1.08] tracking-tight text-[#24324f] sm:text-[2.1rem] md:text-[2.5rem] lg:text-[2.85rem]">
+              <h2 className="font-display text-[1.85rem] font-black leading-[1.08] tracking-tight text-[#64172f] sm:text-[2.1rem] md:text-[2.5rem] lg:text-[2.85rem]">
                 {t('Loại đề luyện thi', 'Tipos de examen')}
               </h2>
-              <p className="mt-1 text-base font-medium text-[#4b5b7a] sm:text-lg md:text-xl">
+              <p className="mt-1 text-base font-medium text-[#6d4a54] sm:text-lg md:text-xl">
                 {t('Chọn loại đề bạn muốn tập trung', 'Elige el tipo de examen que quieres dominar')}
               </p>
             </div>
@@ -510,7 +511,7 @@ const Index = () => {
               variants={fadeUp}
             >
               <Link to="/quizzes">
-                <Card className="card-hover relative overflow-hidden rounded-2xl border border-black/15 bg-transparent shadow-none">
+                <Card className="card-hover relative overflow-hidden rounded-2xl border border-primary/20 bg-white/30 shadow-[0_10px_24px_rgba(95,20,40,0.08)]">
                   <div className="relative aspect-[5/3] w-full min-h-[220px] sm:min-h-[250px] md:min-h-[310px]">
                     <img
                       src="/brand/quiz-illustration.png"
@@ -518,9 +519,9 @@ const Index = () => {
                       className="absolute inset-0 h-full w-full object-contain object-center"
                       loading="lazy"
                     />
-                    <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(9,17,36,0.04)_0%,rgba(9,17,36,0.2)_55%,rgba(9,17,36,0.72)_100%)]" />
+                    <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(122,32,56,0.04)_0%,rgba(122,32,56,0.24)_55%,rgba(100,23,47,0.76)_100%)]" />
                     <CardContent className="absolute inset-x-0 bottom-0 z-10 p-5 text-white md:p-6">
-                      <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-white/40 bg-white/18 px-3 py-1 text-base font-semibold text-white backdrop-blur-sm">
+                      <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-white/50 bg-white/20 px-3 py-1 text-base font-semibold text-white backdrop-blur-sm">
                         <Target className="h-5 w-5" />
                         {formatQuizType(quizTypes[0] || 'general')}
                       </div>
@@ -554,7 +555,7 @@ const Index = () => {
                   className="h-full"
                 >
                   <Link to="/quizzes">
-                    <Card className="card-hover h-full overflow-hidden rounded-2xl border border-black/15 bg-transparent shadow-none">
+                    <Card className="card-hover h-full overflow-hidden rounded-2xl border border-primary/20 bg-white/35 shadow-[0_8px_20px_rgba(95,20,40,0.08)]">
                       <CardContent className="flex h-full items-stretch gap-3 px-4 py-3.5">
                         <img
                           src="/brand/quiz-illustration.png"
@@ -563,10 +564,10 @@ const Index = () => {
                           loading="lazy"
                         />
                         <div className="min-w-0 flex-1">
-                          <h4 className="font-display text-lg font-black leading-tight text-[#24324f] sm:text-xl md:text-2xl">
+                          <h4 className="font-display text-lg font-black leading-tight text-[#64172f] sm:text-xl md:text-2xl">
                             {formatQuizType(type)}
                           </h4>
-                          <p className="mt-1 line-clamp-2 text-sm text-slate-600 sm:text-base md:text-lg">
+                          <p className="mt-1 line-clamp-2 text-sm text-[#6d4a54] sm:text-base md:text-lg">
                             {t(
                               'Bộ đề ngắn gọn theo mục tiêu luyện tập rõ ràng.',
                               'Exámenes enfocados para practicar con objetivo claro.'
@@ -835,7 +836,7 @@ const Index = () => {
                         <div className="flex items-center gap-3 rounded-2xl border border-transparent bg-transparent p-3">
                           {leftProfileUser.avatar_url ? (
                             <img
-                              src={leftProfileUser.avatar_url}
+                              src={resolveMediaUrl(leftProfileUser.avatar_url)}
                               alt={leftProfileUser.full_name || leftProfileUser.username || 'User'}
                               className="h-14 w-14 rounded-full border-2 border-amber-400 object-cover"
                             />
@@ -919,7 +920,7 @@ const Index = () => {
                                     <div className="mb-1.5">
                                       {user.avatar_url ? (
                                         <img
-                                          src={user.avatar_url}
+                                          src={resolveMediaUrl(user.avatar_url)}
                                           alt={displayName}
                                           className="h-7 w-7 rounded-full border border-white/80 object-cover shadow-sm sm:h-8 sm:w-8 md:h-9 md:w-9"
                                         />

@@ -68,6 +68,7 @@ const Login = () => {
                   <Input
                     id="email"
                     type="email"
+                    autoComplete="username"
                     placeholder="name@example.com"
                     className="pl-10"
                     value={email}

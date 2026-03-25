@@ -1,5 +1,27 @@
 const materialsRepository = require('../repositories/materials.repository');
 
+function normalizeMediaPath(value) {
+  if (!value) return null;
+
+  const raw = String(value).trim();
+  if (!raw) return null;
+
+  try {
+    const parsed = new URL(raw);
+    return `${parsed.pathname}${parsed.search}${parsed.hash}`;
+  } catch {
+    return raw.startsWith('/') ? raw : `/${raw}`;
+  }
+}
+
+function normalizeMaterialFilePaths(payload = {}) {
+  return {
+    ...payload,
+    file_path_vi: normalizeMediaPath(payload.file_path_vi),
+    file_path_es: normalizeMediaPath(payload.file_path_es),
+  };
+}
+
 async function listSubjects(lang) {
   return materialsRepository.findSubjects(lang);
 }
@@ -56,7 +78,7 @@ async function listReferenceMaterials(subjectId, lang) {
 
 async function createReferenceMaterial(payload) {
   try {
-    const id = await materialsRepository.createReferenceMaterial(payload);
+    const id = await materialsRepository.createReferenceMaterial(normalizeMaterialFilePaths(payload));
     return { id };
   } catch (error) {
     if (error.code === 'ER_DUP_ENTRY') {
@@ -71,7 +93,9 @@ async function createReferenceMaterial(payload) {
 
 async function createReferenceMaterialsBilingual(payload) {
   try {
-    const ids = await materialsRepository.createReferenceMaterialsBilingual(payload);
+    const ids = await materialsRepository.createReferenceMaterialsBilingual(
+      normalizeMaterialFilePaths(payload)
+    );
     return ids;
   } catch (error) {
     if (error.code === 'ER_DUP_ENTRY') {
@@ -85,7 +109,10 @@ async function createReferenceMaterialsBilingual(payload) {
 }
 
 async function updateReferenceMaterial(materialId, payload) {
-  const affected = await materialsRepository.updateReferenceMaterial(materialId, payload);
+  const affected = await materialsRepository.updateReferenceMaterial(
+    materialId,
+    normalizeMaterialFilePaths(payload)
+  );
 
   if (!affected) {
     const appError = new Error('Material not found');

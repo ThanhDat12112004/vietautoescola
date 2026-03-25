@@ -124,6 +124,6 @@ mysql -h 127.0.0.1 -P 3306 -u root -proot viet_acosla < infra/mysql/migrations/2
 ## Notes
 
 - Media storage is local filesystem, path from `MEDIA_STORAGE_DIR`.
-- CDN-like URLs are generated from `CDN_BASE_URL`.
+- Media upload APIs return relative paths (example: `/media/static/questions/...`) so web can resolve by its API base URL.
 - No AWS/S3 dependencies are required.
 - Role-based upload policy: only `admin` users can create learning materials and upload question images.
