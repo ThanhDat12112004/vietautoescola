@@ -11,6 +11,7 @@ import { useLanguage } from '@/hooks/useLanguage';
 import {
   getLeaderboard,
   getMyDashboard,
+  resolveMediaUrl,
   updateMyAvatar,
   updateMyProfile,
   uploadAvatarImage,
@@ -31,6 +32,25 @@ import {
   User,
 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
+
+function toStoredMediaPath(uploaded: { key?: string; cdn_url?: string } | null | undefined) {
+  if (!uploaded) return '';
+
+  const key = String(uploaded.key || '').trim();
+  if (key) {
+    return `/media/static/${key}`;
+  }
+
+  const raw = String(uploaded.cdn_url || '').trim();
+  if (!raw) return '';
+
+  try {
+    const parsed = new URL(raw);
+    return `${parsed.pathname}${parsed.search}${parsed.hash}`;
+  } catch {
+    return raw.startsWith('/') ? raw : `/${raw}`;
+  }
+}
 
 const Profile = () => {
   const { t, lang } = useLanguage();
@@ -155,8 +175,9 @@ const Profile = () => {
       setError('');
 
       const uploaded = await uploadAvatarImage(file);
-      const updated = await updateMyAvatar(uploaded.cdn_url);
-      const nextAvatarUrl = updated.user?.avatar_url || uploaded.cdn_url;
+      const storedAvatarPath = toStoredMediaPath(uploaded);
+      const updated = await updateMyAvatar(storedAvatarPath);
+      const nextAvatarUrl = updated.user?.avatar_url || storedAvatarPath;
 
       setDashboard((prev) => {
         if (!prev) {
@@ -313,7 +334,7 @@ const Profile = () => {
               <div className="h-16 w-16 md:h-20 md:w-20 rounded-full bg-primary-foreground/20 flex items-center justify-center border-3 border-primary-foreground/30">
                 {stats.avatar_url ? (
                   <img
-                    src={stats.avatar_url}
+                    src={resolveMediaUrl(stats.avatar_url)}
                     alt={stats.full_name || stats.username}
                     className="h-full w-full rounded-full object-cover"
                   />

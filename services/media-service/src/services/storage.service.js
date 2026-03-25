@@ -3,10 +3,13 @@ const path = require('path');
 const { randomUUID } = require('crypto');
 
 const mediaStorageDir = process.env.MEDIA_STORAGE_DIR;
-const cdnBaseUrl = process.env.CDN_BASE_URL;
 
-if (!mediaStorageDir || !cdnBaseUrl) {
-  throw new Error('Missing MEDIA_STORAGE_DIR or CDN_BASE_URL in environment');
+if (!mediaStorageDir) {
+  throw new Error('Missing MEDIA_STORAGE_DIR in environment');
+}
+
+function toPublicMediaPath(relativePath) {
+  return `/media/static/${relativePath}`;
 }
 
 function sanitizeExtension(filename) {
@@ -38,7 +41,7 @@ async function saveFile(file, dirRelative, defaultExtension = 'bin') {
 
   return {
     key: relativePath,
-    cdnUrl: `${cdnBaseUrl}/${relativePath}`,
+    cdnUrl: toPublicMediaPath(relativePath),
     size: file.size,
   };
 }

@@ -4,6 +4,7 @@ import { useLanguage } from '@/hooks/useLanguage';
 import {
   checkQuestion,
   getQuizDetail,
+  resolveMediaUrl,
   startAttempt,
   submitAttempt,
   type CheckQuestionResult,
@@ -371,19 +372,19 @@ const QuizTake = () => {
 
   return (
     <div
-      className="h-screen flex flex-col overflow-hidden bg-[radial-gradient(circle_at_15%_20%,rgba(255,214,224,0.45),transparent_42%),radial-gradient(circle_at_85%_10%,rgba(255,228,171,0.45),transparent_35%),linear-gradient(180deg,#f9edf1_0%,#f4f7ff_55%,#f7eef5_100%)]
+      className="min-h-screen md:h-screen flex flex-col overflow-y-auto md:overflow-hidden bg-[radial-gradient(circle_at_15%_20%,rgba(255,214,224,0.45),transparent_42%),radial-gradient(circle_at_85%_10%,rgba(255,228,171,0.45),transparent_35%),linear-gradient(180deg,#f9edf1_0%,#f4f7ff_55%,#f7eef5_100%)]
                    p-0"
     >
       <div
-        className="flex-1 flex flex-col overflow-hidden w-full rounded-xl border border-border bg-card/90 shadow-sm
+        className="flex-1 flex flex-col overflow-visible md:overflow-hidden w-full rounded-xl border border-border bg-card/90 shadow-sm
                      p-1
                      sm:p-2
                      md:p-3
                      lg:p-4"
       >
         <div className="mb-3 grid gap-2 md:gap-3 grid-cols-[minmax(0,1fr)_auto] lg:grid-cols-[260px_1fr_160px]">
-          <div className="col-span-2 hidden items-center gap-2 rounded-md border border-border bg-background px-3 py-2 text-sm lg:flex lg:col-span-1 lg:row-span-2">
-            <BrandLogo imageClassName="h-11" withText />
+          <div className="col-span-2 flex items-center gap-2 rounded-md border border-border bg-background px-2 py-2 text-sm md:px-3 lg:col-span-1 lg:row-span-2">
+            <BrandLogo imageClassName="h-9 md:h-10 lg:h-11" withText />
           </div>
 
           <div className="rounded-md border border-border bg-background px-3 py-2 text-sm lg:text-base lg:col-start-2 lg:row-start-1">
@@ -424,16 +425,16 @@ const QuizTake = () => {
                         md:grid-cols-2"
         >
           <div
-            className="rounded-lg border border-border bg-card p-3 flex flex-col overflow-hidden gap-3
-                          min-h-[240px]
+            className="rounded-lg border border-border bg-card p-3 flex flex-col overflow-visible md:overflow-hidden gap-3
+                          min-h-0
                           md:min-h-[300px]
                           lg:min-h-[360px]
-                          h-full"
+                          h-auto md:h-full"
           >
-            <div className="flex-1 w-full rounded-md border border-border bg-background flex items-center justify-center overflow-hidden">
+            <div className="w-full rounded-md border border-border bg-background flex items-center justify-center overflow-hidden aspect-[16/10] md:aspect-auto md:flex-1">
               {question.image_url ? (
                 <img
-                  src={question.image_url}
+                  src={resolveMediaUrl(question.image_url)}
                   alt="question"
                   className="h-full w-full object-contain"
                 />
@@ -505,7 +506,7 @@ const QuizTake = () => {
               </div>
 
               {/* Answer options */}
-              <div className="space-y-2.5 w-full overflow-auto pr-1">
+              <div className="mt-1 flex-1 min-h-0 space-y-2.5 w-full overflow-y-auto overflow-x-hidden pr-1">
                 {question.answers.map((answer, idx) => {
                   const detail = detailsMap[question.id];
                   const isSelected = selectedId === answer.id;
@@ -551,7 +552,7 @@ const QuizTake = () => {
                         </span>
                       )}
                       <span
-                        className={`flex-1 line-clamp-2 overflow-hidden break-words leading-tight pt-0.5 text-sm md:line-clamp-none md:overflow-visible md:text-base lg:text-lg ${answerTextClass}`}
+                        className={`flex-1 break-words leading-tight pt-0.5 text-sm md:text-base lg:text-lg ${answerTextClass}`}
                       >
                         {answer.answer_text}
                       </span>

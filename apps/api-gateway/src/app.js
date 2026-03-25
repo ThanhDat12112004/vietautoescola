@@ -8,13 +8,21 @@ const proxyRoute = require('./routes/modules/proxy.route');
 
 const app = express();
 
+// Trust first proxy hop (ngrok/reverse proxy) for correct client IP detection.
+app.set('trust proxy', 1);
+
 app.use(
   helmet({
     crossOriginResourcePolicy: { policy: 'cross-origin' },
     frameguard: false,
     contentSecurityPolicy: {
       directives: {
-        frameAncestors: ["'self'", 'http://localhost:3000', 'http://127.0.0.1:3000'],
+        frameAncestors: [
+          "'self'",
+          'http://localhost:3000',
+          'http://127.0.0.1:3000',
+          'https:',
+        ],
       },
     },
   })

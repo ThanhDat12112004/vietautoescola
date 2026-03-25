@@ -133,8 +133,29 @@ async function heartbeat(userId, sid) {
   return { ok: affected > 0 };
 }
 
+function normalizeMediaPath(value) {
+  if (!value) return null;
+
+  const raw = String(value).trim();
+  if (!raw) return null;
+
+  try {
+    const parsed = new URL(raw);
+    return `${parsed.pathname}${parsed.search}${parsed.hash}`;
+  } catch {
+    return raw.startsWith('/') ? raw : `/${raw}`;
+  }
+}
+
 async function updateMyAvatar(userId, avatarUrl) {
-  const updated = await userRepository.updateAvatarUrl(userId, avatarUrl);
+  const normalizedAvatarPath = normalizeMediaPath(avatarUrl);
+  if (!normalizedAvatarPath) {
+    const appError = new Error('avatar_url is required');
+    appError.status = 400;
+    throw appError;
+  }
+
+  const updated = await userRepository.updateAvatarUrl(userId, normalizedAvatarPath);
   if (!updated) {
     const appError = new Error('User not found');
     appError.status = 404;

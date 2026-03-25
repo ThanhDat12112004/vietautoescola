@@ -1,5 +1,35 @@
 const { z } = require('zod');
 
+function isValidMediaRef(value) {
+  if (!value) return true;
+
+  const raw = String(value).trim();
+  if (!raw) return true;
+
+  if (/^https?:\/\//i.test(raw)) {
+    try {
+      // Validate URL format for absolute references.
+      new URL(raw);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  // Accept relative/absolute paths such as /media/static/... or media/static/...
+  return /^\/?[A-Za-z0-9._\-/]+(?:\?[^\s#]*)?(?:#[^\s]*)?$/.test(raw);
+}
+
+const mediaRefSchema = z
+  .string()
+  .trim()
+  .optional()
+  .nullable()
+  .or(z.literal(''))
+  .refine((value) => isValidMediaRef(value), {
+    message: 'Invalid image_url format',
+  });
+
 const answerSchema = z.object({
   answer_text_vi: z.string().trim().min(1),
   answer_text_es: z.string().trim().min(1),
@@ -12,7 +42,7 @@ const questionSchema = z
     question_text_es: z.string().trim().min(1),
     explanation_vi: z.string().trim().optional().nullable(),
     explanation_es: z.string().trim().optional().nullable(),
-    image_url: z.string().trim().url().optional().nullable().or(z.literal('')),
+    image_url: mediaRefSchema,
     answers: z.array(answerSchema).length(3),
   })
   .refine((value) => value.answers.filter((item) => item.is_correct).length === 1, {
@@ -48,7 +78,7 @@ const detailQuestionSchema = z
     question_text_es: z.string().trim().min(1),
     explanation_vi: z.string().trim().optional().nullable(),
     explanation_es: z.string().trim().optional().nullable(),
-    image_url: z.string().trim().url().optional().nullable().or(z.literal('')),
+    image_url: mediaRefSchema,
     answers: z.array(detailAnswerSchema).length(3),
   })
   .refine((value) => value.answers.filter((item) => item.is_correct).length === 1, {

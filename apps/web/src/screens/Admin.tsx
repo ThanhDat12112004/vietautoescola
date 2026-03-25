@@ -111,6 +111,25 @@ function createEmptyEditQuestionDraft() {
   };
 }
 
+function buildStoredMediaPath(uploaded: { key?: string; cdn_url?: string } | null | undefined) {
+  if (!uploaded) return '';
+
+  const key = String(uploaded.key || '').trim();
+  if (key) {
+    return `/media/static/${key}`;
+  }
+
+  const cdnUrl = String(uploaded.cdn_url || '').trim();
+  if (!cdnUrl) return '';
+
+  try {
+    const parsed = new URL(cdnUrl);
+    return `${parsed.pathname}${parsed.search}${parsed.hash}`;
+  } catch {
+    return cdnUrl.startsWith('/') ? cdnUrl : `/${cdnUrl}`;
+  }
+}
+
 const DEFAULT_QUIZ_TYPE_CODE = 'general';
 
 export default function Admin() {
@@ -656,11 +675,11 @@ export default function Admin() {
         selectedSubjectId,
         {
           ...materialForm,
-          file_path_vi: uploadedVi.cdn_url,
+          file_path_vi: buildStoredMediaPath(uploadedVi),
           file_size_mb_vi: uploadedVi.size
             ? Number((uploadedVi.size / (1024 * 1024)).toFixed(2))
             : null,
-          file_path_es: uploadedEs.cdn_url,
+          file_path_es: buildStoredMediaPath(uploadedEs),
           file_size_mb_es: uploadedEs.size
             ? Number((uploadedEs.size / (1024 * 1024)).toFixed(2))
             : null,
@@ -718,13 +737,13 @@ export default function Admin() {
 
       if (editMaterialFiles.vi) {
         const uploadedVi = await uploadMaterialFile(editMaterialFiles.vi, 'vi');
-        filePathVi = uploadedVi.cdn_url;
+        filePathVi = buildStoredMediaPath(uploadedVi);
         fileSizeVi = uploadedVi.size ? Number((uploadedVi.size / (1024 * 1024)).toFixed(2)) : null;
       }
 
       if (editMaterialFiles.es) {
         const uploadedEs = await uploadMaterialFile(editMaterialFiles.es, 'es');
-        filePathEs = uploadedEs.cdn_url;
+        filePathEs = buildStoredMediaPath(uploadedEs);
         fileSizeEs = uploadedEs.size ? Number((uploadedEs.size / (1024 * 1024)).toFixed(2)) : null;
       }
 
@@ -834,7 +853,7 @@ export default function Admin() {
         let imageUrl = null;
         if (file) {
           const uploaded = await uploadQuestionImage(file);
-          imageUrl = uploaded.cdn_url || null;
+          imageUrl = buildStoredMediaPath(uploaded) || null;
         }
         const correctIndex = Number(draft.correct_index);
         const answers = [1, 2, 3].map((answerIndex) => ({
@@ -1092,7 +1111,7 @@ export default function Admin() {
 
         if (imageFile) {
           const uploaded = await uploadQuestionImage(imageFile);
-          imageUrl = uploaded.cdn_url || null;
+          imageUrl = buildStoredMediaPath(uploaded) || null;
         }
 
         const preparedQuestion: any = {
@@ -2023,7 +2042,9 @@ export default function Admin() {
                                 className="h-8 border-[#d2d2d2] bg-white hover:bg-[#fdf5f8]"
                               >
                                 <a
-                                  href={lang === 'vi' ? item.file_path_vi : item.file_path_es}
+                                  href={resolveMediaUrl(
+                                    lang === 'vi' ? item.file_path_vi : item.file_path_es
+                                  )}
                                   target="_blank"
                                   rel="noreferrer"
                                 >
@@ -2150,7 +2171,7 @@ export default function Admin() {
                                 <div>
                                   <Label className="text-xs text-[#5b5b5b]">URL (VI)</Label>
                                   <a
-                                    href={editMaterialForm.file_path_vi}
+                                    href={resolveMediaUrl(editMaterialForm.file_path_vi)}
                                     target="_blank"
                                     rel="noreferrer"
                                     className="text-xs text-[#7a2038] underline break-all"
@@ -2165,7 +2186,7 @@ export default function Admin() {
                                 <div>
                                   <Label className="text-xs text-[#5b5b5b]">URL (ES)</Label>
                                   <a
-                                    href={editMaterialForm.file_path_es}
+                                    href={resolveMediaUrl(editMaterialForm.file_path_es)}
                                     target="_blank"
                                     rel="noreferrer"
                                     className="text-xs text-[#7a2038] underline break-all"
