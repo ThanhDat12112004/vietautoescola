@@ -79,9 +79,15 @@ async function apiRequest<T>(path: string, options: RequestOptions = {}): Promis
 
   if (!response.ok) {
     if (response.status === 401 && (options.auth === true || options.auth === 'optional')) {
+      const reason = String(payload?.message || '').trim();
       clearAuth();
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('auth-updated'));
+        window.dispatchEvent(
+          new CustomEvent('auth-session-ended', {
+            detail: { reason },
+          })
+        );
       }
     }
     throw new Error(payload?.message || `Request failed (${response.status})`);
@@ -330,6 +336,31 @@ export async function logout() {
   return apiRequest<{ message: string }>('/auth/logout', {
     method: 'POST',
     auth: true,
+  });
+}
+
+export async function heartbeat() {
+  return apiRequest<{ ok: boolean }>('/auth/heartbeat', {
+    method: 'POST',
+    auth: true,
+  });
+}
+
+export function logoutBeacon(token: string) {
+  if (!token || typeof window === 'undefined') {
+    return;
+  }
+
+  const headers = withNgrokHeaders({ 'Content-Type': 'application/json' });
+
+  // keepalive lets the browser send this request while the page is unloading.
+  fetch(`${API_BASE_URL}/auth/logout-beacon`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ token }),
+    keepalive: true,
+  }).catch(() => {
+    // Best effort only; no UI feedback needed during unload.
   });
 }
 
