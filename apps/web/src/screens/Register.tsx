@@ -12,6 +12,38 @@ import { Lock, Mail, User } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
+const toBilingual = (vi: string, es: string) => `${vi} / ${es}`;
+
+const getRegisterErrorMessage = (error: unknown) => {
+  if (!(error instanceof Error) || !error.message) {
+    return toBilingual('Có lỗi xảy ra, vui lòng thử lại.', 'Ha ocurrido un error, inténtalo de nuevo.');
+  }
+
+  const raw = error.message;
+  const message = raw.toLowerCase();
+
+  if (message.includes('email') && (message.includes('exist') || message.includes('duplicate'))) {
+    return toBilingual('Email đã được sử dụng.', 'El correo ya está en uso.');
+  }
+
+  if (
+    (message.includes('username') || message.includes('user name')) &&
+    (message.includes('exist') || message.includes('duplicate'))
+  ) {
+    return toBilingual('Tên đăng nhập đã tồn tại.', 'El nombre de usuario ya existe.');
+  }
+
+  if (message.includes('password') && (message.includes('weak') || message.includes('short'))) {
+    return toBilingual('Mật khẩu còn yếu hoặc quá ngắn.', 'La contraseña es débil o demasiado corta.');
+  }
+
+  if (message.includes('network') || message.includes('fetch') || message.includes('timeout')) {
+    return toBilingual('Không kết nối được máy chủ.', 'No se pudo conectar con el servidor.');
+  }
+
+  return toBilingual(`Lỗi: ${raw}`, `Error: ${raw}`);
+};
+
 const Register = () => {
   const { t } = useLanguage();
   const { toast } = useToast();
@@ -21,26 +53,67 @@ const Register = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    const fullName = form.fullName.trim();
+    const username = form.username.trim();
+    const email = form.email.trim();
+    const password = form.password.trim();
+
+    if (!fullName || !username || !email || !password) {
+      toast({
+        title: toBilingual('Thiếu thông tin đăng ký', 'Faltan datos de registro'),
+        description: toBilingual(
+          'Vui lòng nhập đầy đủ họ tên, tên đăng nhập, email và mật khẩu.',
+          'Introduce nombre, usuario, correo y contraseña completos.'
+        ),
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (!/^\S+@\S+\.\S+$/.test(email)) {
+      toast({
+        title: toBilingual('Email chưa đúng định dạng', 'Formato de correo no válido'),
+        description: toBilingual(
+          'Ví dụ đúng: name@example.com',
+          'Ejemplo correcto: name@example.com'
+        ),
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (password.length < 6) {
+      toast({
+        title: toBilingual('Mật khẩu quá ngắn', 'Contraseña demasiado corta'),
+        description: toBilingual('Mật khẩu cần ít nhất 6 ký tự.', 'La contraseña debe tener al menos 6 caracteres.'),
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
       await register({
-        username: form.username,
-        email: form.email,
-        password: form.password,
-        full_name: form.fullName || undefined,
+        username,
+        email,
+        password,
+        full_name: fullName || undefined,
       });
 
       toast({
-        title: t('Đăng ký thành công', 'Registro exitoso'),
-        description: t('Hãy đăng nhập để bắt đầu', 'Inicia sesión para comenzar'),
+        title: toBilingual('Đăng ký thành công', 'Registro exitoso'),
+        description: toBilingual(
+          'Tài khoản đã được tạo. Vui lòng đăng nhập để bắt đầu luyện thi.',
+          'La cuenta se creó correctamente. Inicia sesión para empezar a practicar.'
+        ),
       });
       navigate('/login');
     } catch (error) {
       toast({
-        title: t('Đăng ký thất bại', 'Error de registro'),
-        description:
-          error instanceof Error ? error.message : t('Có lỗi xảy ra', 'Ha ocurrido un error'),
+        title: toBilingual('Đăng ký thất bại', 'Error de registro'),
+        description: getRegisterErrorMessage(error),
         variant: 'destructive',
       });
     } finally {
@@ -49,10 +122,10 @@ const Register = () => {
   };
 
   return (
-    <div className="app-page min-h-screen flex flex-col bg-[radial-gradient(circle_at_15%_20%,rgba(255,214,224,0.45),transparent_42%),radial-gradient(circle_at_85%_10%,rgba(255,228,171,0.45),transparent_35%),linear-gradient(180deg,#f9edf1_0%,#f4f7ff_55%,#f7eef5_100%)]">
+    <div className="app-page min-h-screen flex flex-col bg-[radial-gradient(circle_at_12%_18%,rgba(255,206,220,0.52),transparent_40%),radial-gradient(circle_at_86%_8%,rgba(255,224,160,0.48),transparent_32%),linear-gradient(180deg,#f9edf1_0%,#f4f7ff_58%,#f8eff6_100%)]">
       <Navbar />
-      <div className="flex-1 flex items-center justify-center px-4 py-12">
-        <Card className="w-full max-w-md border border-primary/20 bg-[linear-gradient(160deg,rgba(255,255,255,0.96)_0%,rgba(255,247,250,0.88)_50%,rgba(255,249,235,0.8)_100%)] shadow-[0_18px_42px_rgba(95,20,40,0.14)]">
+      <div className="flex flex-1 items-center justify-center px-4 py-12">
+        <Card className="w-full max-w-md border border-primary/20 bg-[linear-gradient(160deg,rgba(255,255,255,0.96)_0%,rgba(255,247,250,0.88)_50%,rgba(255,249,235,0.8)_100%)] shadow-[0_20px_46px_rgba(95,20,40,0.16)] backdrop-blur-[2px]">
           <CardHeader className="text-center pb-2">
             <div className="flex justify-center mb-4">
               <BrandLogo imageClassName="h-16" />
@@ -127,7 +200,7 @@ const Register = () => {
                   />
                 </div>
               </div>
-              <Button type="submit" className="w-full bg-[linear-gradient(135deg,#7a2038_0%,#b23d58_65%,#ca8a04_100%)] font-semibold text-white hover:opacity-95" size="lg">
+              <Button type="submit" className="w-full bg-[linear-gradient(135deg,#7a2038_0%,#b23d58_65%,#ca8a04_100%)] font-semibold text-white shadow-[0_10px_22px_rgba(95,20,40,0.2)] hover:opacity-95" size="lg">
                 {isSubmitting ? t('Đang xử lý...', 'Procesando...') : t('Đăng ký', 'Registrarse')}
               </Button>
             </form>

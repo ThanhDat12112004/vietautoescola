@@ -372,27 +372,27 @@ const QuizTake = () => {
 
   return (
     <div
-      className="min-h-screen md:h-screen flex flex-col overflow-y-auto md:overflow-hidden bg-[radial-gradient(circle_at_15%_20%,rgba(255,214,224,0.45),transparent_42%),radial-gradient(circle_at_85%_10%,rgba(255,228,171,0.45),transparent_35%),linear-gradient(180deg,#f9edf1_0%,#f4f7ff_55%,#f7eef5_100%)]
+      className="min-h-screen md:h-screen flex flex-col overflow-y-auto md:overflow-hidden bg-[radial-gradient(circle_at_12%_18%,rgba(255,206,220,0.52),transparent_40%),radial-gradient(circle_at_88%_8%,rgba(255,226,165,0.5),transparent_32%),linear-gradient(180deg,#f9edf1_0%,#f4f7ff_58%,#f8eff6_100%)]
                    p-0"
     >
       <div
-        className="flex-1 flex flex-col overflow-visible md:overflow-hidden w-full rounded-xl border border-border bg-card/90 shadow-sm
+        className="flex-1 flex flex-col overflow-visible md:overflow-hidden w-full rounded-[1.1rem] border border-primary/15 bg-card/90 shadow-[0_16px_34px_rgba(95,20,40,0.12)]
                      p-1
                      sm:p-2
                      md:p-3
                      lg:p-4"
       >
         <div className="mb-3 grid gap-2 md:gap-3 grid-cols-[minmax(0,1fr)_auto] lg:grid-cols-[260px_1fr_160px]">
-          <div className="col-span-2 flex items-center gap-2 rounded-md border border-border bg-background px-2 py-2 text-sm md:px-3 lg:col-span-1 lg:row-span-2">
+          <div className="col-span-2 flex items-center gap-2 rounded-lg border border-primary/20 bg-white/75 px-2 py-2 text-sm md:px-3 lg:col-span-1 lg:row-span-2">
             <BrandLogo imageClassName="h-9 md:h-10 lg:h-11" withText />
           </div>
 
-          <div className="rounded-md border border-border bg-background px-3 py-2 text-sm lg:text-base lg:col-start-2 lg:row-start-1">
+          <div className="rounded-lg border border-primary/20 bg-white/75 px-3 py-2 text-sm lg:text-base lg:col-start-2 lg:row-start-1">
             <span className="font-bold">{t('Đề thi', 'Examen')}:</span>
             <span className="ml-1 break-words">{quiz.title}</span>
           </div>
 
-          <div className="flex items-center justify-center rounded-md border border-border bg-background px-2 py-2 lg:col-start-3 lg:row-start-1">
+          <div className="flex items-center justify-center rounded-lg border border-primary/20 bg-white/75 px-2 py-2 lg:col-start-3 lg:row-start-1">
             <div className="flex items-center gap-1 text-sm lg:text-base">
               <Clock className="h-3.5 w-3.5 text-muted-foreground" />
               <span
@@ -403,15 +403,15 @@ const QuizTake = () => {
             </div>
           </div>
 
-          <div className="rounded-md border border-border bg-background px-3 py-2 text-sm lg:text-base lg:col-start-2 lg:row-start-2">
+          <div className="rounded-lg border border-primary/20 bg-white/75 px-3 py-2 text-sm lg:text-base lg:col-start-2 lg:row-start-2">
             <span className="font-bold">{t('Thí sinh', 'Aspirante')}:</span>
             <span className="ml-1 break-words uppercase">{candidateName}</span>
           </div>
 
-          <div className="rounded-md border border-border bg-background px-1 py-1 lg:col-start-3 lg:row-start-2">
+          <div className="rounded-lg border border-primary/20 bg-white/75 px-1 py-1 lg:col-start-3 lg:row-start-2">
             <button
               onClick={() => setLang(lang === 'vi' ? 'es' : 'vi')}
-              className="mx-auto flex h-8 w-full items-center justify-center rounded-md border border-border bg-background text-lg font-semibold text-primary"
+              className="mx-auto flex h-8 w-full items-center justify-center rounded-md border border-primary/20 bg-white text-lg font-semibold text-primary transition-colors hover:bg-primary/5"
               aria-label={t('Đổi ngôn ngữ', 'Cambiar idioma')}
             >
               {lang === 'vi' ? '🇻🇳' : '🇪🇸'}
@@ -420,18 +420,18 @@ const QuizTake = () => {
         </div>
 
         <div
-          className="flex-1 min-h-0 grid gap-2 md:gap-3 rounded-lg border border-border bg-background/80 p-2 md:p-3
+          className="flex-1 min-h-0 grid gap-2 md:gap-3 rounded-xl border border-primary/15 bg-background/75 p-2 md:p-3
                         grid-cols-1
                         md:grid-cols-2"
         >
           <div
-            className="rounded-lg border border-border bg-card p-3 flex flex-col overflow-visible md:overflow-hidden gap-3
+            className="rounded-xl border border-primary/15 bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(255,249,252,0.9)_100%)] p-3 flex flex-col overflow-visible md:overflow-hidden gap-3
                           min-h-0
                           md:min-h-[300px]
                           lg:min-h-[360px]
                           h-auto md:h-full"
           >
-            <div className="w-full rounded-md border border-border bg-background flex items-center justify-center overflow-hidden aspect-[16/10] md:aspect-auto md:flex-1">
+            <div className="w-full rounded-lg border border-primary/15 bg-white flex items-center justify-center overflow-hidden aspect-[16/10] md:aspect-auto md:flex-1">
               {question.image_url ? (
                 <img
                   src={resolveMediaUrl(question.image_url)}
@@ -447,7 +447,7 @@ const QuizTake = () => {
             <Button
               type="button"
               variant="outline"
-              className="h-10 w-full rounded-md border-primary bg-primary text-primary-foreground hover:bg-primary/90 font-bold"
+              className="h-10 w-full rounded-lg border border-primary/70 bg-primary text-primary-foreground hover:bg-primary/90 font-bold shadow-[0_10px_20px_rgba(95,20,40,0.2)]"
               disabled={mode !== 'practice' || !checkedForCurrent || !question.explanation}
               onClick={() => setShowExplanationPanel((prev) => !prev)}
             >
@@ -460,7 +460,7 @@ const QuizTake = () => {
               checkedForCurrent &&
               showExplanationPanel &&
               question.explanation && (
-                <div className="rounded-md border border-[#dec4ce] bg-white p-3">
+                <div className="rounded-lg border border-primary/20 bg-white p-3 shadow-sm">
                   <p className="mb-1 font-semibold text-sm">{t('Giải thích', 'Explicación')}</p>
                   <p className="text-muted-foreground leading-relaxed text-sm">
                     {question.explanation}
@@ -471,7 +471,7 @@ const QuizTake = () => {
 
           {/* RIGHT: Question + answers - responsive typography */}
           <div
-            className="min-w-0 rounded-lg border border-border bg-card px-2 py-2
+            className="min-w-0 rounded-xl border border-primary/15 bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(255,250,252,0.92)_100%)] px-2 py-2
                           md:px-3 md:py-2
                           lg:px-4 lg:py-3
                           flex flex-col"
@@ -486,7 +486,7 @@ const QuizTake = () => {
                               lg:gap-4"
               >
                 <span
-                  className="font-black text-[#5a1428] leading-none
+                  className="font-black text-[#5a1428] leading-none drop-shadow-[0_1px_1px_rgba(95,20,40,0.14)]
                                 text-2xl
                                 md:text-3xl
                                 lg:text-4xl
@@ -522,17 +522,17 @@ const QuizTake = () => {
                     <button
                       key={answer.id}
                       onClick={() => void handleSelect(answer.id)}
-                      className={`flex w-full items-center gap-2 rounded-lg border px-2 py-2 text-left transition-colors
+                      className={`group flex w-full items-center gap-2 rounded-xl border px-2 py-2 text-left transition-all duration-200
                                  md:gap-3 md:px-3
                                  lg:gap-4 lg:px-4 lg:py-3
                                  ${
                                    isCorrect
-                                     ? 'border-green-500 bg-green-50'
+                                     ? 'border-green-500 bg-green-50 shadow-[0_8px_18px_rgba(34,197,94,0.14)]'
                                      : isWrong
-                                       ? 'border-destructive bg-destructive/10'
+                                       ? 'border-destructive bg-destructive/10 shadow-[0_8px_18px_rgba(239,68,68,0.12)]'
                                        : isSelected
-                                         ? 'border-primary bg-primary/10'
-                                         : 'border-border bg-background hover:bg-muted/40'
+                                         ? 'border-primary bg-primary/10 shadow-[0_10px_20px_rgba(95,20,40,0.14)]'
+                                         : 'border-primary/20 bg-white hover:-translate-y-[1px] hover:bg-primary/5 hover:shadow-[0_10px_18px_rgba(95,20,40,0.08)]'
                                  }`}
                     >
                       {badgeSrc ? (
@@ -543,7 +543,7 @@ const QuizTake = () => {
                         />
                       ) : (
                         <span
-                          className="shrink-0 flex items-center justify-center rounded-full border border-[#b8b8b8] bg-[#f3f3f3] font-bold text-[#5b5b5b] mt-0.5
+                          className="shrink-0 flex items-center justify-center rounded-full border border-primary/30 bg-primary/5 font-bold text-[#5b5b5b] mt-0.5
                                       h-7 w-7 text-sm
                                       md:h-8 md:w-8 md:text-base
                                       lg:h-9 lg:w-9 lg:text-lg"
@@ -566,7 +566,7 @@ const QuizTake = () => {
             <div className="mt-3 grid gap-2 w-full grid-cols-3">
               <Button
                 variant="outline"
-                className="rounded-lg border-border bg-background font-bold hover:bg-muted transition-colors
+                className="rounded-xl border-primary/25 bg-white/80 font-bold hover:bg-white transition-colors
                           h-10 text-sm
                           md:h-11 md:text-base
                           lg:h-12 lg:text-lg"
@@ -583,7 +583,7 @@ const QuizTake = () => {
               </Button>
 
               <Button
-                className="rounded-lg border border-border bg-background text-foreground font-bold hover:bg-muted transition-colors
+                className="rounded-xl border border-primary/20 bg-white/80 text-foreground font-bold hover:bg-white transition-colors
                           h-10 text-sm
                           md:h-11 md:text-base
                           lg:h-12 lg:text-lg"
@@ -600,7 +600,7 @@ const QuizTake = () => {
               </Button>
 
               <Button
-                className="rounded-lg bg-primary text-primary-foreground font-bold hover:bg-primary/90 transition-colors
+                className="rounded-xl border border-primary/80 bg-primary text-primary-foreground font-bold hover:bg-primary/90 transition-colors shadow-[0_10px_20px_rgba(95,20,40,0.22)]
                           h-10 text-sm
                           md:h-11 md:text-base
                           lg:h-12 lg:text-lg"
@@ -616,7 +616,7 @@ const QuizTake = () => {
         </div>
 
         <div
-          className="mt-3 rounded-lg border border-border bg-card p-2
+          className="mt-3 rounded-xl border border-primary/15 bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(255,249,252,0.9)_100%)] p-2
                        md:p-3 lg:p-4"
         >
           {shouldUseTwoRowsOnMobile ? (
@@ -635,7 +635,7 @@ const QuizTake = () => {
                     <button
                       key={item.id}
                       onClick={() => setCurrentIndex(index)}
-                      className={`rounded-md border font-bold transition-colors h-8 text-sm ${
+                      className={`rounded-lg border font-bold transition-all h-8 text-sm ${
                         hasJudged
                           ? isCorrect
                             ? 'border-green-500 bg-green-50 text-green-700'
@@ -669,7 +669,7 @@ const QuizTake = () => {
                     <button
                       key={item.id}
                       onClick={() => setCurrentIndex(index)}
-                      className={`rounded-md border font-bold transition-colors h-8 text-sm ${
+                      className={`rounded-lg border font-bold transition-all h-8 text-sm ${
                         hasJudged
                           ? isCorrect
                             ? 'border-green-500 bg-green-50 text-green-700'
@@ -699,7 +699,7 @@ const QuizTake = () => {
                     <button
                       key={item.id}
                       onClick={() => setCurrentIndex(index)}
-                      className={`rounded-md border font-bold transition-colors
+                       className={`rounded-lg border font-bold transition-all
                              h-9 text-base
                              lg:h-10 lg:text-lg
                              xl:h-11 xl:text-xl
@@ -739,7 +739,7 @@ const QuizTake = () => {
                   <button
                     key={item.id}
                     onClick={() => setCurrentIndex(index)}
-                    className={`rounded-md border font-bold transition-colors
+                    className={`rounded-lg border font-bold transition-all
                              h-8 text-sm
                              md:h-9 md:text-base
                              lg:h-10 lg:text-lg

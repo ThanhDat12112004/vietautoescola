@@ -17,7 +17,7 @@ router.post(
   upload.single('image'),
   mediaController.uploadImage
 );
-router.post('/upload-avatar', authRequired, upload.single('image'), mediaController.uploadImage);
+router.post('/upload-avatar', authRequired, upload.single('image'), mediaController.uploadAvatar);
 router.post(
   '/upload-material',
   authRequired,

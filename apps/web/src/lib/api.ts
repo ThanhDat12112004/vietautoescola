@@ -459,8 +459,9 @@ export function resolveMediaUrl(filePath: string) {
     return '';
   }
 
-  if (trimmedPath.startsWith('/media/static/')) {
-    return joinApiBase(trimmedPath);
+  // Tolerate accidental missing leading protocol character in stored URLs.
+  if (/^ttps?:\/\//i.test(trimmedPath)) {
+    return `h${trimmedPath}`;
   }
 
   if (/^https?:\/\//i.test(trimmedPath)) {
@@ -477,8 +478,21 @@ export function resolveMediaUrl(filePath: string) {
     return trimmedPath;
   }
 
+  // Normalize known legacy relative formats before resolving.
+  if (trimmedPath.startsWith('media/static/')) {
+    return joinApiBase(`/${trimmedPath}`);
+  }
+
+  if (/^(questions|materials)\//i.test(trimmedPath)) {
+    return joinApiBase(`/media/static/${trimmedPath}`);
+  }
+
+  if (trimmedPath.startsWith('/media/static/')) {
+    return joinApiBase(trimmedPath);
+  }
+
   const normalized = trimmedPath.startsWith('/') ? trimmedPath : `/${trimmedPath}`;
-  return `${API_BASE_URL}${normalized}`;
+  return joinApiBase(normalized);
 }
 
 // Admin API functions

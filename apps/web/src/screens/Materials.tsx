@@ -13,6 +13,7 @@ import {
 } from '@/lib/api';
 import { motion } from 'framer-motion';
 import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 
 const fadeUp = {
   hidden: { opacity: 0, y: 20 },
@@ -25,10 +26,12 @@ const fadeUp = {
 
 const Materials = () => {
   const { t, lang } = useLanguage();
+  const [searchParams] = useSearchParams();
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [activeSubject, setActiveSubject] = useState<number | null>(null);
   const [readFilter, setReadFilter] = useState<'all' | 'read' | 'unread'>('all');
   const [materials, setMaterials] = useState<MaterialItem[]>([]);
+  const [subjectMaterialCounts, setSubjectMaterialCounts] = useState<Record<number, number>>({});
   const [readMaterialIds, setReadMaterialIds] = useState<number[]>([]);
   const [loadingSubjects, setLoadingSubjects] = useState(true);
   const [loadingMaterials, setLoadingMaterials] = useState(false);
@@ -140,6 +143,39 @@ const Materials = () => {
     };
   }, [activeSubject, lang, subjects, t]);
 
+  useEffect(() => {
+    if (!subjects.length) {
+      setSubjectMaterialCounts({});
+      return;
+    }
+
+    let active = true;
+
+    (async () => {
+      try {
+        const rowsBySubject = await Promise.all(
+          subjects.map((subject) => getMaterialsBySubject(subject.id, lang))
+        );
+        if (!active) return;
+
+        const nextCounts = subjects.reduce<Record<number, number>>((acc, subject, index) => {
+          const rows = rowsBySubject[index] || [];
+          acc[subject.id] = rows.length;
+          return acc;
+        }, {});
+
+        setSubjectMaterialCounts(nextCounts);
+      } catch {
+        if (!active) return;
+        setSubjectMaterialCounts({});
+      }
+    })();
+
+    return () => {
+      active = false;
+    };
+  }, [lang, subjects]);
+
   const activeSubjectInfo = useMemo(
     () => subjects.find((subject) => subject.id === activeSubject),
     [subjects, activeSubject]
@@ -154,6 +190,33 @@ const Materials = () => {
       return readFilter === 'read' ? isRead : !isRead;
     });
   }, [materials, readFilter, readMaterialSet]);
+
+  const readCounts = useMemo(() => {
+    const done = materials.filter((material) => readMaterialSet.has(material.id)).length;
+    return {
+      all: materials.length,
+      read: done,
+      unread: Math.max(materials.length - done, 0),
+    };
+  }, [materials, readMaterialSet]);
+
+  const totalMaterialCount = useMemo(
+    () => Object.values(subjectMaterialCounts).reduce((sum, count) => sum + Number(count || 0), 0),
+    [subjectMaterialCounts]
+  );
+
+  const requestedSubjectId = useMemo(() => {
+    const raw = Number(searchParams.get('subject'));
+    if (!Number.isInteger(raw) || raw <= 0) return null;
+    return raw;
+  }, [searchParams]);
+
+  useEffect(() => {
+    if (requestedSubjectId === null) return;
+    if (subjects.some((subject) => subject.id === requestedSubjectId)) {
+      setActiveSubject(requestedSubjectId);
+    }
+  }, [requestedSubjectId, subjects]);
 
   const openMaterialViewer = async (material: MaterialItem, language: 'vi' | 'es') => {
     const filePath = language === 'es' ? material.file_path_es : material.file_path_vi;
@@ -193,7 +256,7 @@ const Materials = () => {
   };
 
   return (
-    <div className="app-page min-h-screen flex flex-col bg-[radial-gradient(circle_at_15%_20%,rgba(255,214,224,0.45),transparent_42%),radial-gradient(circle_at_85%_10%,rgba(255,228,171,0.45),transparent_35%),linear-gradient(180deg,#f9edf1_0%,#f4f7ff_55%,#f7eef5_100%)]">
+    <div className="app-page min-h-screen flex flex-col bg-[radial-gradient(circle_at_12%_18%,rgba(255,206,220,0.52),transparent_40%),radial-gradient(circle_at_86%_8%,rgba(255,224,160,0.48),transparent_32%),linear-gradient(180deg,#f9edf1_0%,#f4f7ff_58%,#f8eff6_100%)]">
       <Navbar />
       <div className="px-2 py-4 md:px-4 md:py-6">
         <div className="container section-panel">
@@ -209,6 +272,11 @@ const Materials = () => {
               'Visualiza directamente o descarga materiales bilingües para estudiar'
             )}
           </p>
+          {activeSubjectInfo && (
+            <p className="mt-2 text-sm font-semibold text-primary">
+              {t('Chủ đề đang chọn', 'Tema seleccionado')}: {activeSubjectInfo.name}
+            </p>
+          )}
         </div>
       </div>
 
@@ -220,14 +288,14 @@ const Materials = () => {
           {!loadingSubjects && error && <p className="text-sm text-destructive mb-3">{error}</p>}
 
           {!loadingSubjects && subjects.length > 0 && (
-            <div className="mb-6 flex flex-wrap gap-2 md:gap-2.5">
+            <div className="mb-6 flex flex-wrap gap-2 rounded-2xl border border-[#7a2038]/12 bg-white/55 p-2 md:gap-2.5">
               <Button
                 size="sm"
                 variant={readFilter === 'all' ? 'default' : 'outline'}
                 className="h-8 rounded-full px-3 text-xs md:h-9 md:text-sm"
                 onClick={() => setReadFilter('all')}
               >
-                {t('Tất cả trạng thái', 'Todos los estados')}
+                {t('Tất cả trạng thái', 'Todos los estados')} ({readCounts.all})
               </Button>
               <Button
                 size="sm"
@@ -235,7 +303,7 @@ const Materials = () => {
                 className="h-8 rounded-full px-3 text-xs md:h-9 md:text-sm"
                 onClick={() => setReadFilter('read')}
               >
-                {t('Đã đọc', 'Leidos')}
+                {t('Đã đọc', 'Leidos')} ({readCounts.read})
               </Button>
               <Button
                 size="sm"
@@ -243,20 +311,20 @@ const Materials = () => {
                 className="h-8 rounded-full px-3 text-xs md:h-9 md:text-sm"
                 onClick={() => setReadFilter('unread')}
               >
-                {t('Chưa đọc', 'No leidos')}
+                {t('Chưa đọc', 'No leidos')} ({readCounts.unread})
               </Button>
             </div>
           )}
 
           {!loadingSubjects && subjects.length > 0 && (
-            <div className="mb-6 flex flex-wrap gap-2 md:gap-2.5">
+            <div className="mb-6 flex flex-wrap gap-2 rounded-2xl border border-[#7a2038]/12 bg-white/55 p-2 md:gap-2.5">
               <Button
                 size="sm"
                 variant={activeSubject === null ? 'default' : 'outline'}
                 className="h-8 rounded-full px-3 text-xs md:h-9 md:text-sm"
                 onClick={() => setActiveSubject(null)}
               >
-                {t('Tất cả', 'Todos')}
+                {t('Tất cả', 'Todos')} ({totalMaterialCount})
               </Button>
               {subjects.map((subject) => (
                 <Button
@@ -266,7 +334,7 @@ const Materials = () => {
                   className="h-8 rounded-full px-3 text-xs md:h-9 md:text-sm"
                   onClick={() => setActiveSubject(subject.id)}
                 >
-                  {subject.name}
+                  {subject.name} ({subjectMaterialCounts[subject.id] || 0})
                 </Button>
               ))}
             </div>
@@ -299,7 +367,7 @@ const Materials = () => {
                 animate="visible"
                 variants={fadeUp}
               >
-                <Card className="card-hover glassmorph-card h-full border-border/50">
+                <Card className="card-hover glassmorph-card h-full border-primary/20 bg-white/78 shadow-[0_12px_26px_rgba(95,20,40,0.10)]">
                   <CardContent className="flex h-full flex-col p-4 md:p-5">
                     <div className="mb-3 flex items-start gap-3">
                       <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10">
@@ -330,9 +398,9 @@ const Materials = () => {
                       </div>
                     </div>
 
-                    <div className="flex items-center justify-between mt-auto pt-3 border-t border-border/50">
+                    <div className="mt-auto flex items-center justify-between border-t border-border/40 pt-3">
                       <div className="flex items-center gap-2 text-[10px] text-muted-foreground md:text-xs">
-                        <span className="uppercase font-bold px-1.5 py-0.5 rounded bg-muted">
+                        <span className="rounded-md bg-muted px-1.5 py-0.5 font-bold uppercase">
                           VI/ES
                         </span>
                         <span>
@@ -346,7 +414,7 @@ const Materials = () => {
                         <Button
                           variant="outline"
                           size="sm"
-                          className="h-8 gap-1 text-xs md:h-9 md:text-sm"
+                          className="h-8 gap-1 border-primary/25 bg-white/75 text-xs text-primary hover:bg-white md:h-9 md:text-sm"
                           onClick={() => openMaterialViewer(material, lang === 'es' ? 'es' : 'vi')}
                         >
                           <Eye className="h-3 w-3" />

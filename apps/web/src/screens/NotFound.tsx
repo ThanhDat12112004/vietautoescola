@@ -11,11 +11,11 @@ const NotFound = () => {
   }, [location.pathname]);
 
   return (
-    <div className="app-page min-h-screen flex flex-col bg-[radial-gradient(circle_at_15%_20%,rgba(255,214,224,0.45),transparent_42%),radial-gradient(circle_at_85%_10%,rgba(255,228,171,0.45),transparent_35%),linear-gradient(180deg,#f9edf1_0%,#f4f7ff_55%,#f7eef5_100%)]">
+    <div className="app-page min-h-screen flex flex-col bg-[radial-gradient(circle_at_12%_18%,rgba(255,206,220,0.52),transparent_40%),radial-gradient(circle_at_86%_8%,rgba(255,224,160,0.48),transparent_32%),linear-gradient(180deg,#f9edf1_0%,#f4f7ff_58%,#f8eff6_100%)]">
       <Navbar />
       <div className="flex-1 px-4 py-12">
         <div className="container section-panel flex min-h-[52vh] items-center justify-center text-center">
-          <div>
+          <div className="rounded-3xl border border-[#7a2038]/15 bg-[linear-gradient(160deg,rgba(255,255,255,0.92)_0%,rgba(255,247,250,0.82)_50%,rgba(255,249,235,0.72)_100%)] px-8 py-10 shadow-[0_18px_42px_rgba(95,20,40,0.14)]">
             <h1 className="mb-3 font-display text-5xl font-black text-[#64172f] md:text-6xl">404</h1>
             <p className="mb-6 text-lg text-muted-foreground md:text-xl">Oops! Page not found</p>
             <a

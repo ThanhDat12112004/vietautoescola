@@ -850,7 +850,7 @@ export default function Admin() {
       for (let index = 0; index < source.length; index++) {
         const draft = source[index];
         const file = questionImageFiles[index];
-        let imageUrl = null;
+        let imageUrl: string | null = null;
         if (file) {
           const uploaded = await uploadQuestionImage(file);
           imageUrl = buildStoredMediaPath(uploaded) || null;
@@ -1277,10 +1277,48 @@ export default function Admin() {
   ];
 
   return (
-    <div className="app-page min-h-screen flex flex-col bg-[radial-gradient(circle_at_15%_20%,rgba(255,214,224,0.45),transparent_42%),radial-gradient(circle_at_85%_10%,rgba(255,228,171,0.45),transparent_35%),linear-gradient(180deg,#f9edf1_0%,#f4f7ff_55%,#f7eef5_100%)]">
+    <div className="app-page admin-polish min-h-screen flex flex-col bg-[radial-gradient(circle_at_12%_18%,rgba(255,206,220,0.52),transparent_40%),radial-gradient(circle_at_86%_8%,rgba(255,224,160,0.48),transparent_32%),linear-gradient(180deg,#f9edf1_0%,#f4f7ff_58%,#f8eff6_100%)]">
+      <style>{`
+        .admin-polish input,
+        .admin-polish textarea {
+          border-radius: 0.75rem;
+        }
+
+        .admin-polish button {
+          letter-spacing: 0.01em;
+          transition: all 0.18s ease;
+        }
+
+        .admin-polish .rounded-sm {
+          border-radius: 0.7rem;
+        }
+
+        .admin-polish .bg-white {
+          background: rgba(255, 255, 255, 0.92);
+        }
+
+        .admin-polish .shadow-sm {
+          box-shadow: 0 10px 22px rgba(95, 20, 40, 0.08);
+        }
+
+        .admin-polish .border {
+          transition: border-color 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease;
+        }
+
+        .admin-polish .border:hover {
+          border-color: rgba(122, 32, 56, 0.34);
+        }
+
+        .admin-polish input:focus,
+        .admin-polish textarea:focus,
+        .admin-polish button:focus-visible {
+          outline: none;
+          box-shadow: 0 0 0 3px rgba(122, 32, 56, 0.12);
+        }
+      `}</style>
       <Navbar />
       <main className="flex-1 px-2 md:px-4 py-3 md:py-4">
-        <div className="w-full min-h-full rounded-2xl border border-[#7a2038]/12 bg-[linear-gradient(160deg,rgba(255,255,255,0.92)_0%,rgba(255,247,250,0.84)_45%,rgba(255,249,235,0.74)_100%)] p-3 shadow-[0_14px_34px_rgba(95,20,40,0.12)] md:p-4">
+        <div className="w-full min-h-full rounded-3xl border border-[#7a2038]/12 bg-[linear-gradient(160deg,rgba(255,255,255,0.92)_0%,rgba(255,247,250,0.84)_45%,rgba(255,249,235,0.74)_100%)] p-3 shadow-[0_16px_38px_rgba(95,20,40,0.12)] md:p-4">
           {/* Notice */}
           {notice.text && (
             <div
@@ -1308,8 +1346,8 @@ export default function Admin() {
                       onClick={() => setActiveTab(tab.id)}
                       className={`w-full flex items-center gap-2 px-3 py-2 rounded-sm border font-semibold text-sm transition-colors ${
                         activeTab === tab.id
-                          ? 'border-[#7a2038] bg-[#f5d6df] text-[#6b1b31]'
-                          : 'border-[#bcbcbc] bg-white text-[#5f5f5f] hover:bg-[#f0f0f0]'
+                          ? 'border-[#7a2038]/60 bg-[linear-gradient(135deg,#f6d7e0_0%,#fbe8d4_100%)] text-[#6b1b31] shadow-[0_8px_18px_rgba(95,20,40,0.10)]'
+                          : 'border-[#bcbcbc] bg-white text-[#5f5f5f] hover:bg-[#f9f3f6]'
                       }`}
                     >
                       <Icon className="h-4 w-4" />

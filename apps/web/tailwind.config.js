@@ -27,8 +27,8 @@ module.exports = {
         '25': 'repeat(25, minmax(0, 1fr))',
       },
       fontFamily: {
-        display: ["'Montserrat'", 'sans-serif'],
-        body: ["'Inter'", 'sans-serif'],
+        display: ["'Sora'", 'sans-serif'],
+        body: ["'Manrope'", 'sans-serif'],
       },
       colors: {
         border: 'hsl(var(--border))',
