@@ -221,6 +221,23 @@ const QuizTake = () => {
     }
   };
 
+  const handleLeaveQuiz = (targetPath: string) => {
+    if (isSubmitting) return;
+
+    const hasUnsavedProgress = !submitResult && (Object.keys(selectedAnswers).length > 0 || timer > 0);
+    if (hasUnsavedProgress) {
+      const accepted = window.confirm(
+        t(
+          'Bạn muốn thoát bài thi? Bài này sẽ được tính là chưa làm cho đến khi bạn bấm Nộp bài.',
+          'Quieres salir del examen? Este intento se considerara no realizado hasta que pulses Entregar.'
+        )
+      );
+      if (!accepted) return;
+    }
+
+    navigate(targetPath);
+  };
+
   if (loading) {
     return (
       <div className="h-screen flex items-center justify-center bg-background">
@@ -403,29 +420,88 @@ const QuizTake = () => {
   const shouldUseTwoRowsOnMobile = questions.length > 20;
   const mobileTopCount = Math.ceil(questions.length / 2);
 
+  const getQuestionBadgeClassName = (questionId: number, index: number) => {
+    const isCurrent = index === currentIndex;
+
+    if (mode === 'exam') {
+      const hasAnswered = Boolean(selectedAnswers[questionId]);
+
+      if (hasAnswered) {
+        return 'border-primary bg-primary/10 text-primary';
+      }
+
+      return isCurrent
+        ? 'border-primary bg-primary/10 text-primary'
+        : 'border-border bg-background text-muted-foreground hover:bg-muted';
+    }
+
+    const detail = detailsMap[questionId];
+    const hasJudged = Boolean(detail);
+    const isCorrect = Boolean(detail?.is_correct);
+
+    if (hasJudged) {
+      return isCorrect
+        ? 'border-green-500 bg-green-50 text-green-700'
+        : 'border-red-500 bg-red-50 text-red-700';
+    }
+
+    return isCurrent
+      ? 'border-primary bg-primary/10 text-primary'
+      : 'border-border bg-background text-muted-foreground hover:bg-muted';
+  };
+
   return (
     <div
-      className="min-h-screen md:h-screen flex flex-col overflow-y-auto md:overflow-hidden print:hidden select-none bg-[radial-gradient(circle_at_12%_18%,rgba(255,206,220,0.52),transparent_40%),radial-gradient(circle_at_88%_8%,rgba(255,226,165,0.5),transparent_32%),linear-gradient(180deg,#f9edf1_0%,#f4f7ff_58%,#f8eff6_100%)]
+      className="min-h-screen md:h-screen flex flex-col overflow-y-auto md:overflow-hidden print:hidden select-none bg-[radial-gradient(circle_at_18%_12%,rgba(224,231,255,0.35),transparent_38%),radial-gradient(circle_at_84%_6%,rgba(226,232,240,0.45),transparent_34%),linear-gradient(180deg,#f8fafc_0%,#eef2f7_55%,#f5f7fb_100%)]
                    p-0"
     >
       <div
-        className="flex-1 flex flex-col overflow-visible md:overflow-hidden w-full rounded-[1.1rem] border border-primary/15 bg-card/90 shadow-[0_16px_34px_rgba(95,20,40,0.12)]
+        className="flex-1 flex flex-col overflow-visible md:overflow-hidden w-full rounded-[1.1rem] border border-slate-300/70 bg-white/90 shadow-[0_18px_36px_rgba(15,23,42,0.12)]
                      p-1
                      sm:p-2
                      md:p-3
                      lg:p-4"
       >
         <div className="mb-3 grid gap-2 md:gap-3 grid-cols-[minmax(0,1fr)_auto] lg:grid-cols-[260px_1fr_160px]">
-          <div className="col-span-2 flex items-center gap-2 rounded-lg border border-primary/20 bg-white/75 px-2 py-2 text-sm md:px-3 lg:col-span-1 lg:row-span-2">
-            <BrandLogo imageClassName="h-9 md:h-10 lg:h-11" withText />
+          <div className="col-span-2 flex items-center justify-between gap-2 rounded-lg border border-slate-300/70 bg-slate-50/90 px-2 py-2 text-sm md:px-3 lg:col-span-1 lg:row-span-2">
+            <button
+              type="button"
+              onClick={() => handleLeaveQuiz('/')}
+              className="flex min-w-0 items-center text-left"
+              aria-label={t('Về trang chủ', 'Ir a inicio')}
+            >
+              <BrandLogo imageClassName="h-9 md:h-10 lg:h-11" withText />
+            </button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-8 shrink-0 rounded-lg border-slate-300 bg-white text-xs font-semibold md:h-9 md:text-sm lg:hidden"
+              onClick={() => handleLeaveQuiz('/quizzes')}
+            >
+              <ArrowLeft className="mr-1 h-3.5 w-3.5" />
+              {t('Quay lại', 'Volver')}
+            </Button>
           </div>
 
-          <div className="rounded-lg border border-primary/20 bg-white/75 px-3 py-2 text-sm lg:text-base lg:col-start-2 lg:row-start-1">
-            <span className="font-bold">{t('Đề thi', 'Examen')}:</span>
-            <span className="ml-1 break-words">{quiz.title}</span>
+          <div className="rounded-lg border border-slate-300/70 bg-slate-50/80 px-3 py-2 text-sm lg:text-base lg:col-start-2 lg:row-start-1 lg:flex lg:items-center lg:justify-between lg:gap-3">
+            <div className="min-w-0">
+              <span className="font-bold">{t('Đề thi', 'Examen')}:</span>
+              <span className="ml-1 break-words">{quiz.title}</span>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="hidden h-8 shrink-0 rounded-lg border-slate-300 bg-white text-xs font-semibold lg:inline-flex"
+              onClick={() => handleLeaveQuiz('/quizzes')}
+            >
+              <ArrowLeft className="mr-1 h-3.5 w-3.5" />
+              {t('Quay lại', 'Volver')}
+            </Button>
           </div>
 
-          <div className="flex items-center justify-center rounded-lg border border-primary/20 bg-white/75 px-2 py-2 lg:col-start-3 lg:row-start-1">
+          <div className="flex items-center justify-center rounded-lg border border-slate-300/70 bg-slate-50/80 px-2 py-2 lg:col-start-3 lg:row-start-1">
             <div className="flex items-center gap-1 text-sm lg:text-base">
               <Clock className="h-3.5 w-3.5 text-muted-foreground" />
               <span
@@ -436,15 +512,15 @@ const QuizTake = () => {
             </div>
           </div>
 
-          <div className="rounded-lg border border-primary/20 bg-white/75 px-3 py-2 text-sm lg:text-base lg:col-start-2 lg:row-start-2">
+          <div className="rounded-lg border border-slate-300/70 bg-slate-50/80 px-3 py-2 text-sm lg:text-base lg:col-start-2 lg:row-start-2">
             <span className="font-bold">{t('Thí sinh', 'Aspirante')}:</span>
             <span className="ml-1 break-words uppercase">{candidateName}</span>
           </div>
 
-          <div className="rounded-lg border border-primary/20 bg-white/75 px-1 py-1 lg:col-start-3 lg:row-start-2">
+          <div className="rounded-lg border border-slate-300/70 bg-slate-50/80 px-1 py-1 lg:col-start-3 lg:row-start-2">
             <button
               onClick={() => setLang(lang === 'vi' ? 'es' : 'vi')}
-              className="mx-auto flex h-8 w-full items-center justify-center rounded-md border border-primary/20 bg-white text-lg font-semibold text-primary transition-colors hover:bg-primary/5"
+              className="mx-auto flex h-8 w-full items-center justify-center rounded-md border border-slate-300 bg-white text-lg font-semibold text-slate-700 transition-colors hover:bg-slate-100"
               aria-label={t('Đổi ngôn ngữ', 'Cambiar idioma')}
             >
               {lang === 'vi' ? '🇻🇳' : '🇪🇸'}
@@ -453,18 +529,18 @@ const QuizTake = () => {
         </div>
 
         <div
-          className="flex-1 min-h-0 grid gap-2 md:gap-3 rounded-xl border border-primary/15 bg-background/75 p-2 md:p-3
+          className="flex-1 min-h-0 grid gap-2 md:gap-3 rounded-xl border border-slate-300/70 bg-slate-100/65 p-2 md:p-3
                         grid-cols-1
                         md:grid-cols-2"
         >
           <div
-            className="rounded-xl border border-primary/15 bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(255,249,252,0.9)_100%)] p-3 flex flex-col overflow-visible md:overflow-hidden gap-3
+            className="rounded-xl border border-slate-300/70 bg-white p-3 flex flex-col overflow-visible md:overflow-hidden gap-3
                           min-h-0
                           md:min-h-[300px]
                           lg:min-h-[360px]
                           h-auto md:h-full"
           >
-            <div className="w-full rounded-lg border border-primary/15 bg-white flex items-center justify-center overflow-hidden aspect-[16/10] md:aspect-auto md:flex-1">
+            <div className="w-full rounded-lg border border-slate-200 bg-slate-50 flex items-center justify-center overflow-hidden aspect-[16/10] md:aspect-auto md:flex-1">
               {question.image_url ? (
                 <img
                   src={resolveMediaUrl(question.image_url)}
@@ -480,7 +556,7 @@ const QuizTake = () => {
             <Button
               type="button"
               variant="outline"
-              className="h-10 w-full rounded-lg border border-primary/70 bg-primary text-primary-foreground hover:bg-primary/90 font-bold shadow-[0_10px_20px_rgba(95,20,40,0.2)]"
+              className="h-10 w-full rounded-lg border border-slate-300 bg-slate-900 text-white hover:bg-slate-800 font-semibold shadow-sm"
               disabled={mode !== 'practice' || !checkedForCurrent || !question.explanation}
               onClick={() => setShowExplanationPanel((prev) => !prev)}
             >
@@ -493,7 +569,7 @@ const QuizTake = () => {
               checkedForCurrent &&
               showExplanationPanel &&
               question.explanation && (
-                <div className="rounded-lg border border-primary/20 bg-white p-3 shadow-sm">
+                <div className="rounded-lg border border-slate-300/70 bg-slate-50 p-3 shadow-sm">
                   <p className="mb-1 font-semibold text-sm">{t('Giải thích', 'Explicación')}</p>
                   <p className="text-muted-foreground leading-relaxed text-sm">
                     {question.explanation}
@@ -504,7 +580,7 @@ const QuizTake = () => {
 
           {/* RIGHT: Question + answers - responsive typography */}
           <div
-            className="min-w-0 rounded-xl border border-primary/15 bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(255,250,252,0.92)_100%)] px-2 py-2
+            className="min-w-0 rounded-xl border border-slate-300/70 bg-white px-2 py-2
                           md:px-3 md:py-2
                           lg:px-4 lg:py-3
                           flex flex-col"
@@ -519,7 +595,7 @@ const QuizTake = () => {
                               lg:gap-4"
               >
                 <span
-                  className="font-black text-[#5a1428] leading-none drop-shadow-[0_1px_1px_rgba(95,20,40,0.14)]
+                  className="font-black text-slate-700 leading-none
                                 text-2xl
                                 md:text-3xl
                                 lg:text-4xl
@@ -560,12 +636,12 @@ const QuizTake = () => {
                                  lg:gap-4 lg:px-4 lg:py-3
                                  ${
                                    isCorrect
-                                     ? 'border-green-500 bg-green-50 shadow-[0_8px_18px_rgba(34,197,94,0.14)]'
+                                     ? 'border-green-500 bg-green-50 shadow-sm'
                                      : isWrong
-                                       ? 'border-destructive bg-destructive/10 shadow-[0_8px_18px_rgba(239,68,68,0.12)]'
+                                       ? 'border-destructive bg-destructive/10 shadow-sm'
                                        : isSelected
-                                         ? 'border-primary bg-primary/10 shadow-[0_10px_20px_rgba(95,20,40,0.14)]'
-                                         : 'border-primary/20 bg-white hover:-translate-y-[1px] hover:bg-primary/5 hover:shadow-[0_10px_18px_rgba(95,20,40,0.08)]'
+                                         ? 'border-slate-500 bg-slate-100 shadow-sm'
+                                         : 'border-slate-300 bg-white hover:-translate-y-[1px] hover:bg-slate-50 hover:shadow-sm'
                                  }`}
                     >
                       {badgeSrc ? (
@@ -596,10 +672,10 @@ const QuizTake = () => {
             </div>
 
             {/* Navigation buttons - 2 cột ở mobile, 3 cột ở desktop */}
-            <div className="mt-3 grid gap-2 w-full grid-cols-3">
+            <div className="mt-3 grid gap-2 w-full grid-cols-3 md:sticky md:bottom-0 md:bg-white/95 md:pt-2">
               <Button
                 variant="outline"
-                className="rounded-xl border-primary/25 bg-white/80 font-bold hover:bg-white transition-colors
+                className="rounded-xl border-slate-300 bg-white font-semibold hover:bg-slate-50 transition-colors
                           h-10 text-sm
                           md:h-11 md:text-base
                           lg:h-12 lg:text-lg"
@@ -616,7 +692,7 @@ const QuizTake = () => {
               </Button>
 
               <Button
-                className="rounded-xl border border-primary/20 bg-white/80 text-foreground font-bold hover:bg-white transition-colors
+                className="rounded-xl border border-slate-300 bg-white text-foreground font-semibold hover:bg-slate-50 transition-colors
                           h-10 text-sm
                           md:h-11 md:text-base
                           lg:h-12 lg:text-lg"
@@ -633,7 +709,7 @@ const QuizTake = () => {
               </Button>
 
               <Button
-                className="rounded-xl border border-primary/80 bg-primary text-primary-foreground font-bold hover:bg-primary/90 transition-colors shadow-[0_10px_20px_rgba(95,20,40,0.22)]
+                className="rounded-xl border border-slate-800 bg-slate-900 text-white font-semibold hover:bg-slate-800 transition-colors shadow-sm
                           h-10 text-sm
                           md:h-11 md:text-base
                           lg:h-12 lg:text-lg"
@@ -649,7 +725,7 @@ const QuizTake = () => {
         </div>
 
         <div
-          className="mt-3 rounded-xl border border-primary/15 bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(255,249,252,0.9)_100%)] p-2
+          className="mt-3 rounded-xl border border-slate-300/70 bg-white p-2
                        md:p-3 lg:p-4"
         >
           {shouldUseTwoRowsOnMobile ? (
@@ -659,24 +735,11 @@ const QuizTake = () => {
                 style={{ gridTemplateColumns: `repeat(${mobileTopCount}, minmax(0, 1fr))` }}
               >
                 {questions.slice(0, mobileTopCount).map((item, index) => {
-                  const isCurrent = index === currentIndex;
-                  const detail = detailsMap[item.id];
-                  const hasJudged = Boolean(detail);
-                  const isCorrect = Boolean(detail?.is_correct);
-
                   return (
                     <button
                       key={item.id}
                       onClick={() => setCurrentIndex(index)}
-                      className={`rounded-lg border font-bold transition-all h-8 text-sm ${
-                        hasJudged
-                          ? isCorrect
-                            ? 'border-green-500 bg-green-50 text-green-700'
-                            : 'border-red-500 bg-red-50 text-red-700'
-                          : isCurrent
-                            ? 'border-primary bg-primary/10 text-primary'
-                            : 'border-border bg-background text-muted-foreground hover:bg-muted'
-                      }`}
+                      className={`rounded-lg border font-bold transition-all h-8 text-sm ${getQuestionBadgeClassName(item.id, index)}`}
                       aria-label={`${t('Câu', 'Pregunta')} ${index + 1}`}
                     >
                       {String(index + 1).padStart(2, '0')}
@@ -693,24 +756,11 @@ const QuizTake = () => {
               >
                 {questions.slice(mobileTopCount).map((item, idx) => {
                   const index = mobileTopCount + idx;
-                  const isCurrent = index === currentIndex;
-                  const detail = detailsMap[item.id];
-                  const hasJudged = Boolean(detail);
-                  const isCorrect = Boolean(detail?.is_correct);
-
                   return (
                     <button
                       key={item.id}
                       onClick={() => setCurrentIndex(index)}
-                      className={`rounded-lg border font-bold transition-all h-8 text-sm ${
-                        hasJudged
-                          ? isCorrect
-                            ? 'border-green-500 bg-green-50 text-green-700'
-                            : 'border-red-500 bg-red-50 text-red-700'
-                          : isCurrent
-                            ? 'border-primary bg-primary/10 text-primary'
-                            : 'border-border bg-background text-muted-foreground hover:bg-muted'
-                      }`}
+                      className={`rounded-lg border font-bold transition-all h-8 text-sm ${getQuestionBadgeClassName(item.id, index)}`}
                       aria-label={`${t('Câu', 'Pregunta')} ${index + 1}`}
                     >
                       {String(index + 1).padStart(2, '0')}
@@ -723,11 +773,6 @@ const QuizTake = () => {
                 className="hidden gap-1 md:grid md:grid-cols-18 lg:grid-cols-20 xl:grid-cols-25"
               >
                 {questions.map((item, index) => {
-                  const isCurrent = index === currentIndex;
-                  const detail = detailsMap[item.id];
-                  const hasJudged = Boolean(detail);
-                  const isCorrect = Boolean(detail?.is_correct);
-
                   return (
                     <button
                       key={item.id}
@@ -736,15 +781,7 @@ const QuizTake = () => {
                              h-9 text-base
                              lg:h-10 lg:text-lg
                              xl:h-11 xl:text-xl
-                             ${
-                               hasJudged
-                                 ? isCorrect
-                                   ? 'border-green-500 bg-green-50 text-green-700'
-                                   : 'border-red-500 bg-red-50 text-red-700'
-                                 : isCurrent
-                                   ? 'border-primary bg-primary/10 text-primary'
-                                   : 'border-border bg-background text-muted-foreground hover:bg-muted'
-                             }`}
+                             ${getQuestionBadgeClassName(item.id, index)}`}
                       aria-label={`${t('Câu', 'Pregunta')} ${index + 1}`}
                     >
                       {String(index + 1).padStart(2, '0')}
@@ -763,11 +800,6 @@ const QuizTake = () => {
                          xl:grid-cols-25"
             >
               {questions.map((item, index) => {
-                const isCurrent = index === currentIndex;
-                const detail = detailsMap[item.id];
-                const hasJudged = Boolean(detail);
-                const isCorrect = Boolean(detail?.is_correct);
-
                 return (
                   <button
                     key={item.id}
@@ -777,15 +809,7 @@ const QuizTake = () => {
                              md:h-9 md:text-base
                              lg:h-10 lg:text-lg
                              xl:h-11 xl:text-xl
-                             ${
-                               hasJudged
-                                 ? isCorrect
-                                   ? 'border-green-500 bg-green-50 text-green-700'
-                                   : 'border-red-500 bg-red-50 text-red-700'
-                                 : isCurrent
-                                   ? 'border-primary bg-primary/10 text-primary'
-                                   : 'border-border bg-background text-muted-foreground hover:bg-muted'
-                             }`}
+                             ${getQuestionBadgeClassName(item.id, index)}`}
                     aria-label={`${t('Câu', 'Pregunta')} ${index + 1}`}
                   >
                     {String(index + 1).padStart(2, '0')}
@@ -820,29 +844,43 @@ const QuizTake = () => {
                                lg:h-3.5 lg:w-8"
                 />
                 <span className="text-xs md:text-sm lg:text-base">
-                  {t('chưa trả lời', 'no contestada')}
+                  {mode === 'exam' ? t('chưa làm', 'no realizado') : t('chưa trả lời', 'no contestada')}
                 </span>
               </div>
 
-              <div className="flex items-center gap-1.5">
-                <span
-                  className="inline-block rounded-full border border-green-500 bg-green-100
+              {mode === 'exam' ? (
+                <div className="flex items-center gap-1.5">
+                  <span
+                    className="inline-block rounded-full border border-primary bg-primary/10
                                h-2.5 w-6
                                md:h-3 md:w-7
                                lg:h-3.5 lg:w-8"
-                />
-                <span className="text-xs md:text-sm lg:text-base">{t('đúng', 'correcta')}</span>
-              </div>
+                  />
+                  <span className="text-xs md:text-sm lg:text-base">{t('đã làm', 'realizado')}</span>
+                </div>
+              ) : (
+                <>
+                  <div className="flex items-center gap-1.5">
+                    <span
+                      className="inline-block rounded-full border border-green-500 bg-green-100
+                               h-2.5 w-6
+                               md:h-3 md:w-7
+                               lg:h-3.5 lg:w-8"
+                    />
+                    <span className="text-xs md:text-sm lg:text-base">{t('đúng', 'correcta')}</span>
+                  </div>
 
-              <div className="flex items-center gap-1.5">
-                <span
-                  className="inline-block rounded-full border border-red-500 bg-red-100
+                  <div className="flex items-center gap-1.5">
+                    <span
+                      className="inline-block rounded-full border border-red-500 bg-red-100
                                h-2.5 w-6
                                md:h-3 md:w-7
                                lg:h-3.5 lg:w-8"
-                />
-                <span className="text-xs md:text-sm lg:text-base">{t('sai', 'incorrecta')}</span>
-              </div>
+                    />
+                    <span className="text-xs md:text-sm lg:text-base">{t('sai', 'incorrecta')}</span>
+                  </div>
+                </>
+              )}
             </div>
 
           </div>

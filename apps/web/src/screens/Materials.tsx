@@ -24,12 +24,15 @@ const fadeUp = {
   }),
 };
 
+const ITEMS_PER_PAGE = 20;
+
 const Materials = () => {
   const { t, lang } = useLanguage();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [activeSubject, setActiveSubject] = useState<number | null>(null);
   const [readFilter, setReadFilter] = useState<'all' | 'read' | 'unread'>('all');
+  const [currentPage, setCurrentPage] = useState(1);
   const [materials, setMaterials] = useState<MaterialItem[]>([]);
   const [subjectMaterialCounts, setSubjectMaterialCounts] = useState<Record<number, number>>({});
   const [readMaterialIds, setReadMaterialIds] = useState<number[]>([]);
@@ -211,12 +214,94 @@ const Materials = () => {
     return raw;
   }, [searchParams]);
 
+  const requestedPage = useMemo(() => {
+    const raw = Number(searchParams.get('page'));
+    return Number.isInteger(raw) && raw > 0 ? raw : 1;
+  }, [searchParams]);
+
+  useEffect(() => {
+    setCurrentPage(requestedPage);
+  }, [requestedPage]);
+
   useEffect(() => {
     if (requestedSubjectId === null) return;
     if (subjects.some((subject) => subject.id === requestedSubjectId)) {
       setActiveSubject(requestedSubjectId);
     }
   }, [requestedSubjectId, subjects]);
+
+  const totalPages = useMemo(
+    () => Math.max(1, Math.ceil(filteredMaterials.length / ITEMS_PER_PAGE)),
+    [filteredMaterials.length]
+  );
+
+  const effectivePage = Math.min(currentPage, totalPages);
+
+  useEffect(() => {
+    if (currentPage <= totalPages) return;
+    setCurrentPage(totalPages);
+    const next = new URLSearchParams(searchParams);
+    if (totalPages <= 1) {
+      next.delete('page');
+    } else {
+      next.set('page', String(totalPages));
+    }
+    setSearchParams(next, { replace: true });
+  }, [currentPage, searchParams, setSearchParams, totalPages]);
+
+  const pagedMaterials = useMemo(() => {
+    const start = (effectivePage - 1) * ITEMS_PER_PAGE;
+    return filteredMaterials.slice(start, start + ITEMS_PER_PAGE);
+  }, [effectivePage, filteredMaterials]);
+
+  const goToPage = (page: number) => {
+    const nextPage = Math.max(1, Math.min(page, totalPages));
+    setCurrentPage(nextPage);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    const next = new URLSearchParams(searchParams);
+    if (nextPage === 1) {
+      next.delete('page');
+    } else {
+      next.set('page', String(nextPage));
+    }
+    setSearchParams(next, { replace: true });
+  };
+
+  const resetPage = () => {
+    setCurrentPage(1);
+    const next = new URLSearchParams(searchParams);
+    next.delete('page');
+    setSearchParams(next, { replace: true });
+  };
+
+  const applyReadFilter = (value: 'all' | 'read' | 'unread') => {
+    setReadFilter(value);
+    resetPage();
+  };
+
+  const applySubjectFilter = (subjectId: number | null) => {
+    setActiveSubject(subjectId);
+    const next = new URLSearchParams(searchParams);
+    if (subjectId === null) {
+      next.delete('subject');
+    } else {
+      next.set('subject', String(subjectId));
+    }
+    next.delete('page');
+    setCurrentPage(1);
+    setSearchParams(next, { replace: true });
+  };
+
+  const pageWindow = useMemo(() => {
+    if (totalPages <= 5) {
+      return Array.from({ length: totalPages }, (_, i) => i + 1);
+    }
+
+    const start = Math.max(1, effectivePage - 2);
+    const end = Math.min(totalPages, start + 4);
+    const adjustedStart = Math.max(1, end - 4);
+    return Array.from({ length: end - adjustedStart + 1 }, (_, i) => adjustedStart + i);
+  }, [effectivePage, totalPages]);
 
   const openMaterialViewer = async (material: MaterialItem, language: 'vi' | 'es') => {
     const filePath = language === 'es' ? material.file_path_es : material.file_path_vi;
@@ -256,7 +341,7 @@ const Materials = () => {
   };
 
   return (
-    <div className="app-page min-h-screen flex flex-col bg-[radial-gradient(circle_at_12%_18%,rgba(255,206,220,0.52),transparent_40%),radial-gradient(circle_at_86%_8%,rgba(255,224,160,0.48),transparent_32%),linear-gradient(180deg,#f9edf1_0%,#f4f7ff_58%,#f8eff6_100%)]">
+    <div className="app-page min-h-screen flex flex-col bg-[radial-gradient(circle_at_18%_12%,rgba(224,231,255,0.35),transparent_38%),radial-gradient(circle_at_84%_6%,rgba(226,232,240,0.45),transparent_34%),linear-gradient(180deg,#f8fafc_0%,#eef2f7_55%,#f5f7fb_100%)]">
       <Navbar />
       <div className="px-2 py-4 md:px-4 md:py-6">
         <div className="container section-panel">
@@ -288,12 +373,12 @@ const Materials = () => {
           {!loadingSubjects && error && <p className="text-sm text-destructive mb-3">{error}</p>}
 
           {!loadingSubjects && subjects.length > 0 && (
-            <div className="mb-6 flex flex-wrap gap-2 rounded-2xl border border-[#7a2038]/12 bg-white/55 p-2 md:gap-2.5">
+            <div className="mb-6 flex flex-wrap gap-2 rounded-2xl border border-slate-300/70 bg-slate-50/85 p-2 md:gap-2.5">
               <Button
                 size="sm"
                 variant={readFilter === 'all' ? 'default' : 'outline'}
                 className="h-8 rounded-full px-3 text-xs md:h-9 md:text-sm"
-                onClick={() => setReadFilter('all')}
+                onClick={() => applyReadFilter('all')}
               >
                 {t('Tất cả trạng thái', 'Todos los estados')} ({readCounts.all})
               </Button>
@@ -301,7 +386,7 @@ const Materials = () => {
                 size="sm"
                 variant={readFilter === 'read' ? 'default' : 'outline'}
                 className="h-8 rounded-full px-3 text-xs md:h-9 md:text-sm"
-                onClick={() => setReadFilter('read')}
+                onClick={() => applyReadFilter('read')}
               >
                 {t('Đã đọc', 'Leidos')} ({readCounts.read})
               </Button>
@@ -309,7 +394,7 @@ const Materials = () => {
                 size="sm"
                 variant={readFilter === 'unread' ? 'default' : 'outline'}
                 className="h-8 rounded-full px-3 text-xs md:h-9 md:text-sm"
-                onClick={() => setReadFilter('unread')}
+                onClick={() => applyReadFilter('unread')}
               >
                 {t('Chưa đọc', 'No leidos')} ({readCounts.unread})
               </Button>
@@ -317,12 +402,12 @@ const Materials = () => {
           )}
 
           {!loadingSubjects && subjects.length > 0 && (
-            <div className="mb-6 flex flex-wrap gap-2 rounded-2xl border border-[#7a2038]/12 bg-white/55 p-2 md:gap-2.5">
+            <div className="mb-6 flex flex-wrap gap-2 rounded-2xl border border-slate-300/70 bg-slate-50/85 p-2 md:gap-2.5">
               <Button
                 size="sm"
                 variant={activeSubject === null ? 'default' : 'outline'}
                 className="h-8 rounded-full px-3 text-xs md:h-9 md:text-sm"
-                onClick={() => setActiveSubject(null)}
+                onClick={() => applySubjectFilter(null)}
               >
                 {t('Tất cả', 'Todos')} ({totalMaterialCount})
               </Button>
@@ -332,7 +417,7 @@ const Materials = () => {
                   size="sm"
                   variant={activeSubject === subject.id ? 'default' : 'outline'}
                   className="h-8 rounded-full px-3 text-xs md:h-9 md:text-sm"
-                  onClick={() => setActiveSubject(subject.id)}
+                  onClick={() => applySubjectFilter(subject.id)}
                 >
                   {subject.name} ({subjectMaterialCounts[subject.id] || 0})
                 </Button>
@@ -359,7 +444,7 @@ const Materials = () => {
           )}
 
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            {filteredMaterials.map((material, i) => (
+            {pagedMaterials.map((material, i) => (
               <motion.div
                 key={material.id}
                 custom={i}
@@ -367,11 +452,11 @@ const Materials = () => {
                 animate="visible"
                 variants={fadeUp}
               >
-                <Card className="card-hover glassmorph-card h-full border-primary/20 bg-white/78 shadow-[0_12px_26px_rgba(95,20,40,0.10)]">
+                <Card className="card-hover h-full border-slate-300/70 bg-white shadow-sm">
                   <CardContent className="flex h-full flex-col p-4 md:p-5">
                     <div className="mb-3 flex items-start gap-3">
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10">
-                        <FileText className="h-5 w-5 text-primary md:h-6 md:w-6" />
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100">
+                        <FileText className="h-5 w-5 text-slate-700 md:h-6 md:w-6" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="mb-1 flex items-center gap-2">
@@ -414,7 +499,7 @@ const Materials = () => {
                         <Button
                           variant="outline"
                           size="sm"
-                          className="h-8 gap-1 border-primary/25 bg-white/75 text-xs text-primary hover:bg-white md:h-9 md:text-sm"
+                          className="h-8 gap-1 border-slate-300 bg-white text-xs text-slate-700 hover:bg-slate-50 md:h-9 md:text-sm"
                           onClick={() => openMaterialViewer(material, lang === 'es' ? 'es' : 'vi')}
                         >
                           <Eye className="h-3 w-3" />
@@ -423,7 +508,7 @@ const Materials = () => {
                         <Button
                           variant="default"
                           size="sm"
-                          className="h-8 gap-1 text-xs md:h-9 md:text-sm"
+                          className="h-8 gap-1 border border-slate-800 bg-slate-900 text-xs text-white hover:bg-slate-800 md:h-9 md:text-sm"
                           onClick={() => downloadMaterial(material, lang === 'es' ? 'es' : 'vi')}
                         >
                           <Download className="h-3 w-3" />
@@ -436,6 +521,46 @@ const Materials = () => {
               </motion.div>
             ))}
           </div>
+
+          {filteredMaterials.length > ITEMS_PER_PAGE && (
+            <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2.5">
+              <p className="text-xs text-slate-600 md:text-sm">
+                {t('Trang', 'Página')} {effectivePage}/{totalPages} · {filteredMaterials.length}{' '}
+                {t('tài liệu', 'materiales')}
+              </p>
+              <div className="flex items-center gap-1.5">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-8 px-3 text-xs md:text-sm"
+                  onClick={() => goToPage(effectivePage - 1)}
+                  disabled={effectivePage <= 1}
+                >
+                  {t('Trước', 'Anterior')}
+                </Button>
+                {pageWindow.map((page) => (
+                  <Button
+                    key={page}
+                    size="sm"
+                    variant={page === effectivePage ? 'default' : 'outline'}
+                    className="h-8 min-w-8 px-2 text-xs md:text-sm"
+                    onClick={() => goToPage(page)}
+                  >
+                    {page}
+                  </Button>
+                ))}
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-8 px-3 text-xs md:text-sm"
+                  onClick={() => goToPage(effectivePage + 1)}
+                  disabled={effectivePage >= totalPages}
+                >
+                  {t('Sau', 'Siguiente')}
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

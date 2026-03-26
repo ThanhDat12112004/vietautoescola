@@ -7,15 +7,23 @@ type BrandLogoProps = {
   className?: string;
   imageClassName?: string;
   withText?: boolean;
+  textClassName?: string;
 };
 
 const BRAND_LOGO_SRC = '/brand/logo.png';
 
-export default function BrandLogo({ className, imageClassName, withText = false }: BrandLogoProps) {
+export default function BrandLogo({
+  className,
+  imageClassName,
+  withText = false,
+  textClassName,
+}: BrandLogoProps) {
   const [logoError, setLogoError] = useState(false);
 
   const brandText = (
-    <span className="font-display text-xl font-800 tracking-tight text-foreground">
+    <span
+      className={cn('font-display text-xl font-800 tracking-tight text-foreground', textClassName)}
+    >
       Việt <span className="text-primary">Autoescola</span>
     </span>
   );

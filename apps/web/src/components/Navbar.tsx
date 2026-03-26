@@ -1,4 +1,3 @@
-import BrandLogo from '@/components/BrandLogo';
 import {
   BookOpen,
   FileText,
@@ -10,6 +9,7 @@ import {
   User,
   X,
 } from '@/components/BrandIcons';
+import BrandLogo from '@/components/BrandLogo';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -77,8 +77,8 @@ const Navbar = () => {
   const navItems = [
     { path: '/', label: t('Trang chủ', 'Inicio'), icon: Home },
     { path: '/quizzes', label: t('Làm bài thi', 'Exámenes'), icon: BookOpen },
-    { path: '/leaderboard', label: t('Xếp hạng', 'Ranking'), icon: Trophy },
     { path: '/materials', label: t('Tài liệu', 'Materiales'), icon: FileText },
+    { path: '/leaderboard', label: t('Xếp hạng', 'Ranking'), icon: Trophy },
     ...(isAdmin ? [{ path: '/admin', label: t('Quản trị', 'Admin'), icon: ShieldCheck }] : []),
   ];
 
@@ -86,11 +86,11 @@ const Navbar = () => {
     <>
       <style>{`
         .navbar-root {
-          font-family: 'Manrope', sans-serif;
+          font-family: 'Be Vietnam Pro', sans-serif;
         }
 
         .navbar-logo-text {
-          font-family: 'Sora', sans-serif;
+          font-family: 'Be Vietnam Pro', sans-serif;
         }
 
         .nav-link-pill {
@@ -172,7 +172,7 @@ const Navbar = () => {
           style={{
             width: '100%',
             padding: '0 clamp(12px, 2.8vw, 32px)',
-            height: 74,
+            height: 50,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
@@ -188,14 +188,14 @@ const Navbar = () => {
             }}
           >
             <span className="sm:hidden">
-              <BrandLogo imageClassName="h-10" />
+              <BrandLogo imageClassName="h-6" withText textClassName="text-[11px]" />
             </span>
             <span className="hidden sm:inline-flex">
-              <BrandLogo imageClassName="h-11" withText />
+              <BrandLogo imageClassName="h-8" withText textClassName="text-xs" />
             </span>
           </Link>
 
-          <div className="hidden md:flex" style={{ alignItems: 'center', gap: 4 }}>
+          <div className="hidden lg:flex" style={{ alignItems: 'center', gap: 4 }}>
             {navItems.map((item) => {
               const active = location.pathname === item.path;
               return (
@@ -204,10 +204,10 @@ const Navbar = () => {
                   to={item.path}
                   className={`nav-link-pill${active ? ' active' : ''}`}
                   style={{
-                    padding: '14px 14px',
+                    padding: '6px 9px',
                     borderRadius: 10,
-                    fontSize: 17,
-                    fontWeight: active ? 800 : 700,
+                    fontSize: 15,
+                    fontWeight: active ? 700 : 500,
                     letterSpacing: '0.01em',
                     color: active ? '#8b1e2d' : '#6b4a4f',
                     textDecoration: 'none',
@@ -230,7 +230,7 @@ const Navbar = () => {
             })}
           </div>
 
-          <div className="hidden md:flex" style={{ alignItems: 'center', gap: 10 }}>
+          <div className="hidden lg:flex" style={{ alignItems: 'center', gap: 10 }}>
             <button
               onClick={() => setLang(lang === 'vi' ? 'es' : 'vi')}
               style={{
@@ -241,8 +241,8 @@ const Navbar = () => {
                 border: 'none',
                 background: 'transparent',
                 color: '#8b1e2d',
-                fontSize: 15,
-                fontWeight: 700,
+                fontSize: 14,
+                fontWeight: 600,
                 cursor: 'pointer',
                 transition: 'opacity 0.2s, transform 0.2s',
               }}
@@ -267,7 +267,7 @@ const Navbar = () => {
                       flexDirection: 'column',
                       alignItems: 'center',
                       gap: 5,
-                      padding: '6px 8px',
+                      padding: '4px 7px',
                       border: 'none',
                       background: 'transparent',
                       cursor: 'pointer',
@@ -321,12 +321,12 @@ const Navbar = () => {
                     </div>
                     <span
                       style={{
-                        maxWidth: 132,
+                        maxWidth: 126,
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',
                         whiteSpace: 'nowrap',
-                        fontSize: 13,
-                        fontWeight: 700,
+                        fontSize: 12,
+                        fontWeight: 600,
                         color: '#2f171b',
                         lineHeight: 1.1,
                       }}
@@ -483,15 +483,15 @@ const Navbar = () => {
             )}
           </div>
 
-          <div className="flex items-center gap-3 md:hidden">
+          <div className="flex items-center gap-3 lg:hidden">
             <button
               onClick={() => setLang(lang === 'vi' ? 'es' : 'vi')}
               style={{
                 padding: '0',
                 border: 'none',
                 background: 'transparent',
-                fontSize: 15,
-                fontWeight: 700,
+                fontSize: 14,
+                fontWeight: 600,
                 color: '#8b1e2d',
                 cursor: 'pointer',
               }}
@@ -501,8 +501,8 @@ const Navbar = () => {
             <button
               onClick={() => setMobileOpen(!mobileOpen)}
               style={{
-                width: 38,
-                height: 38,
+                width: 32,
+                height: 32,
                 borderRadius: 9,
                 border: '1px solid rgba(139,30,45,0.28)',
                 background: 'rgba(139,30,45,0.06)',
@@ -514,9 +514,9 @@ const Navbar = () => {
               }}
             >
               {mobileOpen ? (
-                <X style={{ width: 20, height: 20 }} />
+                <X style={{ width: 18, height: 18 }} />
               ) : (
-                <Menu style={{ width: 20, height: 20 }} />
+                <Menu style={{ width: 18, height: 18 }} />
               )}
             </button>
           </div>
@@ -534,7 +534,7 @@ const Navbar = () => {
                 borderTop: '1px solid rgba(139,30,45,0.14)',
                 background: 'rgba(255,252,252,0.98)',
               }}
-              className="md:hidden"
+              className="lg:hidden"
             >
               <div style={{ padding: '12px 20px 20px' }}>
                 {isAuthenticated && (
@@ -614,17 +614,17 @@ const Navbar = () => {
                           display: 'flex',
                           alignItems: 'center',
                           gap: 12,
-                          padding: '11px 14px',
+                          padding: '9px 12px',
                           borderRadius: 10,
                           borderLeft: active ? '3px solid #8b1e2d' : '3px solid transparent',
                           background: active ? 'rgba(139,30,45,0.1)' : 'transparent',
                           color: active ? '#8b1e2d' : '#6f4a50',
                           textDecoration: 'none',
-                          fontSize: 16,
-                          fontWeight: active ? 600 : 400,
+                          fontSize: 14,
+                          fontWeight: active ? 600 : 500,
                         }}
                       >
-                        <item.icon style={{ width: 17, height: 17, flexShrink: 0 }} />
+                        <item.icon style={{ width: 15, height: 15, flexShrink: 0 }} />
                         {item.label}
                       </Link>
                     );

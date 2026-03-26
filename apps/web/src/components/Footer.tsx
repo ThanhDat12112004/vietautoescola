@@ -29,7 +29,7 @@ const Footer = () => {
     <>
       <style>{`
         .ft-root {
-          font-family: 'Manrope', sans-serif;
+          font-family: 'Be Vietnam Pro', sans-serif;
           background: #fff8f9;
           color: #67434a;
           border-top: 1px solid rgba(139, 30, 45, 0.2);
@@ -132,7 +132,7 @@ const Footer = () => {
         }
 
         .ft-col-title {
-          font-family: 'Sora', sans-serif;
+          font-family: 'Be Vietnam Pro', sans-serif;
           font-size: 18px;
           color: #2f171b;
           letter-spacing: 0.01em;

@@ -61,43 +61,155 @@ const Leaderboard = () => {
 
   const ranked = useMemo(() => rows.map((item, index) => ({ ...item, rank: index + 1 })), [rows]);
 
-  const podiumIndexes = [1, 0, 2].filter((idx) => idx < ranked.length);
+  const topScore = useMemo(
+    () => Number(ranked[0]?.total_score || 0),
+    [ranked]
+  );
+
+  const totalCompleted = useMemo(
+    () => ranked.reduce((sum, user) => sum + Number(user.total_quizzes || 0), 0),
+    [ranked]
+  );
+
+  const desktopPodiumIndexes = [1, 0, 2].filter((idx) => idx < ranked.length);
+  const mobilePodium = ranked.slice(0, 3);
+  const mobileRemainingRows = ranked.slice(3);
 
   return (
-    <div className="app-page relative min-h-screen overflow-x-clip flex flex-col bg-[radial-gradient(circle_at_12%_18%,rgba(255,206,220,0.52),transparent_40%),radial-gradient(circle_at_86%_8%,rgba(255,224,160,0.48),transparent_32%),linear-gradient(180deg,#f9edf1_0%,#f4f7ff_58%,#f8eff6_100%)]">
+    <div className="app-page relative flex min-h-screen flex-col overflow-x-clip bg-[radial-gradient(circle_at_14%_14%,rgba(255,220,228,0.42),transparent_36%),radial-gradient(circle_at_88%_8%,rgba(255,232,182,0.32),transparent_30%),linear-gradient(180deg,#fbf7f9_0%,#f8f9fe_56%,#f9f3f7_100%)]">
       <Navbar />
 
-      <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 left-0 hidden xl:block w-[86px] border-r border-white/35 bg-[linear-gradient(180deg,rgba(82,96,113,0.22)_0%,rgba(102,119,138,0.18)_45%,rgba(82,96,113,0.20)_100%)]" />
-      <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 right-0 hidden xl:block w-[86px] border-l border-white/35 bg-[linear-gradient(180deg,rgba(82,96,113,0.22)_0%,rgba(102,119,138,0.18)_45%,rgba(82,96,113,0.20)_100%)]" />
-      <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 left-[42px] hidden xl:block border-l-2 border-dashed border-white/65" />
-      <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 right-[42px] hidden xl:block border-l-2 border-dashed border-white/65" />
-
-      <div className="relative z-10 px-2 py-4 md:px-4 md:py-6">
-        <div className="mx-auto w-full max-w-[1500px] section-panel">
-          <div>
-            <div className="flex items-center gap-3 mb-2">
-              <Trophy className="h-8 w-8 text-gold" />
-              <h1 className="font-display text-3xl md:text-4xl font-800 text-[#64172f]">
-                {t('Bảng xếp hạng', 'Clasificación')}
+      <section className="relative z-10 px-3 pb-3 pt-5 sm:px-5 md:px-7 md:pt-7 lg:px-10">
+        <div className="mx-auto w-full max-w-[1500px] overflow-hidden rounded-[2rem] border border-[#7a2038]/12 bg-[linear-gradient(140deg,rgba(255,255,255,0.88)_0%,rgba(255,245,249,0.82)_52%,rgba(255,248,235,0.76)_100%)] p-4 shadow-[0_16px_36px_rgba(95,20,40,0.12)] backdrop-blur-[2px] sm:p-5 md:p-7 lg:p-8">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-[#7a2038]/18 bg-white/65 px-3 py-1 text-sm font-semibold text-[#7a2038]">
+                <Trophy className="h-4 w-4" />
+                {t('Bảng xếp hạng trực tuyến', 'Ranking en tiempo real')}
+              </div>
+              <h1 className="font-display text-[1.55rem] font-black leading-tight text-[#4a1930] sm:text-[2.1rem] md:text-[2.7rem] lg:text-[3.05rem]">
+                {t('Top học viên xuất sắc', 'Top estudiantes destacados')}
               </h1>
+              <p className="mt-2 max-w-2xl text-sm text-[#666278] sm:text-base md:text-lg">
+                {t(
+                  'Theo dõi thành tích mới nhất của học viên và bứt phá trên bảng xếp hạng.',
+                  'Sigue el rendimiento más reciente y avanza en la clasificación.'
+                )}
+              </p>
             </div>
-            <p className="text-muted-foreground">
-              {t('Top học viên có điểm số cao nhất', 'Los estudiantes con mejor puntuación')}
-            </p>
+
+            <div className="grid w-full grid-cols-2 gap-2 sm:gap-3 md:w-auto lg:min-w-[340px]">
+              <Card className="rounded-2xl border border-[#7a2038]/15 bg-white/82 shadow-[0_8px_20px_rgba(95,20,40,0.08)]">
+                <CardContent className="px-4 py-3">
+                  <div className="text-xs font-semibold uppercase tracking-wide text-[#7f6f79]">
+                    {t('Thành viên', 'Participantes')}
+                  </div>
+                  <div className="mt-1 flex items-center gap-2 font-display text-2xl font-black text-[#4a1930]">
+                    <Users className="h-5 w-5 text-[#7a2038]" />
+                    {ranked.length}
+                  </div>
+                </CardContent>
+              </Card>
+              <Card className="rounded-2xl border border-[#7a2038]/15 bg-white/82 shadow-[0_8px_20px_rgba(95,20,40,0.08)]">
+                <CardContent className="px-4 py-3">
+                  <div className="text-xs font-semibold uppercase tracking-wide text-[#7f6f79]">
+                    {t('Điểm cao nhất', 'Puntuación máxima')}
+                  </div>
+                  <div className="mt-1 font-display text-2xl font-black text-[#4a1930]">
+                    {topScore.toFixed(1)}
+                  </div>
+                </CardContent>
+              </Card>
+              <Card className="rounded-2xl border border-[#7a2038]/15 bg-white/82 shadow-[0_8px_20px_rgba(95,20,40,0.08)] sm:col-span-2">
+                <CardContent className="px-4 py-3">
+                  <div className="text-xs font-semibold uppercase tracking-wide text-[#7f6f79]">
+                    {t('Tổng bài đã hoàn thành', 'Total de exámenes completados')}
+                  </div>
+                  <div className="mt-1 font-display text-2xl font-black text-[#4a1930]">
+                    {totalCompleted}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </div>
         </div>
-      </div>
+      </section>
 
-      <div className="relative z-10 mx-auto w-full max-w-[1500px] py-8 md:py-10 px-2 md:px-4 flex-1">
+      <div className="relative z-10 mx-auto flex w-full max-w-[1500px] flex-1 flex-col px-3 pb-8 pt-3 sm:px-5 md:px-7 md:pb-10 md:pt-5 lg:px-10">
         {loading && (
-          <p className="text-sm text-muted-foreground">{t('Đang tải...', 'Cargando...')}</p>
+          <Card className="rounded-2xl border border-[#7a2038]/15 bg-white/80">
+            <CardContent className="px-4 py-6 text-sm text-[#666278]">
+              {t('Đang tải...', 'Cargando...')}
+            </CardContent>
+          </Card>
         )}
-        {!loading && error && <p className="text-sm text-destructive">{error}</p>}
+        {!loading && error && (
+          <Card className="rounded-2xl border border-red-200 bg-red-50/85">
+            <CardContent className="px-4 py-6 text-sm text-red-700">{error}</CardContent>
+          </Card>
+        )}
 
         {!loading && !error && ranked.length > 0 && (
           <>
-            <div className="grid grid-cols-3 gap-4 mb-10 max-w-2xl mx-auto">
-              {podiumIndexes.map((idx) => {
+            <div className="mb-4 space-y-2.5 md:hidden">
+              {mobilePodium.map((user, idx) => {
+                const isFirst = idx === 0;
+                const isSecondOrThird = idx > 0;
+                return (
+                  <motion.div
+                    key={`mobile-podium-${user.id}`}
+                    custom={idx}
+                    initial="hidden"
+                    animate="visible"
+                    variants={fadeUp}
+                    className={`rounded-2xl border border-[#7a2038]/14 bg-[linear-gradient(160deg,rgba(255,255,255,0.9)_0%,rgba(249,237,242,0.78)_100%)] text-center shadow-[0_10px_24px_rgba(95,20,40,0.09)] ${
+                      isFirst ? 'px-4 pb-4 pt-4' : 'px-4 pb-3 pt-3'
+                    }`}
+                  >
+                    <div
+                      className={`mx-auto mb-2 flex items-center justify-center rounded-full border-2 shadow-[0_8px_20px_rgba(95,20,40,0.12)] ${
+                        isFirst
+                          ? 'h-20 w-20 border-amber-300'
+                          : 'h-16 w-16 border-[#d8a8b7]'
+                      }`}
+                    >
+                      {getAvatarSrc(user) ? (
+                        <img
+                          src={getAvatarSrc(user) || ''}
+                          alt={getDisplayName(user)}
+                          className="h-full w-full rounded-full object-cover"
+                          onError={() => {
+                            setFailedAvatarIds((prev) => ({ ...prev, [user.id]: true }));
+                          }}
+                        />
+                      ) : (
+                        <span className="font-display text-xl font-bold text-[#7a2038]">
+                          {getInitial(user)}
+                        </span>
+                      )}
+                    </div>
+                    <Medal
+                      className={`mx-auto mb-1 h-5 w-5 ${isFirst ? 'text-amber-500' : 'text-[#7a2038]'}`}
+                    />
+                    <p className="truncate font-display text-base font-semibold text-[#402631]">
+                      {getDisplayName(user)}
+                    </p>
+                    <p className="font-display text-2xl font-black leading-tight text-[#7a2038]">
+                      {Number(user.total_score || 0).toFixed(1)}
+                    </p>
+                    <p className="text-sm text-[#7f6f79]">#{user.rank}</p>
+                    {isSecondOrThird && (
+                      <p className="mt-1 text-xs text-[#7f6f79]">
+                        {user.total_quizzes} {t('bài thi đã hoàn thành', 'exámenes completados')}
+                      </p>
+                    )}
+                  </motion.div>
+                );
+              })}
+            </div>
+
+            <div className="mb-8 hidden max-w-4xl grid-cols-1 gap-3 self-center sm:grid-cols-3 sm:gap-4 md:mb-10 md:grid">
+              {desktopPodiumIndexes.map((idx) => {
                 const user = ranked[idx];
                 const isFirst = idx === 0;
                 return (
@@ -107,15 +219,15 @@ const Leaderboard = () => {
                     initial="hidden"
                     animate="visible"
                     variants={fadeUp}
-                    className={`text-center ${isFirst ? '-mt-5' : 'mt-4'}`}
+                    className={`rounded-2xl border border-[#7a2038]/14 bg-[linear-gradient(160deg,rgba(255,255,255,0.9)_0%,rgba(249,237,242,0.78)_100%)] px-4 pb-4 pt-5 text-center shadow-[0_10px_24px_rgba(95,20,40,0.09)] ${
+                      isFirst ? 'sm:-mt-3 sm:scale-[1.03]' : 'sm:mt-5'
+                    }`}
                   >
                     <div
-                      className={`mx-auto flex h-16 w-16 items-center justify-center rounded-full mb-2 shadow-[0_8px_20px_rgba(95,20,40,0.12)] ${
-                        idx === 0
-                          ? 'bg-gold/20 ring-4 ring-gold'
-                          : idx === 1
-                            ? 'bg-muted ring-4 ring-muted-foreground/20'
-                            : 'bg-secondary/20 ring-4 ring-secondary/30'
+                      className={`mx-auto mb-2 flex items-center justify-center rounded-full border-2 shadow-[0_8px_20px_rgba(95,20,40,0.12)] ${
+                        isFirst
+                          ? 'h-20 w-20 border-amber-300'
+                          : 'h-14 w-14 border-[#d8a8b7] sm:h-16 sm:w-16'
                       }`}
                     >
                       {getAvatarSrc(user) ? (
@@ -129,63 +241,53 @@ const Leaderboard = () => {
                         />
                       ) : (
                         <span
-                          className={`font-display text-xl font-bold ${
-                            idx === 0
-                              ? 'text-gold'
-                              : idx === 1
-                                ? 'text-muted-foreground'
-                                : 'text-secondary'
-                          }`}
+                          className="font-display text-xl font-bold text-[#7a2038]"
                         >
                           {getInitial(user)}
                         </span>
                       )}
                     </div>
                     <Medal
-                      className={`h-5 w-5 mx-auto mb-1 ${
-                        idx === 0
-                          ? 'text-gold'
-                          : idx === 1
-                            ? 'text-muted-foreground'
-                            : 'text-secondary'
-                      }`}
+                      className={`mx-auto mb-1 h-5 w-5 ${isFirst ? 'text-amber-500' : 'text-[#7a2038]'}`}
                     />
-                    <p className="font-display font-semibold text-sm truncate">{getDisplayName(user)}</p>
-                    <p className="font-display font-bold text-primary text-xl">
+                    <p className="truncate font-display text-sm font-semibold text-[#402631]">
+                      {getDisplayName(user)}
+                    </p>
+                    <p className="font-display text-lg font-black text-[#7a2038] sm:text-xl">
                       {Number(user.total_score || 0).toFixed(1)}
                     </p>
+                    <p className="text-xs text-[#7f6f79]">#{user.rank}</p>
                   </motion.div>
                 );
               })}
             </div>
 
-            <Card className="mx-auto max-w-5xl border border-primary/20 bg-[linear-gradient(160deg,rgba(255,255,255,0.96)_0%,rgba(255,247,250,0.88)_55%,rgba(255,249,235,0.78)_100%)] shadow-[0_16px_36px_rgba(95,20,40,0.16)]">
-              <CardContent className="p-0">
-                {ranked.map((user, i) => (
-                  <motion.div
-                    key={user.id}
-                    custom={i}
-                    initial="hidden"
-                    animate="visible"
-                    variants={fadeUp}
-                    className={`flex items-center gap-4 px-5 py-4 transition-colors ${
-                      i !== ranked.length - 1 ? 'border-b border-border/40' : ''
-                    } ${i < 3 ? 'bg-gold/10' : 'hover:bg-primary/6'}`}
-                  >
+            <div className="space-y-2.5 md:hidden">
+              {mobileRemainingRows.map((user, i) => (
+                <motion.div
+                  key={`mobile-${user.id}`}
+                  custom={i + 3}
+                  initial="hidden"
+                  animate="visible"
+                  variants={fadeUp}
+                  className="rounded-2xl border border-[#7a2038]/12 bg-white/80 px-3.5 py-3 shadow-[0_8px_20px_rgba(95,20,40,0.08)]"
+                >
+                  <div className="flex items-center gap-3">
                     <div
-                      className={`flex h-9 w-9 items-center justify-center rounded-full font-display font-bold text-sm ${
-                        i === 0
-                          ? 'bg-gold text-gold-foreground'
-                          : i === 1
-                            ? 'bg-muted text-foreground'
-                            : i === 2
-                              ? 'bg-secondary/20 text-secondary'
-                              : 'bg-muted text-muted-foreground'
+                      className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full border text-sm font-bold ${
+                        user.rank === 1
+                          ? 'border-amber-300 bg-amber-100 text-amber-700'
+                          : user.rank === 2
+                            ? 'border-slate-300 bg-slate-100 text-slate-700'
+                            : user.rank === 3
+                              ? 'border-orange-300 bg-orange-100 text-orange-700'
+                              : 'border-[#d8a8b7] bg-white text-[#7a2038]'
                       }`}
                     >
-                      {i < 3 ? <Medal className="h-4 w-4" /> : user.rank}
+                      {user.rank <= 3 ? <Medal className="h-4 w-4" /> : user.rank}
                     </div>
-                    <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border border-primary/10 bg-primary/10">
+
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full border border-[#7a2038]/20 bg-white/75">
                       {getAvatarSrc(user) ? (
                         <img
                           src={getAvatarSrc(user) || ''}
@@ -196,22 +298,92 @@ const Leaderboard = () => {
                           }}
                         />
                       ) : (
-                        <span className="font-display text-sm font-bold text-primary">
+                        <span className="font-display text-sm font-bold text-[#7a2038]">
                           {getInitial(user)}
                         </span>
                       )}
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="font-semibold truncate">{getDisplayName(user)}</div>
-                      <div className="text-xs text-muted-foreground">
+
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate font-semibold text-[#3b2a33]">{getDisplayName(user)}</div>
+                      <div className="text-xs text-[#7f6f79]">
                         {user.total_quizzes} {t('bài thi đã hoàn thành', 'exámenes completados')}
                       </div>
                     </div>
+
                     <div className="text-right">
-                      <div className="font-display font-bold text-lg text-primary">
+                      <div className="font-display text-xl font-black leading-none text-[#7a2038]">
                         {Number(user.total_score || 0).toFixed(1)}
                       </div>
-                      <div className="text-xs text-muted-foreground">{t('điểm', 'puntos')}</div>
+                      <div className="mt-1 text-xs text-[#7f6f79]">{t('điểm', 'puntos')}</div>
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+
+            <Card className="mx-auto hidden w-full max-w-5xl overflow-hidden rounded-2xl border border-[#7a2038]/14 bg-[linear-gradient(160deg,rgba(255,255,255,0.92)_0%,rgba(251,241,246,0.88)_56%,rgba(247,234,241,0.84)_100%)] shadow-[0_16px_36px_rgba(95,20,40,0.13)] md:block">
+              <div className="grid grid-cols-[84px_1fr_auto] items-center border-b border-[#7a2038]/12 bg-white/52 px-5 py-3 text-xs font-semibold uppercase tracking-wide text-[#7f6f79] md:grid-cols-[92px_1fr_170px]">
+                <div>{t('Hạng', 'Puesto')}</div>
+                <div>{t('Học viên', 'Estudiante')}</div>
+                <div className="text-right">{t('Điểm số', 'Puntos')}</div>
+              </div>
+              <CardContent className="p-0">
+                {ranked.map((user, i) => (
+                  <motion.div
+                    key={user.id}
+                    custom={i}
+                    initial="hidden"
+                    animate="visible"
+                    variants={fadeUp}
+                    className={`grid grid-cols-[84px_1fr_auto] items-center gap-2 px-5 py-3.5 transition-colors md:grid-cols-[92px_1fr_170px] ${
+                      i !== ranked.length - 1 ? 'border-b border-[#7a2038]/10' : ''
+                    } ${i < 3 ? 'bg-amber-50/48' : 'hover:bg-[#7a2038]/[0.04]'}`}
+                  >
+                    <div
+                      className={`flex h-9 w-9 items-center justify-center rounded-full border font-display text-sm font-bold ${
+                        i === 0
+                          ? 'border-amber-300 bg-amber-100 text-amber-700'
+                          : i === 1
+                            ? 'border-slate-300 bg-slate-100 text-slate-700'
+                            : i === 2
+                              ? 'border-orange-300 bg-orange-100 text-orange-700'
+                              : 'border-[#d8a8b7] bg-white text-[#7a2038]'
+                      }`}
+                    >
+                      {i < 3 ? <Medal className="h-4 w-4" /> : user.rank}
+                    </div>
+
+                    <div className="flex min-w-0 items-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border border-[#7a2038]/20 bg-white/75">
+                        {getAvatarSrc(user) ? (
+                          <img
+                            src={getAvatarSrc(user) || ''}
+                            alt={getDisplayName(user)}
+                            className="h-full w-full object-cover"
+                            onError={() => {
+                              setFailedAvatarIds((prev) => ({ ...prev, [user.id]: true }));
+                            }}
+                          />
+                        ) : (
+                          <span className="font-display text-sm font-bold text-[#7a2038]">
+                            {getInitial(user)}
+                          </span>
+                        )}
+                      </div>
+                      <div className="min-w-0">
+                        <div className="truncate font-semibold text-[#3b2a33]">{getDisplayName(user)}</div>
+                        <div className="text-xs text-[#7f6f79]">
+                          {user.total_quizzes} {t('bài thi đã hoàn thành', 'exámenes completados')}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="text-right">
+                      <div className="font-display text-lg font-black text-[#7a2038]">
+                        {Number(user.total_score || 0).toFixed(1)}
+                      </div>
+                      <div className="text-xs text-[#7f6f79]">{t('điểm', 'puntos')}</div>
                     </div>
                   </motion.div>
                 ))}
@@ -219,7 +391,16 @@ const Leaderboard = () => {
             </Card>
           </>
         )}
+
+        {!loading && !error && ranked.length === 0 && (
+          <Card className="rounded-2xl border border-dashed border-[#7a2038]/25 bg-white/72">
+            <CardContent className="px-5 py-8 text-sm text-[#666278]">
+              {t('Chưa có dữ liệu bảng xếp hạng.', 'Aún no hay datos de clasificación.')}
+            </CardContent>
+          </Card>
+        )}
       </div>
+
       <Footer />
     </div>
   );
