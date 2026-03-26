@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Sora:wght@500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -7,7 +7,7 @@
 @layer base {
   :root {
     /* Burgundy / Đỏ đô theme */
-    --background: 20 15% 96%;
+    --background: 20 15% 93%;
     --foreground: 220 20% 18%;
 
     --card: 0 0% 100%;
@@ -24,7 +24,7 @@
     --secondary: 345 38% 24%;
     --secondary-foreground: 0 0% 100%;
 
-    --muted: 20 10% 92%;
+    --muted: 20 10% 89%;
     --muted-foreground: 220 10% 46%;
 
     /* Gold accent */
@@ -136,7 +136,7 @@
     position: fixed;
     inset: 0;
     z-index: -1;
-    background: linear-gradient(180deg, rgba(249, 251, 255, 0.68) 0%, rgba(255, 245, 248, 0.7) 100%);
+    background: linear-gradient(180deg, rgba(233, 237, 246, 0.74) 0%, rgba(242, 229, 234, 0.76) 100%);
     pointer-events: none;
   }
 
@@ -160,7 +160,7 @@
   h4,
   h5,
   h6 {
-    font-family: 'Sora', sans-serif;
+    font-family: 'Be Vietnam Pro', sans-serif;
     letter-spacing: -0.015em;
   }
 

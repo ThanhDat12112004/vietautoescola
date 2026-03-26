@@ -27,8 +27,8 @@ module.exports = {
         '25': 'repeat(25, minmax(0, 1fr))',
       },
       fontFamily: {
-        display: ["'Sora'", 'sans-serif'],
-        body: ["'Manrope'", 'sans-serif'],
+        display: ["'Be Vietnam Pro'", 'sans-serif'],
+        body: ["'Be Vietnam Pro'", 'sans-serif'],
       },
       colors: {
         border: 'hsl(var(--border))',

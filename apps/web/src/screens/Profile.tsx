@@ -324,11 +324,11 @@ const Profile = () => {
   };
 
   return (
-    <div className="app-page min-h-screen flex flex-col bg-[radial-gradient(circle_at_12%_18%,rgba(255,206,220,0.52),transparent_40%),radial-gradient(circle_at_86%_8%,rgba(255,224,160,0.48),transparent_32%),linear-gradient(180deg,#f9edf1_0%,#f4f7ff_58%,#f8eff6_100%)]">
+    <div className="app-page min-h-screen flex flex-col bg-[radial-gradient(circle_at_18%_12%,rgba(224,231,255,0.35),transparent_38%),radial-gradient(circle_at_84%_6%,rgba(226,232,240,0.45),transparent_34%),linear-gradient(180deg,#f8fafc_0%,#eef2f7_55%,#f5f7fb_100%)]">
       <Navbar />
 
       <div className="px-2 md:px-4 pt-3 md:pt-4">
-        <div className="container rounded-2xl border border-[#7a2038]/30 bg-[linear-gradient(135deg,rgba(122,32,56,0.92)_0%,rgba(178,61,88,0.86)_62%,rgba(202,138,4,0.72)_100%)] py-6 shadow-[0_14px_34px_rgba(95,20,40,0.22)] backdrop-blur-sm md:py-8">
+        <div className="container rounded-2xl border border-slate-300/70 bg-[linear-gradient(135deg,rgba(15,23,42,0.94)_0%,rgba(51,65,85,0.9)_62%,rgba(71,85,105,0.86)_100%)] py-6 shadow-[0_16px_32px_rgba(15,23,42,0.2)] backdrop-blur-sm md:py-8">
           <div className="flex flex-col sm:flex-row items-center gap-4">
             <div className="relative shrink-0">
               <div className="h-16 w-16 md:h-20 md:w-20 rounded-full bg-primary-foreground/20 flex items-center justify-center border-3 border-primary-foreground/30">
@@ -350,7 +350,7 @@ const Profile = () => {
               </h1>
               <p className="text-primary-foreground/60 text-xs">@{stats.username}</p>
               <div className="flex items-center gap-1 mt-1 justify-center sm:justify-start">
-                <Medal className="h-3.5 w-3.5 text-accent" />
+                <Medal className="h-3.5 w-3.5 text-amber-300" />
                 <span className="text-primary-foreground/80 text-xs font-medium">
                   {rank ? `${t('Hạng', 'Puesto')} #${rank}` : t('Chưa xếp hạng', 'Sin ranking')}
                 </span>
@@ -403,7 +403,7 @@ const Profile = () => {
                 },
               ].map((s, i) => (
                 <div key={i} className="text-center">
-                  <s.icon className="h-4 w-4 text-accent mx-auto mb-0.5" />
+                  <s.icon className="h-4 w-4 text-amber-300 mx-auto mb-0.5" />
                   <div className="font-display text-lg font-900 text-primary-foreground">
                     {s.value}
                   </div>
@@ -420,16 +420,16 @@ const Profile = () => {
           {error && <p className="text-sm text-destructive mb-3">{error}</p>}
 
           <Tabs defaultValue="info" className="w-full">
-            <TabsList className="mb-4 w-full grid grid-cols-3 rounded-xl border border-[#7a2038]/15 bg-white/70 p-1 shadow-[0_8px_20px_rgba(95,20,40,0.06)] sm:w-auto sm:inline-flex">
-              <TabsTrigger value="info" className="gap-1 rounded-lg text-xs data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm">
+            <TabsList className="mb-4 w-full grid grid-cols-3 rounded-xl border border-slate-300/70 bg-slate-100/90 p-1 shadow-sm sm:w-auto sm:inline-flex">
+              <TabsTrigger value="info" className="gap-1 rounded-lg text-xs data-[state=active]:bg-white data-[state=active]:text-slate-800 data-[state=active]:shadow-sm">
                 <User className="h-3.5 w-3.5" />
                 <span className="hidden sm:inline">{t('Thông tin', 'Info')}</span>
               </TabsTrigger>
-              <TabsTrigger value="history" className="gap-1 rounded-lg text-xs data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm">
+              <TabsTrigger value="history" className="gap-1 rounded-lg text-xs data-[state=active]:bg-white data-[state=active]:text-slate-800 data-[state=active]:shadow-sm">
                 <Clock className="h-3.5 w-3.5" />
                 <span className="hidden sm:inline">{t('Lịch sử', 'Historial')}</span>
               </TabsTrigger>
-              <TabsTrigger value="ranking" className="gap-1 rounded-lg text-xs data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm">
+              <TabsTrigger value="ranking" className="gap-1 rounded-lg text-xs data-[state=active]:bg-white data-[state=active]:text-slate-800 data-[state=active]:shadow-sm">
                 <Trophy className="h-3.5 w-3.5" />
                 <span className="hidden sm:inline">{t('Xếp hạng', 'Ranking')}</span>
               </TabsTrigger>
@@ -438,7 +438,7 @@ const Profile = () => {
             <TabsContent value="info">
               <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
                 <div className="grid gap-4 md:grid-cols-2">
-                  <Card className="border-border/40 bg-white/72 shadow-[0_10px_24px_rgba(95,20,40,0.08)]">
+                  <Card className="border-slate-300/70 bg-white shadow-sm">
                     <CardHeader className="pb-2 px-4 pt-4 flex items-center justify-between gap-2">
                       <h3 className="font-display font-bold text-sm">
                         {t('Chỉnh sửa tài khoản', 'Editar cuenta')}
@@ -493,7 +493,7 @@ const Profile = () => {
                           )}
                         </form>
 
-                        <div className="rounded-xl border border-[#7a2038]/15 bg-white/75 px-3 py-2 text-sm shadow-[inset_0_1px_0_rgba(255,255,255,0.4)]">
+                        <div className="rounded-xl border border-slate-300/70 bg-slate-50 px-3 py-2 text-sm shadow-sm">
                           <p>
                             <span className="text-muted-foreground">Username: </span>
                             <span className="font-medium">{stats.username}</span>
@@ -563,7 +563,7 @@ const Profile = () => {
                     </CardContent>
                   </Card>
 
-                  <Card className="border-border/40 bg-white/72 shadow-[0_10px_24px_rgba(95,20,40,0.08)]">
+                  <Card className="border-slate-300/70 bg-white shadow-sm">
                     <CardHeader className="pb-2 px-4 pt-4">
                       <h3 className="font-display font-bold text-sm">
                         {t('Thống kê học tập', 'Estadísticas')}
@@ -593,7 +593,7 @@ const Profile = () => {
                             icon: Medal,
                           },
                         ].map((item, i) => (
-                          <div key={i} className="rounded-xl border border-[#7a2038]/12 bg-white/80 p-3 shadow-[0_6px_14px_rgba(95,20,40,0.06)] flex items-center gap-2">
+                          <div key={i} className="rounded-xl border border-slate-300/70 bg-slate-50 p-3 shadow-sm flex items-center gap-2">
                             <item.icon className="h-4 w-4 text-primary shrink-0" />
                             <div>
                               <div className="text-[10px] text-muted-foreground">{item.label}</div>
@@ -623,12 +623,12 @@ const Profile = () => {
 
             <TabsContent value="history">
               <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-                <Card className="border-border/40 bg-white/74 shadow-[0_10px_24px_rgba(95,20,40,0.08)]">
+                <Card className="border-slate-300/70 bg-white shadow-sm">
                   <CardContent className="p-0">
                     <div className="overflow-x-auto">
                       <table className="w-full text-sm">
                         <thead>
-                          <tr className="border-b border-border/60 bg-[#f8f1f4]/70">
+                          <tr className="border-b border-border/60 bg-slate-100/80">
                             <th className="px-4 py-2.5 text-left font-semibold text-xs">
                               {t('Bài thi', 'Examen')}
                             </th>
@@ -650,7 +650,7 @@ const Profile = () => {
                           {attempts.map((attempt) => (
                             <tr
                               key={attempt.id}
-                              className="border-b border-border/40 transition-colors hover:bg-[#f8f1f4]/65"
+                              className="border-b border-border/40 transition-colors hover:bg-slate-100/65"
                             >
                               <td className="px-4 py-2.5 flex items-center gap-2">
                                 <BookOpen className="h-3.5 w-3.5 text-primary shrink-0" />
@@ -705,7 +705,7 @@ const Profile = () => {
 
             <TabsContent value="ranking">
               <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-                <Card className="border-border/40 bg-white/74 shadow-[0_10px_24px_rgba(95,20,40,0.08)]">
+                <Card className="border-slate-300/70 bg-white shadow-sm">
                   <CardHeader className="pb-2 px-4 pt-4">
                     <h3 className="font-display font-bold text-sm">
                       {t('Vị trí của bạn', 'Tu posición')}
@@ -724,7 +724,7 @@ const Profile = () => {
                           key={user.id}
                           className={`flex items-center gap-3 px-4 py-3 ${
                             i !== leaderboard.length - 1 ? 'border-b border-border/40' : ''
-                          } ${isMe ? 'bg-primary/5 border-l-[3px] border-l-primary' : ''}`}
+                          } ${isMe ? 'bg-slate-100 border-l-[3px] border-l-slate-700' : ''}`}
                         >
                           <div
                             className={`flex h-7 w-7 items-center justify-center rounded-full font-display font-bold text-xs ${
@@ -733,7 +733,7 @@ const Profile = () => {
                                 : i === 1
                                   ? 'bg-muted text-foreground'
                                   : i === 2
-                                    ? 'bg-primary/15 text-primary'
+                                    ? 'bg-slate-200 text-slate-800'
                                     : 'bg-muted text-muted-foreground'
                             }`}
                           >
@@ -743,7 +743,7 @@ const Profile = () => {
                             <div className="font-medium text-xs truncate">
                               {user.full_name}
                               {isMe && (
-                                <span className="ml-1.5 rounded-md bg-primary px-1.5 py-0.5 text-[10px] text-primary-foreground">
+                                <span className="ml-1.5 rounded-md bg-slate-800 px-1.5 py-0.5 text-[10px] text-white">
                                   {t('Bạn', 'Tú')}
                                 </span>
                               )}

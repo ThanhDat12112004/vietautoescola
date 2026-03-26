@@ -102,15 +102,15 @@ const Login = () => {
   };
 
   return (
-    <div className="app-page min-h-screen flex flex-col bg-[radial-gradient(circle_at_12%_18%,rgba(255,206,220,0.52),transparent_40%),radial-gradient(circle_at_86%_8%,rgba(255,224,160,0.48),transparent_32%),linear-gradient(180deg,#f9edf1_0%,#f4f7ff_58%,#f8eff6_100%)]">
+    <div className="app-page min-h-screen flex flex-col bg-[radial-gradient(circle_at_18%_12%,rgba(224,231,255,0.35),transparent_38%),radial-gradient(circle_at_84%_6%,rgba(226,232,240,0.45),transparent_34%),linear-gradient(180deg,#f8fafc_0%,#eef2f7_55%,#f5f7fb_100%)]">
       <Navbar />
       <div className="flex flex-1 items-center justify-center px-4 py-12">
-        <Card className="w-full max-w-md border border-primary/20 bg-[linear-gradient(160deg,rgba(255,255,255,0.96)_0%,rgba(255,247,250,0.88)_50%,rgba(255,249,235,0.8)_100%)] shadow-[0_20px_46px_rgba(95,20,40,0.16)] backdrop-blur-[2px]">
+        <Card className="w-full max-w-md border border-slate-300/70 bg-white/95 shadow-[0_18px_38px_rgba(15,23,42,0.12)] backdrop-blur-[2px]">
           <CardHeader className="text-center pb-2">
             <div className="flex justify-center mb-4">
               <BrandLogo imageClassName="h-16" />
             </div>
-            <h1 className="font-display text-2xl font-800 text-[#64172f]">{t('Đăng nhập', 'Iniciar sesión')}</h1>
+            <h1 className="font-display text-2xl font-800 text-slate-800">{t('Đăng nhập', 'Iniciar sesión')}</h1>
             <p className="text-sm text-muted-foreground mt-1">
               {t('Đăng nhập để tiếp tục luyện thi', 'Inicia sesión para seguir practicando')}
             </p>
@@ -154,7 +154,7 @@ const Login = () => {
                   />
                 </div>
               </div>
-              <Button type="submit" className="w-full bg-[linear-gradient(135deg,#7a2038_0%,#b23d58_65%,#ca8a04_100%)] font-semibold text-white shadow-[0_10px_22px_rgba(95,20,40,0.2)] hover:opacity-95" size="lg">
+              <Button type="submit" className="w-full border border-slate-800 bg-slate-900 font-semibold text-white shadow-sm hover:bg-slate-800" size="lg">
                 {isSubmitting
                   ? t('Đang xử lý...', 'Procesando...')
                   : t('Đăng nhập', 'Iniciar sesión')}
