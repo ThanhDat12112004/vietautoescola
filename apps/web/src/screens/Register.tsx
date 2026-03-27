@@ -118,7 +118,7 @@ const Register = () => {
             <div className="flex justify-center mb-4">
               <BrandLogo imageClassName="h-16" />
             </div>
-            <h1 className="font-display text-2xl font-800 text-slate-800">
+            <h1 className="font-display text-2xl font-extrabold text-slate-800">
               {t('Đăng ký tài khoản', 'Crear cuenta')}
             </h1>
             <p className="text-sm text-muted-foreground mt-1">

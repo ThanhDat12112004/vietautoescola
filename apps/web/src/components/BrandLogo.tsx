@@ -22,7 +22,7 @@ export default function BrandLogo({
 
   const brandText = (
     <span
-      className={cn('font-display text-xl font-800 tracking-tight text-foreground', textClassName)}
+      className={cn('font-display text-xl font-extrabold tracking-tight text-foreground', textClassName)}
     >
       Việt <span className="text-primary">Autoescola</span>
     </span>

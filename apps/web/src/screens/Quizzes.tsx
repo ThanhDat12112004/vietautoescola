@@ -246,7 +246,7 @@ const Quizzes = () => {
         <div className="container section-panel border-slate-200/70 bg-white/90">
           <div className="mb-1 flex items-center gap-3">
             <FileText className="h-7 w-7 text-[#7a2038]" />
-            <h1 className="font-display text-2xl md:text-3xl font-800 text-[#1f2430]">
+            <h1 className="font-display text-2xl md:text-3xl font-extrabold text-[#1f2430]">
               {t('Làm bài thi mô phỏng', 'Exámenes simulados')}
             </h1>
           </div>

@@ -9,3 +9,6 @@ pnpm-debug.log*
 dist
 coverage
 .DS_Store
+apps/web/.next
+apps/web/tsconfig.tsbuildinfo
+screenshot.png

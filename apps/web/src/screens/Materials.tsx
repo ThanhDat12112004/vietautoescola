@@ -347,7 +347,7 @@ const Materials = () => {
         <div className="container section-panel">
           <div className="flex items-center gap-3 mb-2">
             <BookOpen className="h-7 w-7 text-primary" />
-            <h1 className="font-display text-2xl md:text-3xl font-800">
+            <h1 className="font-display text-2xl md:text-3xl font-extrabold">
               {t('Tài liệu học tập', 'Materiales de estudio')}
             </h1>
           </div>

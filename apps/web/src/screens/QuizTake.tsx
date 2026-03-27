@@ -363,7 +363,7 @@ const QuizTake = () => {
                 <XCircle className="h-10 w-10 text-destructive" />
               )}
             </div>
-            <h2 className="font-display text-xl font-800 mb-1">
+            <h2 className="font-display text-xl font-extrabold mb-1">
               {passed
                 ? t('Chúc mừng! Bạn đã đậu!', 'Felicidades, aprobado')
                 : t('Chưa đạt. Hãy thử lại!', 'No aprobado, intenta de nuevo')}
@@ -373,7 +373,7 @@ const QuizTake = () => {
                 ? t('Chế độ thi thật', 'Modo examen')
                 : t('Chế độ luyện tập', 'Modo práctica')}
             </p>
-            <div className="font-display text-5xl font-900 text-primary my-3">
+            <div className="font-display text-5xl font-black text-primary my-3">
               {Number(submitResult.score || 0).toFixed(1)}
               <span className="text-2xl text-muted-foreground">/10</span>
             </div>

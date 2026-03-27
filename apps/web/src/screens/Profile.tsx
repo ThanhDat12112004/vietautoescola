@@ -345,7 +345,7 @@ const Profile = () => {
             </div>
 
             <div className="text-center sm:text-left flex-1 min-w-0">
-              <h1 className="font-display text-lg md:text-xl font-800 text-primary-foreground truncate">
+              <h1 className="font-display text-lg md:text-xl font-extrabold text-primary-foreground truncate">
                 {stats.full_name || stats.username}
               </h1>
               <p className="text-primary-foreground/60 text-xs">@{stats.username}</p>
@@ -404,7 +404,7 @@ const Profile = () => {
               ].map((s, i) => (
                 <div key={i} className="text-center">
                   <s.icon className="h-4 w-4 text-amber-300 mx-auto mb-0.5" />
-                  <div className="font-display text-lg font-900 text-primary-foreground">
+                  <div className="font-display text-lg font-black text-primary-foreground">
                     {s.value}
                   </div>
                   <div className="text-[10px] text-primary-foreground/50">{s.label}</div>

@@ -110,7 +110,7 @@ const Login = () => {
             <div className="flex justify-center mb-4">
               <BrandLogo imageClassName="h-16" />
             </div>
-            <h1 className="font-display text-2xl font-800 text-slate-800">{t('Đăng nhập', 'Iniciar sesión')}</h1>
+            <h1 className="font-display text-2xl font-extrabold text-slate-800">{t('Đăng nhập', 'Iniciar sesión')}</h1>
             <p className="text-sm text-muted-foreground mt-1">
               {t('Đăng nhập để tiếp tục luyện thi', 'Inicia sesión para seguir practicando')}
             </p>
