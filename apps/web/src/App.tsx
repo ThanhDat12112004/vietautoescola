@@ -19,6 +19,7 @@ import Materials from "./screens/Materials";
 import Profile from "./screens/Profile";
 import Admin from "./screens/Admin";
 import NotFound from "./screens/NotFound";
+import FloatingContactButton from "./components/FloatingContactButton";
 
 const queryClient = new QueryClient();
 
@@ -97,6 +98,7 @@ const App = () => (
         <AuthSessionManager />
         <Toaster />
         <Sonner />
+        <FloatingContactButton />
         <BrowserRouter
           future={{
             v7_startTransition: true,

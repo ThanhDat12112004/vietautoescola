@@ -30,9 +30,9 @@ const Footer = () => {
       <style>{`
         .ft-root {
           font-family: 'Be Vietnam Pro', sans-serif;
-          background: #fff8f9;
-          color: #67434a;
-          border-top: 1px solid rgba(139, 30, 45, 0.2);
+          background: linear-gradient(180deg, #8b1e2d 0%, #7a1726 55%, #6b0f1a 100%);
+          color: #f5e9ed;
+          border-top: 1px solid rgba(227, 197, 101, 0.32);
           position: relative;
           overflow: hidden;
         }
@@ -45,7 +45,7 @@ const Footer = () => {
           transform: translateX(-50%);
           width: 600px;
           height: 1px;
-          background: linear-gradient(90deg, transparent, rgba(139, 30, 45, 0.4), transparent);
+          background: linear-gradient(90deg, transparent, rgba(227, 197, 101, 0.7), transparent);
         }
 
         .ft-glow {
@@ -55,7 +55,7 @@ const Footer = () => {
           transform: translateX(-50%);
           width: 500px;
           height: 160px;
-          background: radial-gradient(ellipse, rgba(139, 30, 45, 0.08) 0%, transparent 70%);
+          background: radial-gradient(ellipse, rgba(227, 197, 101, 0.16) 0%, transparent 70%);
           pointer-events: none;
         }
 
@@ -92,9 +92,35 @@ const Footer = () => {
         .ft-brand-desc {
           font-size: 15px;
           line-height: 1.7;
-          color: #6b4a50;
+          color: rgba(250, 237, 241, 0.92);
           margin-top: 14px;
           max-width: 320px;
+        }
+
+        .ft-brand-row {
+          display: inline-flex;
+          align-items: center;
+          gap: 10px;
+          margin-left: -2px;
+        }
+
+        .ft-brand-name {
+          font-family: 'Be Vietnam Pro', sans-serif;
+          font-size: 32px;
+          font-weight: 900;
+          letter-spacing: -0.01em;
+          color: #fff5f8;
+          line-height: 1;
+        }
+
+        .ft-brand-name span {
+          color: #e3c565;
+        }
+
+        @media (max-width: 540px) {
+          .ft-brand-name {
+            font-size: 22px;
+          }
         }
 
         .ft-socials {
@@ -107,21 +133,21 @@ const Footer = () => {
           width: 34px;
           height: 34px;
           border-radius: 8px;
-          border: 1px solid rgba(139, 30, 45, 0.22);
-          background: rgba(139, 30, 45, 0.04);
+          border: 1px solid rgba(255, 236, 242, 0.35);
+          background: rgba(255, 255, 255, 0.08);
           display: flex;
           align-items: center;
           justify-content: center;
           cursor: pointer;
           transition: all 0.2s;
-          color: #7a4d55;
+          color: #fff5f8;
           text-decoration: none;
         }
 
         .ft-social-btn:hover {
-          border-color: rgba(139, 30, 45, 0.55);
-          background: rgba(139, 30, 45, 0.1);
-          color: #8b1e2d;
+          border-color: rgba(227, 197, 101, 0.8);
+          background: rgba(255, 255, 255, 0.16);
+          color: #fff;
           transform: translateY(-2px);
         }
 
@@ -134,7 +160,7 @@ const Footer = () => {
         .ft-col-title {
           font-family: 'Be Vietnam Pro', sans-serif;
           font-size: 18px;
-          color: #2f171b;
+          color: #fff5f8;
           letter-spacing: 0.01em;
           margin-bottom: 16px;
           position: relative;
@@ -148,7 +174,7 @@ const Footer = () => {
           left: 0;
           width: 24px;
           height: 1.5px;
-          background: linear-gradient(90deg, #8b1e2d, transparent);
+          background: linear-gradient(90deg, #e3c565, transparent);
           border-radius: 99px;
         }
 
@@ -160,7 +186,7 @@ const Footer = () => {
 
         .ft-link {
           font-size: 15.5px;
-          color: #69474e;
+          color: rgba(252, 236, 242, 0.92);
           text-decoration: none;
           transition: all 0.2s;
           display: flex;
@@ -170,7 +196,7 @@ const Footer = () => {
         }
 
         .ft-link:hover {
-          color: #8b1e2d;
+          color: #fff;
           gap: 6px;
         }
 
@@ -191,7 +217,7 @@ const Footer = () => {
           align-items: flex-start;
           gap: 10px;
           font-size: 14.5px;
-          color: #6a474e;
+          color: rgba(252, 236, 242, 0.92);
           line-height: 1.5;
         }
 
@@ -199,8 +225,8 @@ const Footer = () => {
           width: 34px;
           height: 34px;
           border-radius: 7px;
-          background: rgba(139, 30, 45, 0.08);
-          border: 1px solid rgba(139, 30, 45, 0.16);
+          background: rgba(255, 255, 255, 0.1);
+          border: 1px solid rgba(255, 238, 243, 0.35);
           display: flex;
           align-items: center;
           justify-content: center;
@@ -211,12 +237,12 @@ const Footer = () => {
         .ft-contact-icon svg {
           width: 15px;
           height: 15px;
-          color: #8b1e2d;
+          color: #fff4f7;
         }
 
         .ft-divider {
           height: 1px;
-          background: linear-gradient(90deg, transparent, rgba(139, 30, 45, 0.18) 20%, rgba(139, 30, 45, 0.18) 80%, transparent);
+          background: linear-gradient(90deg, transparent, rgba(255, 235, 241, 0.35) 20%, rgba(255, 235, 241, 0.35) 80%, transparent);
         }
 
         .ft-bottom {
@@ -230,12 +256,12 @@ const Footer = () => {
 
         .ft-copy {
           font-size: 14px;
-          color: #7a555c;
+          color: rgba(252, 236, 242, 0.88);
           letter-spacing: 0.02em;
         }
 
         .ft-copy span {
-          color: #8b1e2d;
+          color: #e3c565;
         }
 
         .ft-bottom-links {
@@ -245,14 +271,14 @@ const Footer = () => {
 
         .ft-bottom-link {
           font-size: 14px;
-          color: #7a555c;
+          color: rgba(252, 236, 242, 0.88);
           text-decoration: none;
           transition: color 0.2s;
           letter-spacing: 0.02em;
         }
 
         .ft-bottom-link:hover {
-          color: #8b1e2d;
+          color: #fff;
         }
 
         .ft-badge {
@@ -261,11 +287,11 @@ const Footer = () => {
           gap: 5px;
           padding: 4px 10px;
           border-radius: 20px;
-          border: 1px solid rgba(139, 30, 45, 0.25);
-          background: rgba(139, 30, 45, 0.05);
+          border: 1px solid rgba(227, 197, 101, 0.6);
+          background: rgba(227, 197, 101, 0.14);
           font-size: 12px;
           font-weight: 600;
-          color: #8b1e2d;
+          color: #fff3d1;
           letter-spacing: 0.05em;
           text-transform: uppercase;
           margin-bottom: 12px;
@@ -275,7 +301,7 @@ const Footer = () => {
           width: 5px;
           height: 5px;
           border-radius: 50%;
-          background: #8b1e2d;
+          background: #e3c565;
           animation: pulse 2s ease-in-out infinite;
         }
 
@@ -303,12 +329,17 @@ const Footer = () => {
                 {t('Đang hoạt động', 'En linea')}
               </div>
               <Link to="/" style={{ display: 'inline-block', textDecoration: 'none' }}>
-                <BrandLogo imageClassName="h-12" withText />
+                <div className="ft-brand-row">
+                  <BrandLogo imageClassName="h-11" />
+                  <span className="ft-brand-name">
+                    Việt <span>Autoescuela</span>
+                  </span>
+                </div>
               </Link>
               <p className="ft-brand-desc">
                 {t(
-                  'Nền tảng luyện thi bằng lái xe song ngữ Việt - Tây Ban Nha. Học mọi lúc, mọi nơi.',
-                  'Plataforma bilingue vietnamita-espanol para el examen de conducir. Aprende donde quieras.'
+                  'Hệ thống học và luyện thi bằng lái xe Tây Ban Nha',
+                  'Sistema de aprendizaje y preparacion para el examen de conducir en Espana'
                 )}
               </p>
               <div className="ft-socials">

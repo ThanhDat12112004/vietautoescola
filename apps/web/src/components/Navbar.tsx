@@ -1,6 +1,7 @@
 import {
   BookOpen,
   FileText,
+  Globe2,
   Home,
   LogOut,
   Menu,
@@ -52,7 +53,7 @@ const Navbar = () => {
   }, [location.pathname]);
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 8);
+    const onScroll = () => setScrolled(window.scrollY > 170);
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
@@ -82,6 +83,40 @@ const Navbar = () => {
     ...(isAdmin ? [{ path: '/admin', label: t('Quản trị', 'Admin'), icon: ShieldCheck }] : []),
   ];
 
+  const desktopNavItems = [
+    { path: '/', label: t('Trang chủ', 'Inicio'), icon: Home },
+    { path: '/quizzes', label: t('Bài thi', 'Exámenes'), icon: BookOpen },
+    { path: '/materials', label: t('Tài liệu', 'Materiales'), icon: FileText },
+    { path: '/leaderboard', label: t('Xếp hạng', 'Ranking'), icon: Trophy },
+  ];
+
+  const renderDesktopMenuStrip = (compact = false) => (
+    <div
+      style={{
+        width: '100%',
+        display: 'grid',
+        gridTemplateColumns: `repeat(${desktopNavItems.length}, minmax(0, 1fr))`,
+      }}
+    >
+      {desktopNavItems.map((item) => {
+        const active = location.pathname === item.path;
+
+        return (
+          <Link
+            key={`${item.path}-${compact ? 'compact' : 'base'}`}
+            to={item.path}
+            className={`desktop-nav-tile${active ? ' active' : ''}`}
+          >
+            <span className="desktop-nav-tile-badge">
+              <item.icon className="desktop-nav-tile-icon" />
+            </span>
+            <span className="desktop-nav-tile-label">{item.label}</span>
+          </Link>
+        );
+      })}
+    </div>
+  );
+
   return (
     <>
       <style>{`
@@ -106,7 +141,7 @@ const Navbar = () => {
           width: 24px;
           height: 2px;
           border-radius: 99px;
-          background: var(--nav-accent, #8b1e2d);
+          background: var(--nav-accent, #8B1E2D);
           transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
         }
 
@@ -126,7 +161,7 @@ const Navbar = () => {
         }
 
         .avatar-ring {
-          background: linear-gradient(90deg, #8b1e2d 0%, #b63b4f 50%, #8b1e2d 100%);
+          background: linear-gradient(90deg, #8B1E2D 0%, #9B1B30 50%, #8B1E2D 100%);
           background-size: 200% auto;
           animation: shimmer 3s linear infinite;
         }
@@ -141,7 +176,7 @@ const Navbar = () => {
 
         .mobile-nav-item.active {
           background: linear-gradient(90deg, rgba(139, 30, 45, 0.14) 0%, transparent 100%);
-          border-left: 3px solid #8b1e2d;
+          border-left: 3px solid #8B1E2D;
         }
 
         .dd-item {
@@ -151,20 +186,171 @@ const Navbar = () => {
         .dd-item:hover {
           background: rgba(139, 30, 45, 0.08) !important;
         }
+
+        .desktop-nav-strip {
+          background: linear-gradient(180deg, #8B1E2D 0%, #6B0F1A 100%);
+          border-top: 1px solid rgba(255, 255, 255, 0.14);
+          border-bottom: 1px solid rgba(60, 10, 18, 0.7);
+        }
+
+        .desktop-nav-strip--base {
+          position: relative;
+          z-index: 20;
+        }
+
+        .desktop-nav-strip--sticky {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          z-index: 60;
+          transform: translateY(-110%);
+          opacity: 0;
+          pointer-events: none;
+          transition: transform 0.22s ease, opacity 0.18s ease;
+          box-shadow: 0 8px 24px rgba(58, 10, 20, 0.25);
+        }
+
+        .desktop-nav-strip--sticky.visible {
+          transform: translateY(0);
+          opacity: 1;
+          pointer-events: auto;
+        }
+
+        .desktop-nav-tile {
+          min-height: 102px;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          gap: 10px;
+          color: #fff5f6;
+          text-decoration: none;
+          border-right: 1px solid rgba(255, 255, 255, 0.14);
+          transition: background 0.22s ease, color 0.22s ease;
+          text-align: center;
+        }
+
+        .desktop-nav-strip.compact .desktop-nav-tile {
+          min-height: 66px;
+          gap: 6px;
+        }
+
+        .desktop-nav-tile:first-child {
+          border-left: 1px solid rgba(255, 255, 255, 0.14);
+        }
+
+        .desktop-nav-tile:hover {
+          background: rgba(255, 255, 255, 0.08);
+          color: #ffffff;
+        }
+
+        .desktop-nav-tile.active {
+          background: linear-gradient(180deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.06) 100%);
+          box-shadow: inset 0 -4px 0 #E3C565;
+          color: #ffffff;
+        }
+
+        .desktop-nav-tile-badge {
+          width: 40px;
+          height: 40px;
+          border-radius: 8px;
+          border: 1px solid rgba(255, 255, 255, 0.56);
+          background: rgba(255, 255, 255, 0.1);
+          transform: rotate(45deg);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+        }
+
+        .desktop-nav-tile-icon {
+          width: 20px;
+          height: 20px;
+          color: currentColor;
+          transform: rotate(-45deg);
+        }
+
+        .desktop-nav-tile-label {
+          font-size: 1.1rem;
+          font-weight: 700;
+          line-height: 1.2;
+          letter-spacing: 0.015em;
+        }
+
+        .desktop-nav-strip.compact .desktop-nav-tile-badge {
+          width: 30px;
+          height: 30px;
+          border-radius: 6px;
+        }
+
+        .desktop-nav-strip.compact .desktop-nav-tile-icon {
+          width: 15px;
+          height: 15px;
+        }
+
+        .desktop-nav-strip.compact .desktop-nav-tile-label {
+          font-size: 0.88rem;
+        }
+
+        @media (max-width: 1023px) {
+          .desktop-nav-tile {
+            min-height: 86px;
+            gap: 8px;
+          }
+
+          .desktop-nav-tile-badge {
+            width: 34px;
+            height: 34px;
+            border-radius: 7px;
+          }
+
+          .desktop-nav-tile-icon {
+            width: 17px;
+            height: 17px;
+          }
+
+          .desktop-nav-tile-label {
+            font-size: 0.95rem;
+          }
+        }
+
+        @media (max-width: 639px) {
+          .desktop-nav-tile {
+            min-height: 74px;
+            gap: 6px;
+          }
+
+          .desktop-nav-tile-badge {
+            width: 30px;
+            height: 30px;
+            border-radius: 6px;
+          }
+
+          .desktop-nav-tile-icon {
+            width: 15px;
+            height: 15px;
+          }
+
+          .desktop-nav-tile-label {
+            font-size: 0.8rem;
+            line-height: 1.05;
+          }
+        }
       `}</style>
 
       <nav
-        className="navbar-root sticky top-0 z-50"
+        className="navbar-root relative z-50"
         style={
           {
             background: scrolled ? 'rgba(255,250,250,0.96)' : 'rgba(255,252,252,0.88)',
             backdropFilter: 'blur(14px)',
             borderBottom: scrolled
-              ? '1px solid rgba(139,30,45,0.2)'
-              : '1px solid rgba(139,30,45,0.08)',
+              ? '1px solid rgba(107,15,26,0.2)'
+              : '1px solid rgba(107,15,26,0.08)',
             transition: 'background 0.3s, border-color 0.3s, box-shadow 0.3s',
-            boxShadow: scrolled ? '0 10px 28px rgba(139,30,45,0.14)' : 'none',
-            '--nav-accent': '#8b1e2d',
+            boxShadow: scrolled ? '0 10px 28px rgba(107,15,26,0.14)' : 'none',
+            '--nav-accent': '#8B1E2D',
           } as React.CSSProperties
         }
       >
@@ -172,7 +358,7 @@ const Navbar = () => {
           style={{
             width: '100%',
             padding: '0 clamp(12px, 2.8vw, 32px)',
-            height: 50,
+            minHeight: 66,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
@@ -188,75 +374,68 @@ const Navbar = () => {
             }}
           >
             <span className="sm:hidden">
-              <BrandLogo imageClassName="h-6" withText textClassName="text-[11px]" />
+              <BrandLogo imageClassName="h-9" withText textClassName="text-[1.08rem] font-black tracking-tight" />
             </span>
             <span className="hidden sm:inline-flex">
-              <BrandLogo imageClassName="h-8" withText textClassName="text-xs" />
+              <BrandLogo imageClassName="h-12" withText textClassName="text-[1.62rem] font-black tracking-tight" />
             </span>
           </Link>
 
-          <div className="hidden lg:flex" style={{ alignItems: 'center', gap: 4 }}>
-            {navItems.map((item) => {
-              const active = location.pathname === item.path;
-              return (
-                <Link
-                  key={item.path}
-                  to={item.path}
-                  className={`nav-link-pill${active ? ' active' : ''}`}
-                  style={{
-                    padding: '6px 9px',
-                    borderRadius: 10,
-                    fontSize: 15,
-                    fontWeight: active ? 700 : 500,
-                    letterSpacing: '0.01em',
-                    color: active ? '#8b1e2d' : '#6b4a4f',
-                    textDecoration: 'none',
-                    transition: 'color 0.2s',
-                  }}
-                  onMouseEnter={(e) => {
-                    if (!active) {
-                      e.currentTarget.style.color = '#2f171b';
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (!active) {
-                      e.currentTarget.style.color = '#6b4a4f';
-                    }
-                  }}
-                >
-                  {item.label}
-                </Link>
-              );
-            })}
-          </div>
+          <div className="hidden lg:block" />
 
           <div className="hidden lg:flex" style={{ alignItems: 'center', gap: 10 }}>
-            <button
-              onClick={() => setLang(lang === 'vi' ? 'es' : 'vi')}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 6,
-                padding: '0',
-                border: 'none',
-                background: 'transparent',
-                color: '#8b1e2d',
-                fontSize: 14,
-                fontWeight: 600,
-                cursor: 'pointer',
-                transition: 'opacity 0.2s, transform 0.2s',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.opacity = '0.82';
-                e.currentTarget.style.transform = 'translateY(-1px)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.opacity = '1';
-                e.currentTarget.style.transform = 'none';
-              }}
-            >
-              {lang === 'vi' ? '🇻🇳 VI' : '🇪🇸 ES'}
-            </button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  aria-label={t('Chọn ngôn ngữ', 'Seleccionar idioma')}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    border: '1px solid rgba(107,15,26,0.28)',
+                    background: 'rgba(255,252,252,0.96)',
+                    borderRadius: 10,
+                    padding: '6px 10px',
+                    color: '#5e3a41',
+                    fontSize: 14,
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    fontFamily: 'inherit',
+                  }}
+                >
+                  <Globe2 style={{ width: 15, height: 15, color: '#8B1E2D' }} />
+                  <span>{lang === 'vi' ? '🇻🇳 VI' : '🇪🇸 ES'}</span>
+                  <span style={{ fontSize: 10, color: '#8B1E2D' }}>▼</span>
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                align="end"
+                style={{
+                  minWidth: 120,
+                  background: 'rgba(255,252,252,0.98)',
+                  border: '1px solid rgba(107,15,26,0.2)',
+                  borderRadius: 10,
+                  boxShadow: '0 12px 28px rgba(83,24,32,0.14)',
+                  padding: 6,
+                }}
+              >
+                <DropdownMenuItem
+                  className="dd-item"
+                  onClick={() => setLang('vi')}
+                  style={{ borderRadius: 8, fontWeight: 700, color: '#5e3a41', cursor: 'pointer' }}
+                >
+                  🇻🇳 VI
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  className="dd-item"
+                  onClick={() => setLang('es')}
+                  style={{ borderRadius: 8, fontWeight: 700, color: '#5e3a41', cursor: 'pointer' }}
+                >
+                  🇪🇸 ES
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
 
             {isAuthenticated ? (
               <DropdownMenu>
@@ -315,7 +494,7 @@ const Navbar = () => {
                             }}
                           />
                         ) : (
-                          <User style={{ width: 16, height: 16, color: '#8b1e2d' }} />
+                          <User style={{ width: 16, height: 16, color: '#8B1E2D' }} />
                         )}
                       </div>
                     </div>
@@ -341,7 +520,7 @@ const Navbar = () => {
                   style={{
                     width: 176,
                     background: 'rgba(255,252,252,0.98)',
-                    border: '1px solid rgba(139,30,45,0.2)',
+                    border: '1px solid rgba(107,15,26,0.2)',
                     borderRadius: 12,
                     boxShadow: '0 16px 48px rgba(83,24,32,0.16)',
                     padding: '6px',
@@ -353,14 +532,14 @@ const Navbar = () => {
                       fontWeight: 600,
                       letterSpacing: '0.08em',
                       textTransform: 'uppercase',
-                      color: '#8b1e2d',
+                      color: '#8B1E2D',
                       padding: '6px 10px 4px',
                     }}
                   >
                     {t('Tài khoản', 'Cuenta')}
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator
-                    style={{ background: 'rgba(139,30,45,0.12)', margin: '4px 0' }}
+                    style={{ background: 'rgba(107,15,26,0.12)', margin: '4px 0' }}
                   />
                   {isAdmin && (
                     <DropdownMenuItem asChild className="dd-item">
@@ -378,7 +557,7 @@ const Navbar = () => {
                           cursor: 'pointer',
                         }}
                       >
-                        <ShieldCheck style={{ width: 14, height: 14, color: '#8b1e2d' }} />
+                        <ShieldCheck style={{ width: 14, height: 14, color: '#8B1E2D' }} />
                         {t('Quản trị', 'Admin')}
                       </Link>
                     </DropdownMenuItem>
@@ -398,12 +577,12 @@ const Navbar = () => {
                         cursor: 'pointer',
                       }}
                     >
-                      <User style={{ width: 14, height: 14, color: '#8b1e2d' }} />
+                      <User style={{ width: 14, height: 14, color: '#8B1E2D' }} />
                       {t('Hồ sơ', 'Perfil')}
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator
-                    style={{ background: 'rgba(139,30,45,0.12)', margin: '4px 0' }}
+                    style={{ background: 'rgba(107,15,26,0.12)', margin: '4px 0' }}
                   />
                   <DropdownMenuItem
                     onClick={handleLogout}
@@ -415,7 +594,7 @@ const Navbar = () => {
                       padding: '8px 10px',
                       borderRadius: 8,
                       fontSize: 13.5,
-                      color: '#8b1e2d',
+                      color: '#8B1E2D',
                       cursor: 'pointer',
                     }}
                   >
@@ -431,7 +610,7 @@ const Navbar = () => {
                     style={{
                       padding: '8px 16px',
                       borderRadius: 8,
-                      border: '1px solid rgba(139,30,45,0.35)',
+                      border: '1px solid rgba(107,15,26,0.35)',
                       background: 'transparent',
                       color: '#6d434a',
                       fontSize: 13.5,
@@ -441,11 +620,11 @@ const Navbar = () => {
                       fontFamily: 'inherit',
                     }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.borderColor = '#8b1e2d';
-                      e.currentTarget.style.color = '#8b1e2d';
+                      e.currentTarget.style.borderColor = '#8B1E2D';
+                      e.currentTarget.style.color = '#8B1E2D';
                     }}
                     onMouseLeave={(e) => {
-                      e.currentTarget.style.borderColor = 'rgba(139,30,45,0.35)';
+                      e.currentTarget.style.borderColor = 'rgba(107,15,26,0.35)';
                       e.currentTarget.style.color = '#6d434a';
                     }}
                   >
@@ -457,8 +636,8 @@ const Navbar = () => {
                     style={{
                       padding: '8px 16px',
                       borderRadius: 8,
-                      border: '1px solid #8b1e2d',
-                      background: 'linear-gradient(135deg, #8b1e2d 0%, #b63b4f 100%)',
+                      border: '1px solid #8B1E2D',
+                      background: 'linear-gradient(135deg, #8B1E2D 0%, #9B1B30 100%)',
                       color: '#fff6f7',
                       fontSize: 13.5,
                       fontWeight: 700,
@@ -484,28 +663,66 @@ const Navbar = () => {
           </div>
 
           <div className="flex items-center gap-3 lg:hidden">
-            <button
-              onClick={() => setLang(lang === 'vi' ? 'es' : 'vi')}
-              style={{
-                padding: '0',
-                border: 'none',
-                background: 'transparent',
-                fontSize: 14,
-                fontWeight: 600,
-                color: '#8b1e2d',
-                cursor: 'pointer',
-              }}
-            >
-              {lang === 'vi' ? '🇻🇳 VI' : '🇪🇸 ES'}
-            </button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  aria-label={t('Chọn ngôn ngữ', 'Seleccionar idioma')}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    border: '1px solid rgba(107,15,26,0.28)',
+                    background: 'rgba(255,252,252,0.96)',
+                    borderRadius: 8,
+                    padding: '4px 8px',
+                    fontSize: 13,
+                    fontWeight: 700,
+                    color: '#8B1E2D',
+                    cursor: 'pointer',
+                    fontFamily: 'inherit',
+                  }}
+                >
+                  <Globe2 style={{ width: 14, height: 14, color: '#8B1E2D' }} />
+                  <span>{lang === 'vi' ? 'VI' : 'ES'}</span>
+                  <span style={{ fontSize: 9 }}>▼</span>
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                align="start"
+                style={{
+                  minWidth: 110,
+                  background: 'rgba(255,252,252,0.98)',
+                  border: '1px solid rgba(107,15,26,0.2)',
+                  borderRadius: 10,
+                  boxShadow: '0 12px 28px rgba(83,24,32,0.14)',
+                  padding: 6,
+                }}
+              >
+                <DropdownMenuItem
+                  className="dd-item"
+                  onClick={() => setLang('vi')}
+                  style={{ borderRadius: 8, fontWeight: 700, color: '#5e3a41', cursor: 'pointer' }}
+                >
+                  🇻🇳 VI
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  className="dd-item"
+                  onClick={() => setLang('es')}
+                  style={{ borderRadius: 8, fontWeight: 700, color: '#5e3a41', cursor: 'pointer' }}
+                >
+                  🇪🇸 ES
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <button
               onClick={() => setMobileOpen(!mobileOpen)}
               style={{
                 width: 32,
                 height: 32,
                 borderRadius: 9,
-                border: '1px solid rgba(139,30,45,0.28)',
-                background: 'rgba(139,30,45,0.06)',
+                border: '1px solid rgba(107,15,26,0.28)',
+                background: 'rgba(107,15,26,0.06)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -531,7 +748,7 @@ const Navbar = () => {
               transition={{ duration: 0.22, ease: [0.25, 0.46, 0.45, 0.94] }}
               style={{
                 overflow: 'hidden',
-                borderTop: '1px solid rgba(139,30,45,0.14)',
+                borderTop: '1px solid rgba(107,15,26,0.14)',
                 background: 'rgba(255,252,252,0.98)',
               }}
               className="lg:hidden"
@@ -547,8 +764,8 @@ const Navbar = () => {
                       gap: 12,
                       padding: '12px 14px',
                       borderRadius: 12,
-                      border: '1px solid rgba(139,30,45,0.2)',
-                      background: 'rgba(139,30,45,0.05)',
+                      border: '1px solid rgba(107,15,26,0.2)',
+                      background: 'rgba(107,15,26,0.05)',
                       textDecoration: 'none',
                       marginBottom: 12,
                     }}
@@ -586,7 +803,7 @@ const Navbar = () => {
                             }}
                           />
                         ) : (
-                          <User style={{ width: 16, height: 16, color: '#8b1e2d' }} />
+                          <User style={{ width: 16, height: 16, color: '#8B1E2D' }} />
                         )}
                       </div>
                     </div>
@@ -594,7 +811,7 @@ const Navbar = () => {
                       <p style={{ fontSize: 15, fontWeight: 600, color: '#2f171b', margin: 0 }}>
                         {userDisplayName}
                       </p>
-                      <p style={{ fontSize: 13.5, color: '#8b1e2d', margin: 0, marginTop: 1 }}>
+                      <p style={{ fontSize: 13.5, color: '#8B1E2D', margin: 0, marginTop: 1 }}>
                         {t('Xem hồ sơ →', 'Ver perfil →')}
                       </p>
                     </div>
@@ -616,9 +833,9 @@ const Navbar = () => {
                           gap: 12,
                           padding: '9px 12px',
                           borderRadius: 10,
-                          borderLeft: active ? '3px solid #8b1e2d' : '3px solid transparent',
-                          background: active ? 'rgba(139,30,45,0.1)' : 'transparent',
-                          color: active ? '#8b1e2d' : '#6f4a50',
+                          borderLeft: active ? '3px solid #8B1E2D' : '3px solid transparent',
+                          background: active ? 'rgba(107,15,26,0.1)' : 'transparent',
+                          color: active ? '#8B1E2D' : '#6f4a50',
                           textDecoration: 'none',
                           fontSize: 14,
                           fontWeight: active ? 600 : 500,
@@ -635,7 +852,7 @@ const Navbar = () => {
                   style={{
                     marginTop: 14,
                     paddingTop: 14,
-                    borderTop: '1px solid rgba(139,30,45,0.14)',
+                    borderTop: '1px solid rgba(107,15,26,0.14)',
                     display: 'flex',
                     gap: 10,
                   }}
@@ -647,9 +864,9 @@ const Navbar = () => {
                         flex: 1,
                         padding: '10px',
                         borderRadius: 10,
-                        border: '1px solid rgba(139,30,45,0.28)',
-                        background: 'rgba(139,30,45,0.08)',
-                        color: '#8b1e2d',
+                        border: '1px solid rgba(107,15,26,0.28)',
+                        background: 'rgba(107,15,26,0.08)',
+                        color: '#8B1E2D',
                         fontSize: 14,
                         fontWeight: 600,
                         cursor: 'pointer',
@@ -675,7 +892,7 @@ const Navbar = () => {
                             width: '100%',
                             padding: '10px',
                             borderRadius: 10,
-                            border: '1px solid rgba(139,30,45,0.3)',
+                            border: '1px solid rgba(107,15,26,0.3)',
                             background: 'transparent',
                             color: '#6b434a',
                             fontSize: 14,
@@ -698,7 +915,7 @@ const Navbar = () => {
                             padding: '10px',
                             borderRadius: 10,
                             border: 'none',
-                            background: 'linear-gradient(135deg, #8b1e2d 0%, #b63b4f 100%)',
+                            background: 'linear-gradient(135deg, #8B1E2D 0%, #9B1B30 100%)',
                             color: '#fff6f7',
                             fontSize: 14,
                             fontWeight: 700,
@@ -717,6 +934,14 @@ const Navbar = () => {
           )}
         </AnimatePresence>
       </nav>
+
+      <div className="desktop-nav-strip desktop-nav-strip--base">
+        {renderDesktopMenuStrip(false)}
+      </div>
+
+      <div className={`desktop-nav-strip desktop-nav-strip--sticky compact${scrolled ? ' visible' : ''}`}>
+        {renderDesktopMenuStrip(true)}
+      </div>
     </>
   );
 };

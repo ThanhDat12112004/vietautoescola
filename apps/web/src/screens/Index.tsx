@@ -1,4 +1,13 @@
-import { ArrowRight, CheckCircle2, GraduationCap, Medal, Target } from '@/components/BrandIcons';
+import {
+  ArrowRight,
+  BookOpen,
+  CheckCircle2,
+  FileText,
+  GraduationCap,
+  Medal,
+  Target,
+  Users,
+} from '@/components/BrandIcons';
 import BrandLogo from '@/components/BrandLogo';
 import Footer from '@/components/Footer';
 import Navbar from '@/components/Navbar';
@@ -9,11 +18,13 @@ import {
   getHomeSummary,
   getLeaderboard,
   getQuizzes,
+  getQuizTypes,
   getSubjects,
   resolveMediaUrl,
   type HomeSummary,
   type LeaderboardUser,
   type QuizListItem,
+  type QuizType,
   type Subject,
 } from '@/lib/api';
 import { getStoredAuth, type AuthUser } from '@/lib/auth';
@@ -34,6 +45,7 @@ const Index = () => {
   const { t, lang } = useLanguage();
   const [leaderboard, setLeaderboard] = useState<LeaderboardUser[]>([]);
   const [quizzes, setQuizzes] = useState<QuizListItem[]>([]);
+  const [quizTypeCatalog, setQuizTypeCatalog] = useState<QuizType[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [homeSummary, setHomeSummary] = useState<HomeSummary | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -45,9 +57,10 @@ const Index = () => {
 
     (async () => {
       try {
-        const [leaderboardRows, quizRows, subjectRows, summary] = await Promise.all([
+        const [leaderboardRows, quizRows, quizTypeRows, subjectRows, summary] = await Promise.all([
           getLeaderboard(10),
           getQuizzes(lang),
+          getQuizTypes(lang),
           getSubjects(lang),
           getHomeSummary(),
         ]);
@@ -55,6 +68,7 @@ const Index = () => {
         if (!active) return;
         setLeaderboard(leaderboardRows);
         setQuizzes(quizRows);
+        setQuizTypeCatalog(quizTypeRows);
         setSubjects(subjectRows);
         setHomeSummary(summary);
       } catch {
@@ -96,6 +110,38 @@ const Index = () => {
   const formatQuizType = (value: string) =>
     value.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
 
+  const normalizeText = (value: string) => value.toLowerCase().trim();
+
+  const getTopicDescriptionByType = (type: string) => {
+    const formattedType = formatQuizType(type);
+    const matchedType = quizTypeCatalog.find(
+      (quizType) =>
+        normalizeText(quizType.code) === normalizeText(type) ||
+        normalizeText(quizType.name) === normalizeText(formattedType)
+    );
+
+    if (matchedType?.description?.trim()) {
+      return matchedType.description.trim();
+    }
+
+    return t('Chủ đề này chưa có mô tả chi tiết.', 'Este tema aun no tiene descripcion detallada.');
+  };
+
+  const primaryQuizType = quizTypes[0] || null;
+
+  const primaryTypeQuizzes = useMemo(
+    () =>
+      primaryQuizType
+        ? quizzes.filter((quiz) => String(quiz.quiz_type || '') === String(primaryQuizType))
+        : [],
+    [primaryQuizType, quizzes]
+  );
+
+  const primaryTypeDescription = useMemo(
+    () => (primaryQuizType ? getTopicDescriptionByType(primaryQuizType) : ''),
+    [primaryQuizType, quizTypeCatalog, t]
+  );
+
   const topLeaderboard = useMemo(
     () =>
       [...leaderboard]
@@ -109,6 +155,36 @@ const Index = () => {
   );
 
   const champion = topLeaderboard[0] || null;
+
+  const quickStats = useMemo(
+    () => [
+      {
+        label: t('Số đề trắc nghiệm', 'Total de examenes'),
+        value: Number(quizzes.length || 0).toLocaleString('vi-VN'),
+        hint: t('Đề ôn luyện theo chuẩn DGT', 'Examenes de practica tipo DGT'),
+        icon: BookOpen,
+      },
+      {
+        label: t('Số tài liệu học', 'Total de materiales'),
+        value: Number(subjects.length || 0).toLocaleString('vi-VN'),
+        hint: t('Chủ đề, biển báo, mẹo làm đề', 'Temas, senales y guias de estudio'),
+        icon: FileText,
+      },
+      {
+        label: t('Số học viên', 'Total de estudiantes'),
+        value: Number(homeSummary?.total_students || 0).toLocaleString('vi-VN'),
+        hint: t('Đang học và luyện thi hằng ngày', 'Aprendiendo y practicando cada dia'),
+        icon: Users,
+      },
+      {
+        label: t('Tỷ lệ đậu trung bình', 'Tasa media de aprobacion'),
+        value: `${Number(homeSummary?.pass_rate || 0).toFixed(1)}%`,
+        hint: t('Theo thống kê kết quả gần đây', 'Segun resultados recientes'),
+        icon: CheckCircle2,
+      },
+    ],
+    [homeSummary?.pass_rate, homeSummary?.total_students, quizzes.length, subjects.length, t]
+  );
 
   const leftProfileUser = useMemo(() => {
     if (!currentUser) return champion;
@@ -236,341 +312,346 @@ const Index = () => {
   ];
 
   return (
-    <div className="app-page min-h-screen flex flex-col bg-[radial-gradient(circle_at_14%_14%,rgba(255,220,228,0.42),transparent_36%),radial-gradient(circle_at_88%_8%,rgba(255,232,182,0.32),transparent_30%),linear-gradient(180deg,#fbf7f9_0%,#f8f9fe_56%,#f9f3f7_100%)]">
+    <div className="app-page min-h-screen flex flex-col bg-background">
       <Navbar />
 
-      <section className="relative overflow-hidden py-6 sm:py-8 md:py-12 lg:py-14">
-        <svg
+      {/* Hero Section - Professional & Trustworthy */}
+      <section className="relative overflow-hidden bg-gradient-to-br from-background via-sky-light to-background py-16 sm:py-20 md:py-24 lg:py-28">
+        {/* Subtle background pattern */}
+        <div
           aria-hidden="true"
-          className="pointer-events-none absolute inset-0 h-full w-full"
-          viewBox="0 0 1600 900"
-          preserveAspectRatio="none"
-        >
-          <defs>
-            <linearGradient id="hero-bg-base" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#fff5f7" />
-              <stop offset="46%" stopColor="#f8e8ee" />
-              <stop offset="100%" stopColor="#efdee7" />
-            </linearGradient>
-            <radialGradient
-              id="hero-bg-glow-left"
-              cx="0"
-              cy="0"
-              r="1"
-              gradientUnits="userSpaceOnUse"
-              gradientTransform="translate(220 170) rotate(20) scale(360 240)"
-            >
-              <stop offset="0%" stopColor="#b23d58" stopOpacity="0.28" />
-              <stop offset="100%" stopColor="#b23d58" stopOpacity="0" />
-            </radialGradient>
-            <radialGradient
-              id="hero-bg-glow-right"
-              cx="0"
-              cy="0"
-              r="1"
-              gradientUnits="userSpaceOnUse"
-              gradientTransform="translate(1360 180) rotate(-16) scale(330 230)"
-            >
-              <stop offset="0%" stopColor="#7a2038" stopOpacity="0.24" />
-              <stop offset="100%" stopColor="#7a2038" stopOpacity="0" />
-            </radialGradient>
-            <radialGradient
-              id="hero-bg-warm"
-              cx="0"
-              cy="0"
-              r="1"
-              gradientUnits="userSpaceOnUse"
-              gradientTransform="translate(1280 150) rotate(-20) scale(280 190)"
-            >
-              <stop offset="0%" stopColor="#ca8a04" stopOpacity="0.2" />
-              <stop offset="100%" stopColor="#ca8a04" stopOpacity="0" />
-            </radialGradient>
-            <pattern
-              id="hero-bg-road-lines"
-              width="32"
-              height="32"
-              patternUnits="userSpaceOnUse"
-              patternTransform="rotate(28)"
-            >
-              <rect width="32" height="32" fill="transparent" />
-              <rect x="0" y="0" width="2" height="32" fill="#7a2038" fillOpacity="0.06" />
-            </pattern>
-          </defs>
+          className="pointer-events-none absolute inset-0 opacity-40"
+          style={{
+            backgroundImage: "url('/brand/hero.png')",
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            backgroundRepeat: 'no-repeat',
+          }}
+        />
+        
+        {/* Gradient overlay for professional look */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 bg-gradient-to-b from-background/95 via-background/85 to-background/95"
+        />
 
-          <rect width="1600" height="900" fill="url(#hero-bg-base)" />
-          <rect width="1600" height="900" fill="url(#hero-bg-road-lines)" />
-          <rect width="1600" height="900" fill="url(#hero-bg-glow-left)" />
-          <rect width="1600" height="900" fill="url(#hero-bg-glow-right)" />
-          <rect width="1600" height="900" fill="url(#hero-bg-warm)" />
-          <path
-            d="M0 760 C320 710 620 790 930 760 C1220 734 1390 700 1600 736 L1600 900 L0 900 Z"
-            fill="#ecdae3"
-            fillOpacity="0.72"
-          />
-        </svg>
-        <div className="relative w-full px-3 sm:px-5 md:px-7 lg:px-10">
-          <div className="grid items-center gap-6 md:grid-cols-2 md:gap-8">
+        <div className="relative container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-16">
+            {/* Left column - Content */}
             <motion.div
-              initial={{ opacity: 0, x: -40 }}
-              animate={{ opacity: 1, x: 0 }}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6 }}
+              className="text-center lg:text-left"
             >
-              <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-primary/12 px-4 py-1.5 text-sm font-semibold text-primary md:text-base">
-                <GraduationCap className="h-4 w-4" />
-                {t('Hệ thống thi trực tuyến #1', 'Sistema de exámenes online #1')}
+              {/* Trust badge */}
+              <div className="mb-6 inline-flex items-center gap-2.5 rounded-full border border-primary/20 bg-white px-5 py-2.5 shadow-sm">
+                <GraduationCap className="h-5 w-5 text-primary" />
+                <span className="text-sm font-semibold text-foreground">
+                  {t('Chuẩn DGT - Đã giúp hơn 10,000+ học viên', 'Estándar DGT - Más de 10,000+ estudiantes')}
+                </span>
               </div>
-              <h1
-                className="mb-5 text-[2.05rem] font-black leading-[1.02] tracking-[-0.02em] text-[#1f2430] sm:text-[2.45rem] md:text-[2.95rem] lg:text-[3.45rem] xl:text-[3.85rem]"
-                style={{ fontFamily: "'Be Vietnam Pro', sans-serif" }}
-              >
-                {t('Chinh phục bằng lái xe song ngữ Việt - Tây Ban Nha', 'Domina tu examen de conducir bilingüe vietnamita-español')}
-              </h1>
-              <p className="mb-7 max-w-xl text-base leading-relaxed text-[#5c5f70] sm:text-lg md:text-xl">
+
+              {/* Main heading */}
+              <h1 className="mb-6 font-display text-4xl font-extrabold leading-tight tracking-tight text-foreground sm:text-5xl md:text-6xl">
                 {t(
-                  'Bộ đề bám sát thực tế DGT, chấm điểm tức thì, giải thích rõ ràng và lộ trình học thông minh để bạn đậu nhanh hơn.',
-                  'Exámenes estilo DGT, corrección instantánea, explicaciones claras y una ruta de estudio inteligente para aprobar más rápido.'
+                  'Bằng lái xe Tây Ban Nha',
+                  'Permiso de conducir en España'
+                )}
+                <span className="mt-2 block text-primary">
+                  {t('Học thông minh, Đậu nhanh', 'Aprende inteligente, Aprueba rápido')}
+                </span>
+              </h1>
+
+              {/* Subtitle */}
+              <p className="mb-8 max-w-2xl text-lg leading-relaxed text-muted-foreground lg:text-xl">
+                {t(
+                  'Hệ thống luyện thi DGT song ngữ với hàng ngàn câu hỏi thực tế, chấm điểm tức thì và giải thích chi tiết',
+                  'Sistema de práctica DGT bilingüe con miles de preguntas reales, corrección instantánea y explicaciones detalladas'
                 )}
               </p>
-              <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-                <Link to="/quizzes">
+
+              {/* CTA Buttons */}
+              <div className="flex flex-col gap-4 sm:flex-row sm:justify-center lg:justify-start">
+                <Link to="/quizzes" className="inline-flex">
                   <Button
                     size="lg"
-                    className="w-full justify-center gap-2 rounded-xl bg-[linear-gradient(135deg,#7a2038_0%,#b23d58_65%,#ca8a04_100%)] px-6 text-base font-semibold text-white shadow-md hover:opacity-95 sm:w-auto"
+                    className="w-full gap-2.5 rounded-xl bg-primary px-8 py-6 text-base font-semibold text-primary-foreground shadow-lg transition-all hover:bg-secondary hover:shadow-xl sm:w-auto"
                   >
-                    {t('Học thử ngay', 'Empieza ahora')}
-                    <ArrowRight className="h-4 w-4" />
+                    {t('Bắt đầu luyện thi', 'Empezar a practicar')}
+                    <ArrowRight className="h-5 w-5" />
                   </Button>
                 </Link>
                 {!isAuthenticated && (
-                  <Link to="/register">
+                  <Link to="/register" className="inline-flex">
                     <Button
                       size="lg"
                       variant="outline"
-                      className="w-full rounded-xl border-primary/25 bg-white/70 px-6 text-base font-semibold text-primary hover:bg-white sm:w-auto"
+                      className="w-full rounded-xl border-2 border-primary/30 bg-transparent px-8 py-6 text-base font-semibold text-primary transition-all hover:bg-primary/5 sm:w-auto"
                     >
-                      {t('Đăng ký miễn phí', 'Regístrate gratis')}
+                      {t('Đăng ký miễn phí', 'Registro gratuito')}
                     </Button>
                   </Link>
                 )}
               </div>
-            </motion.div>
 
-            <motion.div
-              initial={{ opacity: 0, x: 40 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.6, delay: 0.2 }}
-              className="relative hidden justify-center md:flex md:justify-end"
-            >
-              <div className="relative h-60 w-60 md:h-80 md:w-80 lg:h-[24rem] lg:w-[24rem] xl:h-[28rem] xl:w-[28rem]">
-                <div className="absolute inset-3 rounded-full overflow-hidden border border-primary/30 bg-white/30 shadow-[0_18px_46px_rgba(95,20,40,0.18)] backdrop-blur-sm">
-                  <BrandLogo
-                    className="h-full w-full items-center justify-center"
-                    imageClassName="h-full w-full object-contain animate-float scale-[1.02] md:scale-[1.08] lg:scale-[1.15]"
-                  />
+              {/* Trust indicators */}
+              <div className="mt-10 flex flex-wrap items-center justify-center gap-6 border-t border-border pt-8 lg:justify-start">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <CheckCircle2 className="h-5 w-5 text-gold" />
+                  <span className="font-medium">{t('100% miễn phí', '100% gratis')}</span>
+                </div>
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <CheckCircle2 className="h-5 w-5 text-gold" />
+                  <span className="font-medium">{t('Song ngữ Việt-Tây', 'Bilingüe Viet-Esp')}</span>
+                </div>
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <CheckCircle2 className="h-5 w-5 text-gold" />
+                  <span className="font-medium">{t('Cập nhật 2024', 'Actualizado 2024')}</span>
                 </div>
               </div>
             </motion.div>
-          </div>
 
-          <motion.div
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true }}
-            variants={fadeUp}
-            custom={1}
-            className="mt-8 rounded-2xl border border-[#7a2038]/12 bg-white/72 p-4 shadow-[0_10px_24px_rgba(95,20,40,0.08)] md:mt-10 md:p-5"
-          >
-            <div className="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-4">
-              {features.map((feature, i) => (
-                <motion.div
-                  key={feature.title}
-                  custom={i + 2}
-                  initial="hidden"
-                  whileInView="visible"
-                  viewport={{ once: true }}
-                  variants={fadeUp}
-                  whileHover={{ y: -10, scale: 1.02 }}
-                  whileTap={{ y: -4, scale: 0.99 }}
-                  transition={{ type: 'spring', stiffness: 260, damping: 18 }}
-                  className="rounded-xl border border-[#7a2038]/10 bg-white/92 px-2 py-3 text-center shadow-[0_8px_16px_rgba(95,20,40,0.06)] sm:px-3 sm:py-4"
-                >
-                  <img
-                    src={feature.image}
-                    alt={feature.title}
-                    className="mx-auto mb-1.5 h-10 w-auto object-contain sm:mb-2 sm:h-14 md:h-16"
-                    loading="lazy"
-                  />
-                  <h3 className="mb-0.5 line-clamp-2 font-display text-[13px] font-black leading-snug text-[#4a1930] sm:text-base md:text-lg">
-                    {feature.title}
-                  </h3>
-                  <p className="hidden text-xs font-medium leading-relaxed text-[#646173] md:block md:text-sm">
-                    {feature.desc}
-                  </p>
-                </motion.div>
-              ))}
-            </div>
-          </motion.div>
+            {/* Right column - Visual/Stats */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.6, delay: 0.2 }}
+              className="relative"
+            >
+              {/* Profile/Stats Card */}
+              {leftProfileUser && (
+                <div className="relative mx-auto max-w-md lg:max-w-none">
+                  <div className="section-panel relative overflow-hidden p-6 sm:p-8">
+                    {/* User info if logged in */}
+                    <div className="mb-6 flex items-center gap-4">
+                      <div className="relative h-16 w-16 overflow-hidden rounded-full border-2 border-primary/20 bg-muted">
+                        {leftProfileUser.avatar_url ? (
+                          <img
+                            src={resolveMediaUrl(leftProfileUser.avatar_url)}
+                            alt={leftProfileUser.full_name || leftProfileUser.username}
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center bg-primary/10 text-xl font-bold text-primary">
+                            {(leftProfileUser.full_name || leftProfileUser.username || 'U')[0].toUpperCase()}
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-muted-foreground">
+                          {isAuthenticated ? t('Tiến độ của bạn', 'Tu progreso') : t('Học viên xuất sắc', 'Estudiante destacado')}
+                        </p>
+                        <p className="text-lg font-bold text-foreground">
+                          {leftProfileUser.full_name || leftProfileUser.username}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Stats grid */}
+                    <div className="grid grid-cols-3 gap-4">
+                      <div className="rounded-lg bg-primary/5 p-4 text-center">
+                        <div className="text-2xl font-bold text-primary">
+                          {Number(leftProfileUser.total_quizzes || 0)}
+                        </div>
+                        <div className="mt-1 text-xs font-medium text-muted-foreground">
+                          {t('Bài thi', 'Exámenes')}
+                        </div>
+                      </div>
+                      <div className="rounded-lg bg-gold/10 p-4 text-center">
+                        <div className="text-2xl font-bold text-gold">
+                          {Number(leftProfileUser.average_percentage || 0).toFixed(0)}%
+                        </div>
+                        <div className="mt-1 text-xs font-medium text-muted-foreground">
+                          {t('Điểm TB', 'Promedio')}
+                        </div>
+                      </div>
+                      <div className="rounded-lg bg-accent/10 p-4 text-center">
+                        <div className="text-2xl font-bold text-accent-foreground">
+                          {Number(leftProfileUser.total_score || 0)}
+                        </div>
+                        <div className="mt-1 text-xs font-medium text-muted-foreground">
+                          {t('Điểm số', 'Puntos')}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* CTA inside card */}
+                    {!isAuthenticated && (
+                      <div className="mt-6 rounded-lg border border-primary/20 bg-primary/5 p-4">
+                        <p className="text-center text-sm font-medium text-foreground">
+                          {t('Bắt đầu hành trình của bạn ngay hôm nay', 'Comienza tu viaje hoy')}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Decorative elements */}
+                  <div className="absolute -right-4 -top-4 h-24 w-24 rounded-full bg-gold/20 blur-2xl" />
+                  <div className="absolute -bottom-4 -left-4 h-32 w-32 rounded-full bg-primary/10 blur-3xl" />
+                </div>
+              )}
+            </motion.div>
+          </div>
         </div>
       </section>
 
-      <div
-        aria-hidden="true"
-        className="pointer-events-none relative -mt-2 h-14 overflow-hidden sm:h-20 md:h-28"
+      {/* Quick Features - Below Hero */}
+      <motion.div
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true }}
+        variants={fadeUp}
+        custom={1}
+        className="container mx-auto max-w-7xl -mt-8 px-4 sm:px-6 lg:px-8"
       >
-        <svg
-          viewBox="0 0 1440 220"
-          preserveAspectRatio="none"
-          className="absolute inset-0 h-full w-full"
+        <div className="section-panel">
+          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+            {features.map((feature, i) => (
+              <motion.div
+                key={feature.title}
+                custom={i + 2}
+                initial="hidden"
+                whileInView="visible"
+                viewport={{ once: true }}
+                variants={fadeUp}
+                whileHover={{ y: -4 }}
+                transition={{ type: 'spring', stiffness: 260, damping: 20 }}
+                className="group text-center transition-all"
+              >
+                <div className="rounded-lg border border-border bg-card p-4 transition-all hover:border-primary/30 hover:shadow-md sm:p-5">
+                  <img
+                    src={feature.image}
+                    alt={feature.title}
+                    className="mx-auto mb-3 h-12 w-auto object-contain transition-transform group-hover:scale-110 sm:h-16"
+                    loading="lazy"
+                  />
+                  <h3 className="mb-1.5 font-display text-sm font-bold text-foreground sm:text-base">
+                    {feature.title}
+                  </h3>
+                  <p className="text-xs leading-relaxed text-muted-foreground sm:text-sm">
+                    {feature.desc}
+                  </p>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </motion.div>
+
+      {/* Stats Section - Professional */}
+      <section className="relative w-full bg-primary py-12 sm:py-16">
+        <motion.div
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true }}
+          variants={fadeUp}
+          custom={1}
+          className="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8"
         >
-          <defs>
-            <linearGradient id="hero-cross-road" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="#3d4148" stopOpacity="0.44" />
-              <stop offset="55%" stopColor="#545a63" stopOpacity="0.56" />
-              <stop offset="100%" stopColor="#40454d" stopOpacity="0.46" />
-            </linearGradient>
-            <linearGradient id="hero-cross-edge" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="#1f2329" stopOpacity="0.32" />
-              <stop offset="45%" stopColor="#2a2f37" stopOpacity="0.38" />
-              <stop offset="100%" stopColor="#1f2329" stopOpacity="0.32" />
-            </linearGradient>
-          </defs>
+          <div className="grid grid-cols-2 gap-8 md:grid-cols-4">
+            {quickStats.map((item, i) => (
+              <motion.div
+                key={item.label}
+                custom={i + 1}
+                initial="hidden"
+                whileInView="visible"
+                viewport={{ once: true }}
+                variants={fadeUp}
+                className="text-center"
+              >
+                <item.icon className="mx-auto mb-3 h-8 w-8 text-primary-foreground/80" />
+                <p className="mb-1 text-4xl font-black text-primary-foreground">
+                  {item.value}
+                </p>
+                <p className="text-sm font-semibold text-primary-foreground/90">
+                  {item.label}
+                </p>
+                <p className="mt-1 text-xs text-primary-foreground/70">
+                  {item.hint}
+                </p>
+              </motion.div>
+            ))}
+          </div>
+        </motion.div>
+      </section>
 
-          <path
-            d="M0,0 H1440 V106 C1260,86 1060,124 840,100 C640,80 480,48 300,78 C180,96 90,92 0,84 Z"
-            fill="rgba(239,242,247,0.9)"
-          />
-
-          <path
-            className="hidden md:block"
-            d="M-18,112 C180,56 370,156 610,116 C820,84 1000,56 1180,98 C1320,132 1400,124 1468,112"
-            fill="none"
-            stroke="url(#hero-cross-edge)"
-            strokeWidth="126"
-            strokeLinecap="round"
-          />
-          <path
-            className="hidden md:block"
-            d="M-18,112 C180,56 370,156 610,116 C820,84 1000,56 1180,98 C1320,132 1400,124 1468,112"
-            fill="none"
-            stroke="url(#hero-cross-road)"
-            strokeWidth="96"
-            strokeLinecap="round"
-          />
-          <path
-            className="hidden md:block"
-            d="M-18,112 C180,56 370,156 610,116 C820,84 1000,56 1180,98 C1320,132 1400,124 1468,112"
-            fill="none"
-            stroke="rgba(255,255,255,0.96)"
-            strokeWidth="30"
-            strokeLinecap="butt"
-            strokeDasharray="54 40"
-          />
-          <path
-            className="md:hidden"
-            d="M-18,112 C180,56 370,156 610,116 C820,84 1000,56 1180,98 C1320,132 1400,124 1468,112"
-            fill="none"
-            stroke="url(#hero-cross-edge)"
-            strokeWidth="34"
-            strokeLinecap="round"
-          />
-          <path
-            className="md:hidden"
-            d="M-18,112 C180,56 370,156 610,116 C820,84 1000,56 1180,98 C1320,132 1400,124 1468,112"
-            fill="none"
-            stroke="url(#hero-cross-road)"
-            strokeWidth="24"
-            strokeLinecap="round"
-          />
-          <path
-            className="md:hidden"
-            d="M-18,112 C180,56 370,156 610,116 C820,84 1000,56 1180,98 C1320,132 1400,124 1468,112"
-            fill="none"
-            stroke="rgba(255,255,255,0.96)"
-            strokeWidth="8"
-            strokeLinecap="butt"
-            strokeDasharray="14 14"
-          />
-        </svg>
-      </div>
-
-      <section className="relative py-8 sm:py-10 md:py-14 lg:py-16">
-        <div className="relative z-10 px-4 md:px-8 lg:px-10">
+      {/* Quiz Types Section - Professional Grid */}
+      <section className="relative bg-muted/50 py-16 sm:py-20 lg:py-24">
+        <div className="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <motion.div
             initial="hidden"
             whileInView="visible"
             viewport={{ once: true }}
             variants={fadeUp}
             custom={0}
-            className="mb-5 flex flex-wrap items-end justify-between gap-x-4 gap-y-3 border-b border-primary/20 pb-4"
+            className="mb-10 flex flex-wrap items-end justify-between gap-4"
           >
-            <div className="max-w-3xl">
-              <h2 className="font-display text-[1.85rem] font-black leading-[1.08] tracking-tight text-[#402631] sm:text-[2.1rem] md:text-[2.5rem] lg:text-[2.85rem]">
-                {t('Loại đề luyện thi', 'Tipos de examen')}
+            <div className="max-w-2xl">
+              <h2 className="font-display text-3xl font-bold text-foreground sm:text-4xl">
+                {t('Đề thi theo mục tiêu', 'Exámenes por objetivo')}
               </h2>
-              <p className="mt-1 text-base font-medium text-[#5f6272] sm:text-lg md:text-xl">
+              <p className="mt-3 text-lg text-muted-foreground">
                 {t(
-                  'Chọn loại đề bạn muốn tập trung',
-                  'Elige el tipo de examen que quieres dominar'
+                  'Chọn dạng đề phù hợp để học hiệu quả và nâng điểm nhanh chóng.',
+                  'Elige el tipo de examen adecuado para mejorar rápidamente.'
                 )}
               </p>
             </div>
             <Link to="/quizzes" className="inline-flex">
-              <Button
-                variant="outline"
-                className="gap-1.5 rounded-full border-primary/25 bg-white/70 px-4 py-2 text-sm text-primary hover:bg-white md:text-base"
-              >
-                {t('Xem thêm', 'Ver más')} <ArrowRight className="h-4 w-4" />
+              <Button className="gap-2 bg-primary px-6 text-primary-foreground hover:bg-secondary">
+                {t('Xem tất cả', 'Ver todos')} <ArrowRight className="h-4 w-4" />
               </Button>
             </Link>
           </motion.div>
 
           {quizTypes.length ? (
-            <div className="grid gap-3 lg:grid-cols-[1.55fr_1fr] lg:gap-4">
+            <div className="grid gap-6 lg:grid-cols-3">
+              {/* Featured Quiz Type - Large Card */}
               <motion.div
                 custom={1}
                 initial="hidden"
                 whileInView="visible"
                 viewport={{ once: true }}
                 variants={fadeUp}
+                className="lg:col-span-2 lg:row-span-2"
               >
                 <Link to={`/quizzes?type=${encodeURIComponent(quizTypes[0])}`}>
-                  <Card className="card-hover relative overflow-hidden rounded-2xl border border-primary/20 bg-white/88 shadow-[0_10px_24px_rgba(95,20,40,0.08)]">
-                    <div className="relative aspect-[5/3] w-full min-h-[220px] sm:min-h-[250px] md:min-h-[310px]">
-                      <img
-                        src="/brand/quiz-illustration.png"
-                        alt={t('Minh họa đề luyện thi', 'Ilustración de examen de práctica')}
-                        className="absolute inset-0 h-full w-full object-contain object-center"
-                        loading="lazy"
-                      />
-                      <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(122,32,56,0.05)_0%,rgba(122,32,56,0.22)_52%,rgba(74,25,48,0.70)_100%)]" />
-                      <CardContent className="absolute inset-x-0 bottom-0 z-10 p-5 text-white md:p-6">
-                        <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-white/50 bg-white/20 px-3 py-1 text-base font-semibold text-white backdrop-blur-sm">
-                          <Target className="h-5 w-5" />
-                          {formatQuizType(quizTypes[0])}
-                        </div>
-                        <h3 className="mb-2 font-display text-[1.5rem] font-black leading-tight text-white sm:text-[1.75rem] md:text-[2.25rem]">
-                          {t(
-                            'Lộ trình luyện thi trọng tâm theo từng loại đề',
-                            'Ruta de práctica por tipo de examen'
-                          )}
-                        </h3>
-                        <p className="mb-4 max-w-xl text-sm text-white/90 sm:text-base md:text-lg">
-                          {t(
-                            'Bắt đầu từ đề phù hợp nhất để tăng tốc độ đạt điểm cao.',
-                            'Empieza por el tipo más adecuado para subir tu puntuación más rápido.'
-                          )}
-                        </p>
-                        <span className="inline-flex items-center gap-1.5 text-base font-bold text-white">
-                          {t('Vào luyện thi', 'Empezar')} <ArrowRight className="h-4 w-4" />
+                  <Card className="group h-full overflow-hidden border-0 bg-gradient-to-br from-primary to-secondary shadow-lg transition-all hover:shadow-xl">
+                    <CardContent className="flex h-full min-h-[320px] flex-col justify-end p-6 sm:p-8">
+                      <div className="mb-4 inline-flex w-fit items-center gap-2 rounded-full bg-white/20 px-4 py-2 text-sm font-medium text-white backdrop-blur-sm">
+                        <Target className="h-4 w-4" />
+                        {t('Đề nổi bật', 'Destacado')}
+                      </div>
+                      <h3 className="mb-3 font-display text-2xl font-bold text-white sm:text-3xl">
+                        {formatQuizType(quizTypes[0])}
+                      </h3>
+                      <p className="mb-4 max-w-lg text-base text-white/90">
+                        {primaryTypeDescription}
+                      </p>
+                      <div className="flex items-center justify-between">
+                        <span className="text-lg font-semibold text-white">
+                          {lang === 'vi'
+                            ? `${primaryTypeQuizzes.length} bài thi`
+                            : `${primaryTypeQuizzes.length} exámenes`}
                         </span>
-                      </CardContent>
-                    </div>
+                        <span className="inline-flex items-center gap-2 font-semibold text-white transition-transform group-hover:translate-x-1">
+                          {t('Bắt đầu', 'Empezar')} <ArrowRight className="h-5 w-5" />
+                        </span>
+                      </div>
+                    </CardContent>
                   </Card>
                 </Link>
               </motion.div>
 
-              <div className="grid self-stretch gap-2 sm:grid-cols-2 lg:grid-cols-1 lg:grid-rows-4 lg:gap-2">
-                {quizTypes.slice(1, 5).map((type, i) => (
+              {/* Other Quiz Types - Smaller Cards */}
+              {quizTypes.slice(1, 5).map((type, i) => {
+                const typeQuizzes = quizzes.filter(
+                  (quiz) => String(quiz.quiz_type || '') === String(type)
+                );
+                const typeDescription = getTopicDescriptionByType(type);
+
+                return (
                   <motion.div
                     key={type}
                     custom={i + 2}
@@ -578,45 +659,44 @@ const Index = () => {
                     whileInView="visible"
                     viewport={{ once: true }}
                     variants={fadeUp}
-                    className="h-full"
                   >
                     <Link to={`/quizzes?type=${encodeURIComponent(type)}`}>
-                      <Card className="card-hover h-full overflow-hidden rounded-2xl border border-primary/20 bg-white/88 shadow-[0_8px_20px_rgba(95,20,40,0.08)]">
-                        <CardContent className="flex h-full items-stretch gap-3 px-4 py-3.5">
-                          <img
-                            src="/brand/quiz-illustration.png"
-                            alt={t('Minh họa đề luyện thi', 'Ilustración de examen de práctica')}
-                            className="h-full w-24 shrink-0 object-contain object-center md:w-28"
-                            loading="lazy"
-                          />
-                          <div className="min-w-0 flex-1">
-                            <h4 className="font-display text-lg font-black leading-tight text-[#482735] sm:text-xl md:text-2xl">
-                              {formatQuizType(type)}
-                            </h4>
-                            <p className="mt-1 line-clamp-2 text-sm text-[#616477] sm:text-base md:text-lg">
-                              {t(
-                                'Bộ đề ngắn gọn theo mục tiêu luyện tập rõ ràng.',
-                                'Exámenes enfocados para practicar con objetivo claro.'
-                              )}
-                            </p>
+                      <Card className="group h-full border border-border bg-card transition-all hover:border-primary/30 hover:shadow-lg">
+                        <CardContent className="p-5">
+                          <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
+                            <FileText className="h-6 w-6 text-primary" />
+                          </div>
+                          <h4 className="mb-2 font-display text-lg font-bold text-foreground">
+                            {formatQuizType(type)}
+                          </h4>
+                          <p className="mb-3 line-clamp-2 text-sm text-muted-foreground">
+                            {typeDescription}
+                          </p>
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm font-medium text-muted-foreground">
+                              {lang === 'vi'
+                                ? `${typeQuizzes.length} bài thi`
+                                : `${typeQuizzes.length} exámenes`}
+                            </span>
+                            <ArrowRight className="h-4 w-4 text-primary opacity-0 transition-all group-hover:translate-x-1 group-hover:opacity-100" />
                           </div>
                         </CardContent>
                       </Card>
                     </Link>
                   </motion.div>
-                ))}
-              </div>
+                );
+              })}
             </div>
           ) : (
-            <Card className="rounded-2xl border border-primary/20 bg-white/88 shadow-[0_10px_24px_rgba(95,20,40,0.08)]">
-              <CardContent className="px-5 py-8 text-center sm:px-8 sm:py-10">
-                <p className="text-base font-semibold text-[#482735] sm:text-lg">
+            <Card className="border border-border bg-card">
+              <CardContent className="px-6 py-12 text-center">
+                <p className="text-lg font-semibold text-foreground">
                   {t(
                     'Chưa có dữ liệu loại đề từ hệ thống.',
-                    'Aun no hay tipos de examen desde el sistema.'
+                    'Aún no hay tipos de examen desde el sistema.'
                   )}
                 </p>
-                <p className="mt-2 text-sm text-[#616477] sm:text-base">
+                <p className="mt-2 text-muted-foreground">
                   {t(
                     'Hãy khởi động API + MySQL để tải dữ liệu thật từ DB.',
                     'Inicia la API y MySQL para cargar los datos reales desde la base de datos.'
@@ -628,41 +708,39 @@ const Index = () => {
         </div>
       </section>
 
-      <section className="relative py-8 sm:py-10 md:py-14">
-        <div className="relative z-10 w-full px-3 sm:px-5 md:px-7 lg:px-10">
+      {/* Materials Section - Clean Carousel */}
+      <section className="relative bg-background py-16 sm:py-20">
+        <div className="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <motion.div
             initial="hidden"
             whileInView="visible"
             viewport={{ once: true }}
             variants={fadeUp}
             custom={0}
-            className="text-center mb-8"
+            className="mb-10 flex flex-wrap items-end justify-between gap-4"
           >
-            <h2 className="mb-3 font-display text-[1.55rem] font-black leading-[1.08] tracking-tight text-[#402631] sm:text-[1.9rem] md:text-[2.65rem] lg:text-[2.95rem]">
-              {t('Chủ đề tài liệu', 'Temas de materiales')}
-            </h2>
-            <p className="mx-auto max-w-2xl text-xs font-medium text-[#5f6272] sm:text-base md:text-xl">
-              {t(
-                'Ôn tập theo từng chủ đề tài liệu chính',
-                'Repasa por temas principales de materiales'
-              )}
-            </p>
-            <div className="mt-4">
-              <Link to="/materials" className="inline-flex">
-                <Button
-                  variant="outline"
-                  className="gap-1.5 rounded-xl border-primary/25 bg-white/85 text-primary hover:bg-white"
-                >
-                  {t('Xem tất cả', 'Ver todo')} <ArrowRight className="h-4 w-4" />
-                </Button>
-              </Link>
+            <div className="max-w-2xl">
+              <h2 className="font-display text-3xl font-bold text-foreground sm:text-4xl">
+                {t('Tài liệu học trọng tâm', 'Materiales de estudio clave')}
+              </h2>
+              <p className="mt-3 text-lg text-muted-foreground">
+                {t(
+                  'Nội dung thiết yếu theo chủ đề để học đúng trọng tâm và tiết kiệm thời gian.',
+                  'Contenido esencial por temas para estudiar con enfoque y ahorrar tiempo.'
+                )}
+              </p>
             </div>
+            <Link to="/materials" className="inline-flex">
+              <Button className="gap-2 bg-primary px-6 text-primary-foreground hover:bg-secondary">
+                {t('Xem tất cả', 'Ver todos')} <ArrowRight className="h-4 w-4" />
+              </Button>
+            </Link>
           </motion.div>
 
           <div className="relative">
             <div
               ref={materialsRailRef}
-              className="flex gap-4 overflow-x-auto overflow-y-hidden px-1 pb-3 pr-4 md:gap-5 md:px-2 md:pr-6"
+              className="flex gap-6 overflow-x-auto pb-4 scrollbar-hide"
               style={{ touchAction: 'pan-y' }}
               onWheel={handleMaterialsRailWheel}
             >
@@ -674,35 +752,36 @@ const Index = () => {
                   whileInView="visible"
                   viewport={{ once: true }}
                   variants={fadeUp}
-                  className="min-w-[240px] md:min-w-[340px] lg:min-w-[380px]"
+                  className="min-w-[280px] sm:min-w-[320px] lg:min-w-[360px]"
                 >
                   <Link to={`/materials?subject=${subject.id}`}>
-                    <Card className="card-hover h-full border border-primary/20 bg-white/92 shadow-[0_10px_24px_rgba(95,20,40,0.08)] transition-all duration-300">
-                      <CardContent className="p-4 sm:p-5 md:p-6">
-                        <div className="mb-3 h-40 w-full overflow-hidden rounded-2xl border border-primary/15 bg-white/55 sm:h-48 md:mb-4 md:h-56">
+                    <Card className="group h-full border border-border bg-card transition-all hover:border-primary/30 hover:shadow-lg">
+                      <CardContent className="p-0">
+                        {/* Image Section */}
+                        <div className="h-40 w-full overflow-hidden rounded-t-lg bg-gradient-to-br from-primary/5 to-accent/5">
                           <img
                             src="/brand/materials-illustration.png"
-                            alt={t(
-                              'Minh họa tài liệu học tập',
-                              'Ilustración de materiales de estudio'
-                            )}
-                            className="h-full w-full object-contain object-left"
+                            alt={subject.name}
+                            className="h-full w-full object-cover object-center transition-transform group-hover:scale-105"
                             loading="lazy"
                           />
                         </div>
-                        <h3 className="mb-1.5 font-display text-lg font-bold text-[#402631] sm:text-xl">
-                          {subject.name}
-                        </h3>
-                        <p className="mb-3 text-sm leading-relaxed text-[#5f6272] sm:mb-4 sm:text-base">
-                          {subject.description ||
-                            t(
-                              'Xem tài liệu chi tiết cho chủ đề này',
-                              'Ver materiales de este tema'
-                            )}
-                        </p>
-                        <span className="inline-flex items-center gap-1 text-sm font-medium text-primary sm:text-base">
-                          {t('Xem tài liệu', 'Ver materiales')} <ArrowRight className="h-4 w-4" />
-                        </span>
+                        {/* Content Section */}
+                        <div className="p-5">
+                          <h3 className="mb-2 font-display text-lg font-bold text-foreground">
+                            {subject.name}
+                          </h3>
+                          <p className="mb-4 line-clamp-2 text-sm text-muted-foreground">
+                            {subject.description ||
+                              t(
+                                'Xem tài liệu chi tiết cho chủ đề này',
+                                'Ver materiales de este tema'
+                              )}
+                          </p>
+                          <span className="inline-flex items-center gap-2 text-sm font-semibold text-primary transition-all group-hover:gap-3">
+                            {t('Xem tài liệu', 'Ver materiales')} <ArrowRight className="h-4 w-4" />
+                          </span>
+                        </div>
                       </CardContent>
                     </Card>
                   </Link>
@@ -713,229 +792,233 @@ const Index = () => {
         </div>
       </section>
 
-      <section className="relative pt-8 pb-28 sm:py-10 md:py-12">
-        <div className="relative z-10 w-full px-3 sm:px-5 md:px-7 lg:px-10">
-          <div className="relative grid items-start gap-5 overflow-visible md:overflow-hidden">
-            <motion.div
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true }}
-              variants={fadeUp}
-              custom={0}
-            >
-              <div className="mb-6">
-                <div className="flex items-center gap-3 md:gap-4">
-                  <img
-                    src="/brand/cup.png"
-                    alt={t('Cúp bảng xếp hạng', 'Copa del ranking')}
-                    className="h-12 w-auto object-contain md:h-16 lg:h-20"
-                    loading="lazy"
-                  />
-                  <h2 className="font-display text-[1.85rem] font-black leading-tight tracking-tight text-[#64172f] sm:text-[2.1rem] md:text-[2.65rem] lg:text-[2.95rem]">
-                    {t('Bảng xếp hạng', 'Ranking de alto rendimiento')}
-                  </h2>
-                </div>
-              </div>
-
-              <div className="grid gap-4 xl:grid-cols-[0.9fr_1.45fr]">
-                <div className="relative flex h-full flex-col overflow-hidden p-5 md:p-6">
-                  {leftProfileUser ? (
-                    <>
-                      <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-amber-300/60 bg-amber-50/70 px-3 py-1 text-xs font-bold text-amber-800">
-                        <Medal className="h-4 w-4" />
-                        {t('Thông tin của bạn', 'Tu perfil')}
-                      </div>
-                      <div className="flex items-center gap-3 rounded-2xl border border-primary/15 bg-[rgba(236,224,231,0.86)] p-3">
-                        {leftProfileUser.avatar_url ? (
-                          <img
-                            src={resolveMediaUrl(leftProfileUser.avatar_url)}
-                            alt={leftProfileUser.full_name || leftProfileUser.username || 'User'}
-                            className="h-14 w-14 rounded-full border-2 border-amber-400 object-cover"
-                          />
-                        ) : (
-                          <div className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-amber-400 bg-white text-lg font-black text-primary">
-                            {(leftProfileUser.full_name || leftProfileUser.username || 'U')
-                              .charAt(0)
-                              .toUpperCase()}
-                          </div>
-                        )}
-                        <div className="min-w-0">
-                          <div className="truncate font-display text-xl font-black text-primary">
-                            {leftProfileUser.full_name || leftProfileUser.username || 'User'}
-                          </div>
-                          <div className="text-sm font-semibold text-slate-600">
-                            {Number(leftProfileUser.total_quizzes || 0)}{' '}
-                            {t('bài hoàn thành', 'pruebas completadas')}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="mt-3 grid grid-cols-2 gap-2">
-                        <div className="rounded-xl border border-primary/15 bg-[rgba(236,224,231,0.86)] px-3 py-2 text-center">
-                          <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-                            {t('Điểm trung bình', 'Media')}
-                          </div>
-                          <div className="font-display text-xl font-black text-primary">
-                            {Number(
-                              leftProfileUser.average_percentage || leftProfileUser.total_score || 0
-                            ).toFixed(1)}
-                            %
-                          </div>
-                        </div>
-                        <div className="rounded-xl border border-primary/15 bg-[rgba(236,224,231,0.86)] px-3 py-2 text-center">
-                          <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-                            {t('Tổng điểm', 'Puntos')}
-                          </div>
-                          <div className="font-display text-xl font-black text-primary">
-                            {Number(leftProfileUser.total_score || 0).toFixed(1)}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="mt-auto flex justify-center pt-4">
-                        <Link to="/leaderboard" className="inline-flex">
-                          <Button className="gap-2 rounded-xl bg-primary px-4 text-white hover:bg-primary/90">
-                            {t('Xem bảng đầy đủ', 'Ver ranking completo')}{' '}
-                            <ArrowRight className="h-4 w-4" />
-                          </Button>
-                        </Link>
-                      </div>
-                    </>
-                  ) : (
-                    <div className="rounded-2xl border border-dashed border-primary/25 bg-[rgba(229,214,223,0.78)] p-5 text-sm text-slate-600">
-                      {t('Chưa có dữ liệu bảng xếp hạng.', 'Aún no hay datos del ranking.')}
-                    </div>
-                  )}
-                </div>
-
-                <div className="grid gap-4 xl:-mt-8">
-                  <Card className="overflow-visible border-0 bg-transparent shadow-none">
-                    <CardContent className="p-0">
-                      {raceTopFive.length ? (
-                        <div className="space-y-2 rounded-2xl bg-transparent p-2 md:space-y-2.5 md:p-3">
-                          {raceTopFive.map((user, i) => {
-                            const displayName = user.full_name || user.username || 'User';
-                            const percentage = Math.max(
-                              0,
-                              Math.min(100, Number(user.average_percentage || 0))
-                            );
-                            const isChampion = i === 0;
-
-                            return (
-                              <motion.div
-                                key={user.id}
-                                custom={i}
-                                initial="hidden"
-                                whileInView="visible"
-                                viewport={{ once: true }}
-                                variants={fadeUp}
-                                className={`flex items-center gap-3 rounded-xl border px-3 py-2.5 backdrop-blur-[1px] ${
-                                  isChampion
-                                    ? 'border-amber-300/55 bg-[linear-gradient(90deg,rgba(255,246,215,0.78)_0%,rgba(255,255,255,0.92)_70%)]'
-                                    : 'border-primary/12 bg-[rgba(233,220,228,0.84)]'
-                                }`}
-                              >
-                                <div
-                                  className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-black ${isChampion ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-700'}`}
-                                >
-                                  {user.rank}
-                                </div>
-
-                                {user.avatar_url ? (
-                                  <img
-                                    src={resolveMediaUrl(user.avatar_url)}
-                                    alt={displayName}
-                                    className="h-9 w-9 shrink-0 rounded-full border border-white object-cover"
-                                  />
-                                ) : (
-                                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-primary/15 bg-white text-sm font-black text-primary">
-                                    {displayName.charAt(0).toUpperCase()}
-                                  </div>
-                                )}
-
-                                <div className="min-w-0 flex-1">
-                                  <div className="truncate font-display text-sm font-black text-[#3b2a33]">
-                                    {displayName}
-                                  </div>
-                                  <div className="text-xs text-[#667085]">
-                                    {Number(user.total_quizzes || 0)} {t('bài thi', 'exámenes')}
-                                  </div>
-                                </div>
-
-                                <div className="text-right">
-                                  <div className="font-display text-base font-black text-primary">
-                                    {Number(user.total_score || 0).toFixed(1)}
-                                  </div>
-                                  <div className="text-[11px] text-[#667085]">
-                                    {percentage.toFixed(1)}%
-                                  </div>
-                                </div>
-                              </motion.div>
-                            );
-                          })}
-                        </div>
-                      ) : (
-                        <div className="rounded-2xl border border-dashed border-primary/25 bg-[rgba(229,214,223,0.78)] p-5 text-sm text-slate-600">
-                          {t(
-                            'Chưa có dữ liệu để hiển thị biểu đồ.',
-                            'Aún no hay datos para mostrar el gráfico.'
-                          )}
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                </div>
-              </div>
-            </motion.div>
-          </div>
-        </div>
-      </section>
-
-      <section className="relative py-10 sm:py-12 md:py-14">
-        <div className="relative z-10 w-full px-3 sm:px-5 md:px-7 lg:px-10">
+      {/* Leaderboard Section - Professional & Clean */}
+      <section className="relative bg-muted/30 py-16 sm:py-20">
+        <div className="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <motion.div
             initial="hidden"
             whileInView="visible"
             viewport={{ once: true }}
             variants={fadeUp}
             custom={0}
-            className="relative overflow-hidden rounded-[2rem] border border-[#24324f]/15 bg-[linear-gradient(140deg,rgba(255,255,255,0.9)_0%,rgba(255,247,250,0.82)_52%,rgba(255,249,235,0.76)_100%)] px-6 py-7 shadow-[0_18px_42px_rgba(36,50,79,0.14)] backdrop-blur-[2px] md:px-8 md:py-9 lg:px-10"
           >
-            <div className="pointer-events-none absolute -left-12 top-1/2 h-36 w-36 -translate-y-1/2 rounded-full bg-primary/10 blur-3xl" />
-            <div className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-amber-300/15 blur-3xl" />
+            <div className="mb-10 flex flex-wrap items-end justify-between gap-4">
+              <div className="max-w-2xl">
+                <h2 className="font-display text-3xl font-bold text-foreground sm:text-4xl">
+                  {t('Bảng xếp hạng', 'Tabla de clasificación')}
+                </h2>
+                <p className="mt-3 text-lg text-muted-foreground">
+                  {t(
+                    'Theo dõi thứ hạng và so sánh kết quả với các học viên khác.',
+                    'Sigue tu posición y compara resultados con otros estudiantes.'
+                  )}
+                </p>
+              </div>
+              <Link to="/leaderboard" className="inline-flex">
+                <Button className="gap-2 bg-primary px-6 text-primary-foreground hover:bg-secondary">
+                  {t('Xem đầy đủ', 'Ver completo')} <ArrowRight className="h-4 w-4" />
+                </Button>
+              </Link>
+            </div>
 
-            <div className="relative grid gap-6 lg:grid-cols-[1.35fr_auto] lg:items-center">
-              <div>
-                <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-white/60 px-3 py-1 text-sm font-semibold text-primary">
-                  <CheckCircle2 className="h-4 w-4" />
-                  {t('Sẵn sàng bứt tốc', 'Listo para acelerar')}
-                </div>
-                <h2 className="mb-3 font-display text-[1.85rem] font-black leading-tight tracking-tight text-[#24324f] sm:text-[2.15rem] md:text-[2.5rem]">
+            <div className="grid gap-8 lg:grid-cols-3">
+              {/* User Profile Card */}
+              <div className="lg:col-span-1">
+                {leftProfileUser ? (
+                  <Card className="h-full border border-border bg-card">
+                    <CardContent className="p-6">
+                      <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-gold/10 px-3 py-1.5 text-sm font-semibold text-gold">
+                        <Medal className="h-4 w-4" />
+                        {isAuthenticated ? t('Hồ sơ của bạn', 'Tu perfil') : t('Học viên xuất sắc', 'Estudiante destacado')}
+                      </div>
+                      
+                      <div className="mb-6 flex items-center gap-4">
+                        {leftProfileUser.avatar_url ? (
+                          <img
+                            src={resolveMediaUrl(leftProfileUser.avatar_url)}
+                            alt={leftProfileUser.full_name || leftProfileUser.username || 'User'}
+                            className="h-16 w-16 rounded-full border-2 border-gold object-cover"
+                          />
+                        ) : (
+                          <div className="flex h-16 w-16 items-center justify-center rounded-full border-2 border-gold bg-primary/10 text-xl font-bold text-primary">
+                            {(leftProfileUser.full_name || leftProfileUser.username || 'U').charAt(0).toUpperCase()}
+                          </div>
+                        )}
+                        <div className="min-w-0 flex-1">
+                          <h3 className="truncate text-lg font-bold text-foreground">
+                            {leftProfileUser.full_name || leftProfileUser.username || 'User'}
+                          </h3>
+                          <p className="text-sm text-muted-foreground">
+                            {Number(leftProfileUser.total_quizzes || 0)} {t('bài hoàn thành', 'pruebas completadas')}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="rounded-lg bg-primary/5 p-4 text-center">
+                          <p className="text-2xl font-bold text-primary">
+                            {Number(leftProfileUser.average_percentage || 0).toFixed(0)}%
+                          </p>
+                          <p className="mt-1 text-xs font-medium text-muted-foreground">
+                            {t('Điểm TB', 'Promedio')}
+                          </p>
+                        </div>
+                        <div className="rounded-lg bg-gold/10 p-4 text-center">
+                          <p className="text-2xl font-bold text-gold">
+                            {Number(leftProfileUser.total_score || 0)}
+                          </p>
+                          <p className="mt-1 text-xs font-medium text-muted-foreground">
+                            {t('Tổng điểm', 'Puntos')}
+                          </p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <Card className="border border-border bg-card">
+                    <CardContent className="p-6 text-center text-muted-foreground">
+                      {t('Chưa có dữ liệu.', 'Sin datos.')}
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+
+              {/* Top 5 Rankings */}
+              <div className="lg:col-span-2">
+                <Card className="h-full border border-border bg-card">
+                  <CardContent className="p-6">
+                    <h3 className="mb-6 text-lg font-bold text-foreground">
+                      {t('Top 5 học viên xuất sắc', 'Top 5 estudiantes destacados')}
+                    </h3>
+                    
+                    {raceTopFive.length ? (
+                      <div className="space-y-3">
+                        {raceTopFive.map((user, i) => {
+                          const displayName = user.full_name || user.username || 'User';
+                          const percentage = Math.max(0, Math.min(100, Number(user.average_percentage || 0)));
+                          const isTopThree = i < 3;
+                          
+                          return (
+                            <div
+                              key={`top5-${user.id}`}
+                              className={`flex items-center gap-4 rounded-lg border p-4 transition-all hover:shadow-sm ${
+                                i === 0
+                                  ? 'border-gold/30 bg-gold/5'
+                                  : i === 1
+                                  ? 'border-gray-300 bg-gray-50'
+                                  : i === 2
+                                  ? 'border-amber-200 bg-amber-50/50'
+                                  : 'border-border bg-card'
+                              }`}
+                            >
+                              {/* Rank */}
+                              <div className={`flex h-10 w-10 items-center justify-center rounded-full font-bold ${
+                                i === 0
+                                  ? 'bg-gold text-white'
+                                  : i === 1
+                                  ? 'bg-gray-400 text-white'
+                                  : i === 2
+                                  ? 'bg-amber-600 text-white'
+                                  : 'bg-muted text-muted-foreground'
+                              }`}>
+                                {i + 1}
+                              </div>
+
+                              {/* Avatar */}
+                              {user.avatar_url ? (
+                                <img
+                                  src={resolveMediaUrl(user.avatar_url)}
+                                  alt={displayName}
+                                  className="h-10 w-10 rounded-full object-cover"
+                                />
+                              ) : (
+                                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">
+                                  {displayName.charAt(0).toUpperCase()}
+                                </div>
+                              )}
+
+                              {/* Name & Progress */}
+                              <div className="min-w-0 flex-1">
+                                <p className="truncate font-semibold text-foreground">{displayName}</p>
+                                <div className="mt-1 flex items-center gap-2">
+                                  <div className="h-2 flex-1 overflow-hidden rounded-full bg-muted">
+                                    <div
+                                      className="h-full rounded-full bg-primary transition-all"
+                                      style={{ width: `${percentage}%` }}
+                                    />
+                                  </div>
+                                  <span className="text-sm font-medium text-muted-foreground">
+                                    {percentage.toFixed(0)}%
+                                  </span>
+                                </div>
+                              </div>
+
+                              {/* Score */}
+                              <div className="text-right">
+                                <p className="text-lg font-bold text-primary">
+                                  {Number(user.total_score || 0)}
+                                </p>
+                                <p className="text-xs text-muted-foreground">{t('điểm', 'pts')}</p>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <p className="text-center text-muted-foreground">
+                        {t('Chưa có dữ liệu xếp hạng.', 'Sin datos de clasificación.')}
+                      </p>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* CTA Section - Professional & Clean */}
+      <section className="relative bg-primary py-16 sm:py-20">
+        <div className="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+            variants={fadeUp}
+            custom={0}
+          >
+            <div className="flex flex-col items-center text-center lg:flex-row lg:justify-between lg:text-left">
+              <div className="max-w-2xl">
+                <h2 className="font-display text-3xl font-bold text-primary-foreground sm:text-4xl">
                   {t('Sẵn sàng bắt đầu luyện thi?', '¿Listo para empezar a practicar?')}
                 </h2>
-                <p className="max-w-2xl text-base font-medium leading-relaxed text-[#4b5b7a] md:text-lg">
+                <p className="mt-4 text-lg text-primary-foreground/80">
                   {t(
                     'Đăng ký ngay để truy cập hàng trăm câu hỏi mô phỏng thi DGT miễn phí',
                     'Regístrate para acceder a cientos de preguntas del examen DGT gratis'
                   )}
                 </p>
-
-                <div className="mt-4 flex flex-wrap gap-2">
-                  <span className="inline-flex items-center rounded-full border border-primary/20 bg-white/55 px-3 py-1 text-sm font-semibold text-[#24324f]">
-                    {t('Miễn phí bắt đầu', 'Inicio gratis')}
+                <div className="mt-6 flex flex-wrap justify-center gap-3 lg:justify-start">
+                  <span className="inline-flex items-center gap-2 rounded-full bg-white/15 px-4 py-2 text-sm font-medium text-primary-foreground">
+                    <CheckCircle2 className="h-4 w-4" />
+                    {t('Miễn phí', 'Gratis')}
                   </span>
-                  <span className="inline-flex items-center rounded-full border border-primary/20 bg-white/55 px-3 py-1 text-sm font-semibold text-[#24324f]">
+                  <span className="inline-flex items-center gap-2 rounded-full bg-white/15 px-4 py-2 text-sm font-medium text-primary-foreground">
+                    <CheckCircle2 className="h-4 w-4" />
                     {t('Chấm điểm tức thì', 'Corrección instantánea')}
                   </span>
-                  <span className="inline-flex items-center rounded-full border border-primary/20 bg-white/55 px-3 py-1 text-sm font-semibold text-[#24324f]">
-                    {t('Song ngữ Việt - TBN', 'Bilingüe vietnamita-español')}
+                  <span className="inline-flex items-center gap-2 rounded-full bg-white/15 px-4 py-2 text-sm font-medium text-primary-foreground">
+                    <CheckCircle2 className="h-4 w-4" />
+                    {t('Song ngữ', 'Bilingüe')}
                   </span>
                 </div>
               </div>
 
-              <div className="flex flex-col items-start gap-3 lg:items-end">
+              <div className="mt-8 flex flex-col gap-3 lg:mt-0">
                 <Link to={isAuthenticated ? '/quizzes' : '/register'}>
                   <Button
                     size="lg"
-                    className="gap-2 rounded-xl bg-[linear-gradient(135deg,#7a2038_0%,#b23d58_65%,#ca8a04_100%)] px-6 text-base font-semibold text-white shadow-[0_10px_22px_rgba(95,20,40,0.2)] hover:opacity-95"
+                    className="gap-2 bg-white px-8 text-base font-semibold text-primary hover:bg-white/90"
                   >
                     {isAuthenticated
                       ? t('Làm bài thi ngay', 'Haz el examen ahora')
@@ -944,13 +1027,10 @@ const Index = () => {
                   </Button>
                 </Link>
                 {!isAuthenticated && (
-                  <Link to="/quizzes">
-                    <Button
-                      variant="outline"
-                      className="rounded-xl border-primary/30 bg-white/75 px-5 text-sm font-semibold text-primary shadow-[0_8px_18px_rgba(95,20,40,0.08)] hover:bg-white"
-                    >
-                      {t('Xem bộ đề trước', 'Ver exámenes primero')}
-                    </Button>
+                  <Link to="/quizzes" className="text-center">
+                    <span className="text-sm font-medium text-primary-foreground/80 hover:text-primary-foreground hover:underline">
+                      {t('Hoặc xem bộ đề trước', 'O ver exámenes primero')}
+                    </span>
                   </Link>
                 )}
               </div>
@@ -958,12 +1038,6 @@ const Index = () => {
           </motion.div>
         </div>
       </section>
-
-      <div className="w-full px-3 sm:px-5 md:px-7 lg:px-10">
-        <div className="h-px w-full bg-[linear-gradient(90deg,transparent_0%,rgba(36,50,79,0.18)_20%,rgba(36,50,79,0.26)_50%,rgba(36,50,79,0.18)_80%,transparent_100%)]" />
-      </div>
-
-      <div className="h-5 md:h-7" aria-hidden="true" />
 
       <Footer />
     </div>

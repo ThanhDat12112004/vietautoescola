@@ -104,6 +104,24 @@
   }
 }
 
+/* Additional theme variables for consistency */
+@layer base {
+  :root {
+    /* Overlay and surface colors */
+    --overlay-bg: 47 30% 18%;
+    --hover-surface: 350 40% 98%;
+    --text-muted-dark: 350 15% 35%;
+    --card-overlay: 350 40% 99%;
+  }
+
+  .dark {
+    --overlay-bg: 220 25% 12%;
+    --hover-surface: 220 20% 16%;
+    --text-muted-dark: 20 8% 58%;
+    --card-overlay: 220 22% 12%;
+  }
+}
+
 @layer base {
   * {
     @apply border-border;
@@ -136,7 +154,11 @@
     position: fixed;
     inset: 0;
     z-index: -1;
-    background: linear-gradient(180deg, rgba(233, 237, 246, 0.74) 0%, rgba(242, 229, 234, 0.76) 100%);
+    background: linear-gradient(
+      180deg,
+      rgba(233, 237, 246, 0.74) 0%,
+      rgba(242, 229, 234, 0.76) 100%
+    );
     pointer-events: none;
   }
 
@@ -275,5 +297,54 @@
     background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(255, 249, 251, 0.88));
     border: 1px solid rgba(139, 30, 45, 0.14);
     box-shadow: 0 12px 30px rgba(95, 20, 40, 0.1);
+  }
+
+  .brand-panel {
+    border: 1px solid rgba(107, 15, 26, 0.14);
+    border-radius: 1rem;
+    background: linear-gradient(
+      155deg,
+      rgba(255, 255, 255, 0.94) 0%,
+      rgba(251, 245, 247, 0.9) 56%,
+      rgba(255, 249, 236, 0.72) 100%
+    );
+    box-shadow:
+      0 12px 30px rgba(95, 20, 40, 0.09),
+      inset 0 1px 0 rgba(255, 255, 255, 0.78);
+    backdrop-filter: blur(8px);
+  }
+
+  .brand-surface {
+    border: 1px solid rgba(107, 15, 26, 0.1);
+    border-radius: 1rem;
+    background: linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.96) 0%,
+      rgba(249, 241, 245, 0.88) 100%
+    );
+    box-shadow: 0 10px 24px rgba(95, 20, 40, 0.08);
+  }
+
+  .brand-heading {
+    color: #3d2230;
+    letter-spacing: -0.02em;
+  }
+
+  .brand-subtitle {
+    color: #5f6272;
+    font-weight: 500;
+  }
+
+  .brand-cta-primary {
+    background: linear-gradient(135deg, #6b0f1a 0%, #9b1b30 100%);
+    color: #f5f5f5;
+    border: 1px solid rgba(107, 15, 26, 0.56);
+    box-shadow: 0 10px 22px rgba(95, 20, 40, 0.2);
+  }
+
+  .brand-cta-secondary {
+    background: rgba(255, 255, 255, 0.88);
+    color: #6b0f1a;
+    border: 1px solid rgba(107, 15, 26, 0.3);
   }
 }
