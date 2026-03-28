@@ -692,7 +692,7 @@ const QuizTake = () => {
               </Button>
 
               <Button
-                className="rounded-xl border border-slate-300 bg-white text-foreground font-semibold hover:bg-slate-50 transition-colors
+                className="rounded-xl border border-[#7a2038] bg-[#7a2038] text-white font-semibold hover:bg-[#681a31] transition-colors
                           h-10 text-sm
                           md:h-11 md:text-base
                           lg:h-12 lg:text-lg"
@@ -709,10 +709,15 @@ const QuizTake = () => {
               </Button>
 
               <Button
-                className="rounded-xl border border-slate-800 bg-slate-900 text-white font-semibold hover:bg-slate-800 transition-colors shadow-sm
+                variant={currentIndex === questions.length - 1 ? 'default' : 'outline'}
+                className={`rounded-xl font-semibold transition-colors shadow-sm
                           h-10 text-sm
                           md:h-11 md:text-base
-                          lg:h-12 lg:text-lg"
+                          lg:h-12 lg:text-lg ${
+                            currentIndex === questions.length - 1
+                              ? 'border border-slate-900 bg-slate-900 text-white hover:bg-slate-800'
+                              : 'border border-slate-300 bg-white text-slate-700 hover:bg-slate-50'
+                          }`}
                 onClick={() => void handleFinish()}
                 disabled={isSubmitting || Boolean(submitResult)}
               >

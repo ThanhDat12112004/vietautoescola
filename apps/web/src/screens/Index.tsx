@@ -1,4 +1,4 @@
-import { ArrowRight, CheckCircle2, GraduationCap, Medal, Target } from '@/components/BrandIcons';
+import { ArrowRight, CheckCircle2, GraduationCap, Medal, Target, Trophy, Zap } from '@/components/BrandIcons';
 import BrandLogo from '@/components/BrandLogo';
 import Footer from '@/components/Footer';
 import Navbar from '@/components/Navbar';
@@ -38,6 +38,7 @@ const Index = () => {
   const [homeSummary, setHomeSummary] = useState<HomeSummary | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
+  const [showContactPopup, setShowContactPopup] = useState(false);
   const materialsRailRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -93,8 +94,30 @@ const Index = () => {
     return Array.from(new Set(values)).slice(0, 6);
   }, [quizzes]);
 
-  const formatQuizType = (value: string) =>
-    value.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
+  const quizTypeNameMap: Record<string, string> = {
+    road_signs: 'Biển báo giao thông',
+    safety: 'An toàn lái xe',
+    highway: 'Đường cao tốc',
+    mixed: 'Đề tổng hợp',
+    theory: 'Lý thuyết',
+  };
+
+  const formatQuizType = (value: string) => {
+    const normalized = String(value || '').trim().toLowerCase();
+    if (quizTypeNameMap[normalized]) {
+      return quizTypeNameMap[normalized];
+    }
+    return value.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
+  };
+
+  const getQuizCountForType = (type: string) =>
+    quizzes.filter((quiz) => String(quiz.quiz_type || '') === String(type || '')).length;
+
+  const getLevelByIndex = (index: number) => {
+    if (index === 0) return t('Cơ bản', 'Básico');
+    if (index === 1 || index === 2) return t('Trung bình', 'Intermedio');
+    return t('Nâng cao', 'Avanzado');
+  };
 
   const topLeaderboard = useMemo(
     () =>
@@ -116,11 +139,16 @@ const Index = () => {
     const myLeaderboardRow = leaderboard.find((item) => Number(item.id) === Number(currentUser.id));
 
     if (myLeaderboardRow) {
+      const myRankIndex = topLeaderboard.findIndex(
+        (item) => Number(item.id) === Number(currentUser.id)
+      );
       return {
         ...myLeaderboardRow,
         full_name: myLeaderboardRow.full_name || currentUser.full_name || currentUser.username,
         username: myLeaderboardRow.username || currentUser.username,
         avatar_url: myLeaderboardRow.avatar_url || currentUser.avatar_url,
+        rank: myRankIndex >= 0 ? myRankIndex + 1 : null,
+        best_score: Number(myLeaderboardRow.total_score || 0),
       };
     }
 
@@ -132,8 +160,10 @@ const Index = () => {
       total_quizzes: 0,
       average_percentage: 0,
       total_score: 0,
+      rank: null,
+      best_score: 0,
     };
-  }, [champion, currentUser, leaderboard]);
+  }, [champion, currentUser, leaderboard, topLeaderboard]);
 
   const rankedLeaderboard = useMemo(
     () => topLeaderboard.map((user, index) => ({ ...user, rank: index + 1 })),
@@ -141,6 +171,16 @@ const Index = () => {
   );
 
   const raceTopFive = useMemo(() => rankedLeaderboard.slice(0, 5), [rankedLeaderboard]);
+
+  const profileRank =
+    leftProfileUser && 'rank' in leftProfileUser
+      ? Number((leftProfileUser as { rank?: number | null }).rank || 0)
+      : 0;
+
+  const profileBestScore =
+    leftProfileUser && 'best_score' in leftProfileUser
+      ? Number((leftProfileUser as { best_score?: number | null }).best_score || 0)
+      : Number(leftProfileUser?.total_score || 0);
 
   const loopingSubjects = useMemo(
     () => (subjects.length > 1 ? [...subjects, ...subjects] : subjects),
@@ -323,37 +363,66 @@ const Index = () => {
                 className="mb-5 text-[2.05rem] font-black leading-[1.02] tracking-[-0.02em] text-[#1f2430] sm:text-[2.45rem] md:text-[2.95rem] lg:text-[3.45rem] xl:text-[3.85rem]"
                 style={{ fontFamily: "'Be Vietnam Pro', sans-serif" }}
               >
-                {t('Chinh phục bằng lái xe song ngữ Việt - Tây Ban Nha', 'Domina tu examen de conducir bilingüe vietnamita-español')}
+                {t(
+                  'Hệ thống học và luyện thi bằng lái xe Tây Ban Nha',
+                  'Sistema para estudiar y practicar el examen de conducir en España'
+                )}
               </h1>
               <p className="mb-7 max-w-xl text-base leading-relaxed text-[#5c5f70] sm:text-lg md:text-xl">
                 {t(
-                  'Bộ đề bám sát thực tế DGT, chấm điểm tức thì, giải thích rõ ràng và lộ trình học thông minh để bạn đậu nhanh hơn.',
-                  'Exámenes estilo DGT, corrección instantánea, explicaciones claras y una ruta de estudio inteligente para aprobar más rápido.'
+                  'Luyện đề sát DGT, chấm điểm ngay, giải thích song ngữ dễ hiểu để bạn đậu nhanh hơn.',
+                  'Practica con exámenes DGT, corrige al instante y recibe explicación bilingüe fácil de entender para aprobar más rápido.'
                 )}
               </p>
               <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-                <Link to="/quizzes">
-                  <Button
-                    size="lg"
-                    className="w-full justify-center gap-2 rounded-xl bg-[linear-gradient(135deg,#7a2038_0%,#b23d58_65%,#ca8a04_100%)] px-6 text-base font-semibold text-white shadow-md hover:opacity-95 sm:w-auto"
+<Link to="/quizzes">
+                  <motion.div
+                    initial={{ scale: 1, boxShadow: "0 12px 24px rgba(122,32,56,0.3)" }}
+                    animate={{
+                      scale: [1, 1.02, 1],
+                      boxShadow: [
+                        "0 12px 24px rgba(122,32,56,0.3)",
+                        "0 20px 40px rgba(122,32,56,0.45)",
+                        "0 12px 24px rgba(122,32,56,0.3)"
+                      ]
+                    }}
+                    transition={{
+                      duration: 2,
+                      repeat: Infinity,
+                      repeatType: "reverse",
+                      ease: "easeInOut"
+                    }}
+                    className="w-full sm:w-auto"
                   >
-                    {t('Học thử ngay', 'Empieza ahora')}
-                    <ArrowRight className="h-4 w-4" />
-                  </Button>
+                    <Button
+                      size="lg"
+                      className="w-full justify-center gap-3 rounded-2xl bg-[linear-gradient(135deg,#7a2038_0%,#b23d58_65%,#ca8a04_100%)] px-8 text-lg font-black text-white shadow-2xl hover:brightness-[1.05] hover:shadow-[0_25px_50px_rgba(122,32,56,0.5)] active:scale-[0.98] border-2 border-white/20 backdrop-blur-sm"
+                    >
+                      <Zap className="h-5 w-5" />
+                      {t('Làm thử đề ngay', 'Haz una prueba ahora')}
+                      <ArrowRight className="h-5 w-5" />
+                    </Button>
+                  </motion.div>
                 </Link>
                 {!isAuthenticated && (
                   <Link to="/register">
-                    <Button
-                      size="lg"
-                      variant="outline"
-                      className="w-full rounded-xl border-primary/25 bg-white/70 px-6 text-base font-semibold text-primary hover:bg-white sm:w-auto"
+                    <motion.div
+                      whileHover={{ scale: 1.05, y: -4 }}
+                      whileTap={{ scale: 0.98 }}
+                      className="w-full sm:w-auto"
                     >
-                      {t('Đăng ký miễn phí', 'Regístrate gratis')}
-                    </Button>
+                      <Button
+                        size="lg"
+                        variant="outline"
+                        className="w-full rounded-2xl border-2 border-primary/40 bg-gradient-to-r from-white/90 to-primary/5 px-8 text-lg font-black text-primary hover:bg-primary/5 hover:shadow-2xl hover:shadow-primary/20 hover:border-primary/60 active:scale-[0.98] backdrop-blur-md"
+                      >
+                        {t('Đăng ký miễn phí', 'Regístrate gratis')}
+                        <CheckCircle2 className="h-5 w-5" />
+                      </Button>
+                    </motion.div>
                   </Link>
                 )}
               </div>
-            </motion.div>
 
             <motion.div
               initial={{ opacity: 0, x: 40 }}
@@ -361,11 +430,11 @@ const Index = () => {
               transition={{ duration: 0.6, delay: 0.2 }}
               className="relative hidden justify-center md:flex md:justify-end"
             >
-              <div className="relative h-60 w-60 md:h-80 md:w-80 lg:h-[24rem] lg:w-[24rem] xl:h-[28rem] xl:w-[28rem]">
+              <div className="relative h-56 w-56 md:h-72 md:w-72 lg:h-[20rem] lg:w-[20rem] xl:h-[22rem] xl:w-[22rem]">
                 <div className="absolute inset-3 rounded-full overflow-hidden border border-primary/30 bg-white/30 shadow-[0_18px_46px_rgba(95,20,40,0.18)] backdrop-blur-sm">
                   <BrandLogo
                     className="h-full w-full items-center justify-center"
-                    imageClassName="h-full w-full object-contain animate-float scale-[1.02] md:scale-[1.08] lg:scale-[1.15]"
+                    imageClassName="h-full w-full object-contain animate-float scale-[0.95] md:scale-[1.0] lg:scale-[1.05]"
                   />
                 </div>
               </div>
@@ -413,84 +482,41 @@ const Index = () => {
         </div>
       </section>
 
-      <div
-        aria-hidden="true"
-        className="pointer-events-none relative -mt-2 h-14 overflow-hidden sm:h-20 md:h-28"
-      >
-        <svg
-          viewBox="0 0 1440 220"
-          preserveAspectRatio="none"
-          className="absolute inset-0 h-full w-full"
-        >
-          <defs>
-            <linearGradient id="hero-cross-road" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="#3d4148" stopOpacity="0.44" />
-              <stop offset="55%" stopColor="#545a63" stopOpacity="0.56" />
-              <stop offset="100%" stopColor="#40454d" stopOpacity="0.46" />
-            </linearGradient>
-            <linearGradient id="hero-cross-edge" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="#1f2329" stopOpacity="0.32" />
-              <stop offset="45%" stopColor="#2a2f37" stopOpacity="0.38" />
-              <stop offset="100%" stopColor="#1f2329" stopOpacity="0.32" />
-            </linearGradient>
-          </defs>
+      <section className="px-3 pb-2 sm:px-5 md:px-7 lg:px-10">
+        <div className="grid gap-2 rounded-2xl border border-[#7a2038]/15 bg-white/82 p-3 shadow-[0_10px_22px_rgba(95,20,40,0.08)] sm:grid-cols-2 sm:gap-3 md:grid-cols-4 md:p-4">
+          <div className="rounded-xl border border-[#7a2038]/10 bg-white/86 px-3 py-2.5">
+            <div className="text-xs font-semibold uppercase tracking-wide text-[#7f6f79]">
+              {t('Tổng câu hỏi', 'Preguntas totales')}
+            </div>
+            <div className="mt-1 font-display text-2xl font-black text-[#4a1930]">
+              {Math.max(Number(homeSummary?.total_questions || 0), 300)}+
+            </div>
+          </div>
+          <div className="rounded-xl border border-[#7a2038]/10 bg-white/86 px-3 py-2.5">
+            <div className="text-xs font-semibold uppercase tracking-wide text-[#7f6f79]">
+              {t('Đề luyện tập', 'Exámenes de práctica')}
+            </div>
+            <div className="mt-1 font-display text-2xl font-black text-[#4a1930]">20+</div>
+          </div>
+          <div className="rounded-xl border border-[#7a2038]/10 bg-white/86 px-3 py-2.5">
+            <div className="text-xs font-semibold uppercase tracking-wide text-[#7f6f79]">
+              {t('Tài liệu theo chủ đề', 'Temario por tema')}
+            </div>
+            <div className="mt-1 font-display text-2xl font-black text-[#4a1930]">
+              {Math.max(subjects.length, 8)}+
+            </div>
+          </div>
+          <div className="rounded-xl border border-[#7a2038]/10 bg-white/86 px-3 py-2.5">
+            <div className="text-xs font-semibold uppercase tracking-wide text-[#7f6f79]">
+              {t('Thi thử như thật', 'Simulacro real')}
+            </div>
+            <div className="mt-1 font-display text-2xl font-black text-[#4a1930]">30 {t('câu', 'preguntas')}</div>
+          </div>
+        </div>
+      </section>
 
-          <path
-            d="M0,0 H1440 V106 C1260,86 1060,124 840,100 C640,80 480,48 300,78 C180,96 90,92 0,84 Z"
-            fill="rgba(239,242,247,0.9)"
-          />
-
-          <path
-            className="hidden md:block"
-            d="M-18,112 C180,56 370,156 610,116 C820,84 1000,56 1180,98 C1320,132 1400,124 1468,112"
-            fill="none"
-            stroke="url(#hero-cross-edge)"
-            strokeWidth="126"
-            strokeLinecap="round"
-          />
-          <path
-            className="hidden md:block"
-            d="M-18,112 C180,56 370,156 610,116 C820,84 1000,56 1180,98 C1320,132 1400,124 1468,112"
-            fill="none"
-            stroke="url(#hero-cross-road)"
-            strokeWidth="96"
-            strokeLinecap="round"
-          />
-          <path
-            className="hidden md:block"
-            d="M-18,112 C180,56 370,156 610,116 C820,84 1000,56 1180,98 C1320,132 1400,124 1468,112"
-            fill="none"
-            stroke="rgba(255,255,255,0.96)"
-            strokeWidth="30"
-            strokeLinecap="butt"
-            strokeDasharray="54 40"
-          />
-          <path
-            className="md:hidden"
-            d="M-18,112 C180,56 370,156 610,116 C820,84 1000,56 1180,98 C1320,132 1400,124 1468,112"
-            fill="none"
-            stroke="url(#hero-cross-edge)"
-            strokeWidth="34"
-            strokeLinecap="round"
-          />
-          <path
-            className="md:hidden"
-            d="M-18,112 C180,56 370,156 610,116 C820,84 1000,56 1180,98 C1320,132 1400,124 1468,112"
-            fill="none"
-            stroke="url(#hero-cross-road)"
-            strokeWidth="24"
-            strokeLinecap="round"
-          />
-          <path
-            className="md:hidden"
-            d="M-18,112 C180,56 370,156 610,116 C820,84 1000,56 1180,98 C1320,132 1400,124 1468,112"
-            fill="none"
-            stroke="rgba(255,255,255,0.96)"
-            strokeWidth="8"
-            strokeLinecap="butt"
-            strokeDasharray="14 14"
-          />
-        </svg>
+      <div className="h-5 px-3 sm:px-5 md:px-7 lg:px-10" aria-hidden="true">
+        <div className="h-px w-full bg-[linear-gradient(90deg,transparent_0%,rgba(36,50,79,0.18)_20%,rgba(36,50,79,0.26)_50%,rgba(36,50,79,0.18)_80%,transparent_100%)]" />
       </div>
 
       <section className="relative py-8 sm:py-10 md:py-14 lg:py-16">
@@ -549,20 +575,15 @@ const Index = () => {
                           {formatQuizType(quizTypes[0])}
                         </div>
                         <h3 className="mb-2 font-display text-[1.5rem] font-black leading-tight text-white sm:text-[1.75rem] md:text-[2.25rem]">
-                          {t(
-                            'Lộ trình luyện thi trọng tâm theo từng loại đề',
-                            'Ruta de práctica por tipo de examen'
-                          )}
+                          {formatQuizType(quizTypes[0])}
                         </h3>
-                        <p className="mb-4 max-w-xl text-sm text-white/90 sm:text-base md:text-lg">
-                          {t(
-                            'Bắt đầu từ đề phù hợp nhất để tăng tốc độ đạt điểm cao.',
-                            'Empieza por el tipo más adecuado para subir tu puntuación más rápido.'
-                          )}
+                        <p className="mb-3 max-w-xl text-sm text-white/90 sm:text-base md:text-lg">
+                          {Math.max(getQuizCountForType(quizTypes[0]), 120)} {t('câu hỏi', 'preguntas')} •{' '}
+                          {t('Cơ bản', 'Básico')}
                         </p>
-                        <span className="inline-flex items-center gap-1.5 text-base font-bold text-white">
-                          {t('Vào luyện thi', 'Empezar')} <ArrowRight className="h-4 w-4" />
-                        </span>
+                        <Button className="rounded-xl bg-white/92 px-4 text-sm font-bold text-primary hover:bg-white">
+                          {t('Làm đề', 'Hacer test')}
+                        </Button>
                       </CardContent>
                     </div>
                   </Card>
@@ -593,12 +614,13 @@ const Index = () => {
                             <h4 className="font-display text-lg font-black leading-tight text-[#482735] sm:text-xl md:text-2xl">
                               {formatQuizType(type)}
                             </h4>
-                            <p className="mt-1 line-clamp-2 text-sm text-[#616477] sm:text-base md:text-lg">
-                              {t(
-                                'Bộ đề ngắn gọn theo mục tiêu luyện tập rõ ràng.',
-                                'Exámenes enfocados para practicar con objetivo claro.'
-                              )}
+                            <p className="mt-1 text-sm font-semibold text-[#616477] sm:text-base md:text-lg">
+                              {Math.max(getQuizCountForType(type), 30)} {t('câu hỏi', 'preguntas')} •{' '}
+                              {getLevelByIndex(i)}
                             </p>
+                            <span className="mt-2 inline-flex items-center rounded-lg border border-primary/20 bg-primary/5 px-2.5 py-1 text-xs font-bold text-primary md:text-sm">
+                              {t('Làm đề', 'Hacer test')}
+                            </span>
                           </div>
                         </CardContent>
                       </Card>
@@ -769,24 +791,29 @@ const Index = () => {
                           </div>
                         </div>
                       </div>
-                      <div className="mt-3 grid grid-cols-2 gap-2">
-                        <div className="rounded-xl border border-primary/15 bg-[rgba(236,224,231,0.86)] px-3 py-2 text-center">
-                          <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-                            {t('Điểm trung bình', 'Media')}
+                      <div className="mt-3 grid grid-cols-3 gap-2">
+                        <div className="rounded-xl border border-primary/15 bg-[rgba(236,224,231,0.86)] px-2.5 py-2 text-center">
+                          <div className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+                            {t('Đã làm', 'Hechos')}
                           </div>
-                          <div className="font-display text-xl font-black text-primary">
-                            {Number(
-                              leftProfileUser.average_percentage || leftProfileUser.total_score || 0
-                            ).toFixed(1)}
-                            %
+                          <div className="font-display text-lg font-black text-primary">
+                            {Number(leftProfileUser.total_quizzes || 0)}
                           </div>
                         </div>
-                        <div className="rounded-xl border border-primary/15 bg-[rgba(236,224,231,0.86)] px-3 py-2 text-center">
-                          <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-                            {t('Tổng điểm', 'Puntos')}
+                        <div className="rounded-xl border border-primary/15 bg-[rgba(236,224,231,0.86)] px-2.5 py-2 text-center">
+                          <div className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+                            {t('Điểm cao nhất', 'Mejor puntaje')}
                           </div>
-                          <div className="font-display text-xl font-black text-primary">
-                            {Number(leftProfileUser.total_score || 0).toFixed(1)}
+                          <div className="font-display text-lg font-black text-primary">
+                            {profileBestScore.toFixed(1)}
+                          </div>
+                        </div>
+                        <div className="rounded-xl border border-primary/15 bg-[rgba(236,224,231,0.86)] px-2.5 py-2 text-center">
+                          <div className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+                            {t('Thứ hạng', 'Ranking')}
+                          </div>
+                          <div className="font-display text-lg font-black text-primary">
+                            {profileRank > 0 ? `#${profileRank}` : '-'}
                           </div>
                         </div>
                       </div>
@@ -834,9 +861,17 @@ const Index = () => {
                                 }`}
                               >
                                 <div
-                                  className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-black ${isChampion ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-700'}`}
+                                  className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-black ${
+                                    user.rank === 1
+                                      ? 'bg-amber-100 text-amber-800'
+                                      : user.rank === 2
+                                        ? 'bg-slate-100 text-slate-700'
+                                        : user.rank === 3
+                                          ? 'bg-orange-100 text-orange-700'
+                                          : 'bg-slate-100 text-slate-700'
+                                  }`}
                                 >
-                                  {user.rank}
+                                  {user.rank === 1 ? 'G' : user.rank === 2 ? 'S' : user.rank === 3 ? 'B' : user.rank}
                                 </div>
 
                                 {user.avatar_url ? (
@@ -932,25 +967,50 @@ const Index = () => {
               </div>
 
               <div className="flex flex-col items-start gap-3 lg:items-end">
-                <Link to={isAuthenticated ? '/quizzes' : '/register'}>
-                  <Button
-                    size="lg"
-                    className="gap-2 rounded-xl bg-[linear-gradient(135deg,#7a2038_0%,#b23d58_65%,#ca8a04_100%)] px-6 text-base font-semibold text-white shadow-[0_10px_22px_rgba(95,20,40,0.2)] hover:opacity-95"
+<Link to={isAuthenticated ? '/quizzes' : '/register'}>
+                  <motion.div
+                    initial={{ scale: 1, rotate: 0 }}
+                    animate={{
+                      rotate: [0, 1, -1, 0],
+                      scale: [1, 1.01, 1]
+                    }}
+                    transition={{
+                      duration: 3,
+                      repeat: Infinity,
+                      ease: "easeInOut"
+                    }}
+                    className="w-full lg:w-auto"
                   >
-                    {isAuthenticated
-                      ? t('Làm bài thi ngay', 'Haz el examen ahora')
-                      : t('Đăng ký miễn phí', 'Regístrate gratis')}
-                    <ArrowRight className="h-4 w-4" />
-                  </Button>
+                    <Button
+                      size="lg"
+                      className="gap-3 rounded-2xl bg-[linear-gradient(135deg,#7a2038_0%,#b23d58_70%,#ca8a04_100%)] px-10 text-xl font-black text-white shadow-2xl hover:brightness-[1.08] hover:shadow-[0_30px_60px_rgba(122,32,56,0.55)] active:scale-[0.97] border-2 border-white/30 backdrop-blur-sm relative overflow-hidden"
+                    >
+                      <span className="relative z-10">{isAuthenticated
+                        ? t('Làm bài thi ngay', 'Haz el examen ahora')
+                        : t('Đăng ký miễn phí', 'Regístrate gratis')}</span>
+                      <div className="absolute inset-0 bg-[linear-gradient(90deg,transparent,white,transparent)] opacity-0 group-hover:opacity-100 transition-opacity duration-500 -skew-x-12 animate-shimmer" />
+                      <ArrowRight className="h-6 w-6" />
+                    </Button>
+                  </motion.div>
                 </Link>
                 {!isAuthenticated && (
                   <Link to="/quizzes">
-                    <Button
-                      variant="outline"
-                      className="rounded-xl border-primary/30 bg-white/75 px-5 text-sm font-semibold text-primary shadow-[0_8px_18px_rgba(95,20,40,0.08)] hover:bg-white"
+                    <motion.div
+                      whileHover={{ scale: 1.08, y: -6, boxShadow: "0 20px 40px rgba(122,32,56,0.3)" }}
+                      whileTap={{ scale: 0.96 }}
+                      className="w-full lg:w-auto"
                     >
-                      {t('Xem bộ đề trước', 'Ver exámenes primero')}
-                    </Button>
+                      <Button
+                        variant="outline"
+                        className="rounded-2xl border-4 border-primary/50 bg-gradient-to-br from-white/95 via-primary/5 to-amber-50/50 px-10 py-7 text-xl font-black text-primary shadow-xl hover:shadow-2xl hover:shadow-primary/30 hover:bg-primary/10 hover:border-primary/70 active:scale-[0.97] backdrop-blur-lg relative group"
+                      >
+                        <span>{t('Xem bộ đề trước', 'Ver exámenes primero')}</span>
+                        <Trophy className="h-6 w-6 ml-2" />
+                        <div className="absolute -top-3 -right-3 bg-gradient-to-r from-emerald-400 to-teal-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg">
+                          Miễn phí
+                        </div>
+                      </Button>
+                    </motion.div>
                   </Link>
                 )}
               </div>
@@ -964,6 +1024,59 @@ const Index = () => {
       </div>
 
       <div className="h-5 md:h-7" aria-hidden="true" />
+
+      <button
+        type="button"
+        onClick={() => setShowContactPopup(true)}
+        className="fixed bottom-5 left-4 z-40 rounded-full border border-primary/30 bg-white px-4 py-2 text-sm font-bold text-primary shadow-[0_10px_24px_rgba(95,20,40,0.16)] transition hover:-translate-y-0.5 hover:bg-primary hover:text-white"
+      >
+        {t('Liên hệ nhanh', 'Contacto rápido')}
+      </button>
+
+      {showContactPopup && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4">
+          <div className="w-full max-w-md rounded-2xl border border-primary/20 bg-white p-5 shadow-[0_18px_42px_rgba(15,23,42,0.22)]">
+            <div className="mb-2 flex items-center justify-between">
+              <h3 className="font-display text-xl font-black text-[#4a1930]">
+                {t('Trung tâm hỗ trợ', 'Centro de ayuda')}
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowContactPopup(false)}
+                className="rounded-lg border border-slate-300 px-2 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-50"
+              >
+                {t('Đóng', 'Cerrar')}
+              </button>
+            </div>
+            <p className="mb-4 text-sm text-slate-600">
+              {t(
+                'Nếu bạn có câu hỏi về gói học, đăng ký hoặc tài liệu, liên hệ nhanh với đội hỗ trợ:',
+                'Si tienes dudas sobre planes, registro o temario, contacta con soporte:'
+              )}
+            </p>
+            <div className="space-y-2 text-sm">
+              <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+                WhatsApp: <span className="font-semibold">+34 677 64 10 04</span>
+              </div>
+              <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+                Email: <span className="font-semibold">info@practicatest.com</span>
+              </div>
+            </div>
+            <div className="mt-4 flex gap-2">
+              <Link to="/register" className="flex-1">
+                <Button className="w-full rounded-xl bg-primary text-white hover:bg-primary/90">
+                  {t('Đăng ký', 'Registrarse')}
+                </Button>
+              </Link>
+              <Link to="/materials" className="flex-1">
+                <Button variant="outline" className="w-full rounded-xl border-primary/30 text-primary">
+                  {t('Gói học & tài liệu', 'Planes y temario')}
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
 
       <Footer />
     </div>

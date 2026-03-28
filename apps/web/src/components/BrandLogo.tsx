@@ -24,7 +24,7 @@ export default function BrandLogo({
     <span
       className={cn('font-display text-xl font-800 tracking-tight text-foreground', textClassName)}
     >
-      Việt <span className="text-primary">Autoescola</span>
+      Việt <span className="text-primary">Autoescuela</span>
     </span>
   );
 
@@ -33,7 +33,7 @@ export default function BrandLogo({
       <div className={cn('flex items-center gap-2', className)}>
         <img
           src={BRAND_LOGO_SRC}
-          alt="Viet Autoescola"
+          alt="Viet Autoescuela"
           className={cn('h-10 w-auto object-contain', imageClassName)}
           onError={() => setLogoError(true)}
         />

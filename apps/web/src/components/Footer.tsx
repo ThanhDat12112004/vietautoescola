@@ -104,8 +104,8 @@ const Footer = () => {
         }
 
         .ft-social-btn {
-          width: 34px;
-          height: 34px;
+          width: 40px;
+          height: 40px;
           border-radius: 8px;
           border: 1px solid rgba(139, 30, 45, 0.22);
           background: rgba(139, 30, 45, 0.04);
@@ -126,8 +126,8 @@ const Footer = () => {
         }
 
         .ft-social-btn svg {
-          width: 14px;
-          height: 14px;
+          width: 17px;
+          height: 17px;
           fill: currentColor;
         }
 
@@ -307,7 +307,7 @@ const Footer = () => {
               </Link>
               <p className="ft-brand-desc">
                 {t(
-                  'Nền tảng luyện thi bằng lái xe song ngữ Việt - Tây Ban Nha. Học mọi lúc, mọi nơi.',
+                  'Viet Autoescuela - nền tảng luyện thi bằng lái xe song ngữ Việt - Tây Ban Nha. Học mọi lúc, mọi nơi.',
                   'Plataforma bilingue vietnamita-espanol para el examen de conducir. Aprende donde quieras.'
                 )}
               </p>
@@ -342,7 +342,7 @@ const Footer = () => {
                   <ArrowUpRight className="ft-link-arrow" />
                 </Link>
                 <Link to="/materials" className="ft-link">
-                  {t('Tài liệu', 'Materiales')}
+                  {t('Tài liệu', 'Temario')}
                   <ArrowUpRight className="ft-link-arrow" />
                 </Link>
                 <Link to="/leaderboard" className="ft-link">
@@ -383,7 +383,7 @@ const Footer = () => {
                   <div className="ft-contact-icon">
                     <Mail />
                   </div>
-                  <span>support@vietautoescola.com</span>
+                  <span>support@vietautoescuela.com</span>
                 </div>
                 <div className="ft-contact-item">
                   <div className="ft-contact-icon">
@@ -395,7 +395,7 @@ const Footer = () => {
                   <div className="ft-contact-icon">
                     <MapPin />
                   </div>
-                  <span>Madrid, Espana</span>
+                  <span>Madrid, España</span>
                 </div>
               </div>
             </div>
@@ -405,7 +405,7 @@ const Footer = () => {
 
           <div className="ft-bottom">
             <p className="ft-copy">
-              © 2026 <span>Viet Auto Escola</span>.{' '}
+              © 2026 <span>Viet Autoescuela</span>.{' '}
               {t('Bảo lưu mọi quyền.', 'Todos los derechos reservados.')}
             </p>
             <div className="ft-bottom-links">

@@ -2,8 +2,8 @@ import '../index.css';
 
 export const metadata = {
   title: {
-    default: 'Viet Autoescola',
-    template: '%s | Viet Autoescola',
+    default: 'Viet Autoescuela',
+    template: '%s | Viet Autoescuela',
   },
   description: 'Quiz and learning interface',
   icons: {

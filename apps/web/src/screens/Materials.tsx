@@ -32,6 +32,7 @@ const Materials = () => {
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [activeSubject, setActiveSubject] = useState<number | null>(null);
   const [readFilter, setReadFilter] = useState<'all' | 'read' | 'unread'>('all');
+  const [searchKeyword, setSearchKeyword] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [materials, setMaterials] = useState<MaterialItem[]>([]);
   const [subjectMaterialCounts, setSubjectMaterialCounts] = useState<Record<number, number>>({});
@@ -190,9 +191,24 @@ const Materials = () => {
     return materials.filter((material) => {
       if (readFilter === 'all') return true;
       const isRead = readMaterialSet.has(material.id);
-      return readFilter === 'read' ? isRead : !isRead;
+      const passReadFilter = readFilter === 'read' ? isRead : !isRead;
+      if (!passReadFilter) return false;
+
+      const keyword = searchKeyword.trim().toLowerCase();
+      if (!keyword) return true;
+
+      const bag = [
+        material.title_vi,
+        material.title_es,
+        material.description_vi,
+        material.description_es,
+      ]
+        .join(' ')
+        .toLowerCase();
+
+      return bag.includes(keyword);
     });
-  }, [materials, readFilter, readMaterialSet]);
+  }, [materials, readFilter, readMaterialSet, searchKeyword]);
 
   const readCounts = useMemo(() => {
     const done = materials.filter((material) => readMaterialSet.has(material.id)).length;
@@ -340,6 +356,20 @@ const Materials = () => {
     window.open(resolveMediaUrl(filePath), '_blank', 'noopener,noreferrer');
   };
 
+  const inferMaterialType = (material: MaterialItem) => {
+    const source = `${material.title_vi} ${material.title_es} ${material.description_vi || ''} ${material.description_es || ''}`.toLowerCase();
+    if (source.includes('checklist')) return 'Checklist';
+    if (source.includes('resumen') || source.includes('tom tat')) return 'Resumen';
+    if (source.includes('guia') || source.includes('guide')) return 'Guia';
+    return 'PDF';
+  };
+
+  const estimatePages = (material: MaterialItem) => {
+    const size = Number(material.file_size_mb_vi || material.file_size_mb_es || 0);
+    if (!size || Number.isNaN(size)) return '-';
+    return Math.max(1, Math.round(size * 9));
+  };
+
   return (
     <div className="app-page min-h-screen flex flex-col bg-[radial-gradient(circle_at_18%_12%,rgba(224,231,255,0.35),transparent_38%),radial-gradient(circle_at_84%_6%,rgba(226,232,240,0.45),transparent_34%),linear-gradient(180deg,#f8fafc_0%,#eef2f7_55%,#f5f7fb_100%)]">
       <Navbar />
@@ -348,7 +378,7 @@ const Materials = () => {
           <div className="flex items-center gap-3 mb-2">
             <BookOpen className="h-7 w-7 text-primary" />
             <h1 className="font-display text-2xl md:text-3xl font-800">
-              {t('Tài liệu học tập', 'Materiales de estudio')}
+              {t('Tài liệu học tập', 'Temario')}
             </h1>
           </div>
           <p className="max-w-2xl text-sm text-muted-foreground md:text-base">
@@ -425,11 +455,45 @@ const Materials = () => {
             </div>
           )}
 
+          {!loadingSubjects && subjects.length > 8 && (
+            <div className="mb-5 rounded-xl border border-slate-200 bg-slate-50/70 p-2.5">
+              <label className="mb-1 block text-xs font-semibold text-slate-600">
+                {t('Chọn nhanh chủ đề', 'Seleccion rápida por tema')}
+              </label>
+              <select
+                className="h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm"
+                value={activeSubject === null ? 'all' : String(activeSubject)}
+                onChange={(event) =>
+                  applySubjectFilter(event.target.value === 'all' ? null : Number(event.target.value))
+                }
+              >
+                <option value="all">{t('Tất cả', 'Todos')}</option>
+                {subjects.map((subject) => (
+                  <option key={subject.id} value={subject.id}>
+                    {subject.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
           {activeSubjectInfo && (
             <p className="mb-5 text-xs text-muted-foreground md:text-sm">
               {activeSubjectInfo.description || ''}
             </p>
           )}
+
+          <div className="mb-5 rounded-xl border border-slate-200 bg-slate-50/70 p-2.5">
+            <label className="mb-1 block text-xs font-semibold text-slate-600">
+              {t('Buscar material', 'Buscar material')}
+            </label>
+            <input
+              value={searchKeyword}
+              onChange={(event) => setSearchKeyword(event.target.value)}
+              placeholder={t('Tìm theo từ khóa: señales, prioridad, velocidad...', 'Buscar por palabra clave: señales, prioridad, velocidad...')}
+              className="h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm"
+            />
+          </div>
 
           {loadingMaterials && (
             <p className="text-sm text-muted-foreground">
@@ -484,15 +548,18 @@ const Materials = () => {
                     </div>
 
                     <div className="mt-auto flex items-center justify-between border-t border-border/40 pt-3">
-                      <div className="flex items-center gap-2 text-[10px] text-muted-foreground md:text-xs">
+                      <div className="flex flex-col gap-1 text-[10px] text-muted-foreground md:text-xs">
                         <span className="rounded-md bg-muted px-1.5 py-0.5 font-bold uppercase">
                           VI/ES
                         </span>
                         <span>
-                          PDF
+                          {inferMaterialType(material)}
                           {material.file_size_mb_vi || material.file_size_mb_es
                             ? ` · VI ${material.file_size_mb_vi || '-'} MB · ES ${material.file_size_mb_es || '-'} MB`
                             : ''}
+                        </span>
+                        <span>
+                          {estimatePages(material)} {t('trang', 'páginas')} · {activeSubjectInfo?.name || t('Chủ đề chung', 'Tema general')}
                         </span>
                       </div>
                       <div className="flex gap-1.5">

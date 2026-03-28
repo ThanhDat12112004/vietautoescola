@@ -20,7 +20,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useLanguage } from '@/hooks/useLanguage';
 import { logout, resolveMediaUrl } from '@/lib/api';
-import { clearAuth, getStoredAuth, type AuthUser } from '@/lib/auth';
+import { clearAuth, getStoredAuth, getTokenRemainingDays, type AuthUser } from '@/lib/auth';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
@@ -73,11 +73,12 @@ const Navbar = () => {
   const userDisplayName = authUser?.full_name || authUser?.username || 'User';
   const userAvatarUrl = authUser?.avatar_url ? resolveMediaUrl(authUser.avatar_url) : null;
   const isAdmin = (authUser?.role || '').toLowerCase() === 'admin';
+  const tokenRemainingDays = getTokenRemainingDays(getStoredAuth()?.token || '');
 
   const navItems = [
     { path: '/', label: t('Trang chủ', 'Inicio'), icon: Home },
     { path: '/quizzes', label: t('Làm bài thi', 'Exámenes'), icon: BookOpen },
-    { path: '/materials', label: t('Tài liệu', 'Materiales'), icon: FileText },
+    { path: '/materials', label: t('Tài liệu', 'Temario'), icon: FileText },
     { path: '/leaderboard', label: t('Xếp hạng', 'Ranking'), icon: Trophy },
     ...(isAdmin ? [{ path: '/admin', label: t('Quản trị', 'Admin'), icon: ShieldCheck }] : []),
   ];
@@ -347,6 +348,27 @@ const Navbar = () => {
                     padding: '6px',
                   }}
                 >
+                  {tokenRemainingDays !== null && (
+                    <div
+                      style={{
+                        margin: '4px 4px 6px',
+                        borderRadius: 8,
+                        border: '1px solid rgba(139,30,45,0.18)',
+                        background: 'rgba(139,30,45,0.06)',
+                        padding: '8px 10px',
+                        fontSize: 12,
+                        color: '#5f2d35',
+                        lineHeight: 1.35,
+                      }}
+                    >
+                      {tokenRemainingDays > 0
+                        ? t(
+                            `Tài khoản của bạn còn sử dụng được ${tokenRemainingDays} ngày nữa`,
+                            `Tu cuenta se puede usar durante ${tokenRemainingDays} dias mas`
+                          )
+                        : t('Phiên đăng nhập đã hết hạn', 'La sesión ha expirado')}
+                    </div>
+                  )}
                   <DropdownMenuLabel
                     style={{
                       fontSize: 11,
@@ -594,6 +616,24 @@ const Navbar = () => {
                       <p style={{ fontSize: 15, fontWeight: 600, color: '#2f171b', margin: 0 }}>
                         {userDisplayName}
                       </p>
+                      {tokenRemainingDays !== null && (
+                        <p
+                          style={{
+                            fontSize: 12.5,
+                            color: '#5f2d35',
+                            margin: 0,
+                            marginTop: 1,
+                            fontWeight: 600,
+                          }}
+                        >
+                          {tokenRemainingDays > 0
+                            ? t(
+                                `Còn ${tokenRemainingDays} ngày sử dụng`,
+                                `${tokenRemainingDays} dias restantes`
+                              )
+                            : t('Phiên đã hết hạn', 'Sesión expirada')}
+                        </p>
+                      )}
                       <p style={{ fontSize: 13.5, color: '#8b1e2d', margin: 0, marginTop: 1 }}>
                         {t('Xem hồ sơ →', 'Ver perfil →')}
                       </p>
