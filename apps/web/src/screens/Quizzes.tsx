@@ -33,6 +33,12 @@ const Quizzes = () => {
   const formatQuizType = (value: string) =>
     value.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
 
+  const getLevelLabel = (totalQuestions: number) => {
+    if (totalQuestions <= 30) return t('Cơ bản', 'Básico');
+    if (totalQuestions <= 60) return t('Trung bình', 'Intermedio');
+    return t('Nâng cao', 'Avanzado');
+  };
+
   const normalizeToken = (value: string) =>
     String(value || '')
       .trim()
@@ -293,7 +299,7 @@ const Quizzes = () => {
             </Button>
           </div>
 
-          <div className="mb-6 flex flex-wrap gap-2 rounded-xl border border-slate-200 bg-slate-50/70 p-2 md:gap-2.5">
+          <div className="mb-3 flex flex-wrap gap-2 rounded-xl border border-slate-200 bg-slate-50/70 p-2 md:gap-2.5">
             <Button
               variant={activeType === 'all' ? 'default' : 'outline'}
               size="sm"
@@ -320,6 +326,26 @@ const Quizzes = () => {
               </Button>
             ))}
           </div>
+
+          {quizTypes.length > 6 && (
+            <div className="mb-6 rounded-xl border border-slate-200 bg-slate-50/70 p-2.5">
+              <label className="mb-1 block text-xs font-semibold text-slate-600">
+                {t('Chọn nhanh chủ đề', 'Seleccion rápida por tipo')}
+              </label>
+              <select
+                className="h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm"
+                value={activeType}
+                onChange={(event) => applyTypeFilter(event.target.value)}
+              >
+                <option value="all">{t('Tất cả', 'Todos')}</option>
+                {quizTypes.map((type) => (
+                  <option key={type} value={type}>
+                    {formatQuizType(type)} ({typeCounts[type] || 0})
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           {loading && (
             <p className="text-sm text-muted-foreground">{t('Đang tải...', 'Cargando...')}</p>
@@ -357,15 +383,24 @@ const Quizzes = () => {
                           </span>
                         </div>
 
-                        <h3 className="mb-1 font-display text-sm font-bold text-slate-900 md:text-base">{quiz.title}</h3>
-                        <p className="mb-4 flex-1 text-xs text-muted-foreground line-clamp-2 md:text-sm">
+                        <h3 className="mb-1 font-display text-sm font-bold text-slate-900 md:text-base">
+                          {quiz.title}
+                        </h3>
+                        <p className="mb-3 flex-1 text-xs text-muted-foreground line-clamp-2 md:text-sm">
                           {quiz.description || t('Không có mô tả', 'Sin descripción')}
                         </p>
 
-                        <div className="mb-4 flex items-center gap-3 text-[10px] text-muted-foreground md:text-xs">
+                        <div className="mb-4 grid grid-cols-2 gap-2 text-[10px] text-muted-foreground md:text-xs">
                           <span className="flex items-center gap-1">
                             <FileText className="h-3 w-3" />
-                            {`${quiz.total_questions} ${t('câu', 'preg.')}`}
+                            <span className="font-semibold text-slate-700">
+                              {quiz.total_questions} {t('câu', 'preg.')}
+                            </span>
+                          </span>
+                          <span>{quiz.duration_minutes} {t('phút', 'min')}</span>
+                          <span>{getLevelLabel(quiz.total_questions)}</span>
+                          <span>
+                            {t('Đã làm', 'Hecho')}: {quiz.has_completed ? 1 : 0} {t('lần', 'vez')}
                           </span>
                         </div>
 
@@ -373,7 +408,7 @@ const Quizzes = () => {
                           <Link to={`/quiz/${quiz.id}?mode=practice`} className="flex-1">
                             <Button
                               variant="outline"
-                              className="h-8 w-full gap-1.5 border-slate-300 bg-white text-xs text-slate-700 hover:border-[#7a2038]/35 hover:text-[#7a2038] md:h-9 md:text-sm"
+                              className="h-8 w-full gap-1.5 border-slate-300 bg-slate-50 text-xs text-slate-700 hover:border-[#7a2038]/35 hover:bg-white hover:text-[#7a2038] md:h-9 md:text-sm"
                               size="sm"
                             >
                               <BookOpen className="h-3 w-3" />
@@ -381,7 +416,7 @@ const Quizzes = () => {
                             </Button>
                           </Link>
                           <Link to={`/quiz/${quiz.id}?mode=exam`} className="flex-1">
-                            <Button className="h-8 w-full gap-1.5 bg-[#7a2038] text-xs hover:bg-[#681a31] md:h-9 md:text-sm" size="sm">
+                            <Button className="h-8 w-full gap-1.5 bg-[#7a2038] text-xs text-white shadow-sm hover:bg-[#681a31] md:h-9 md:text-sm" size="sm">
                               <Zap className="h-3 w-3" />
                               {t('Thi thật', 'Examen')}
                             </Button>
