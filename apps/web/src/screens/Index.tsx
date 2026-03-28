@@ -889,7 +889,7 @@ const Index = () => {
         </div>
       </section>
 
-      <section className="relative py-10 sm:py-12 md:py-14">
+      <section className="relative py-10 sm:py-12 md:py-16">
         <div className="relative z-10 w-full px-3 sm:px-5 md:px-7 lg:px-10">
           <motion.div
             initial="hidden"
@@ -897,45 +897,104 @@ const Index = () => {
             viewport={{ once: true }}
             variants={fadeUp}
             custom={0}
-            className="relative overflow-hidden rounded-[2rem] border border-[#24324f]/15 bg-[linear-gradient(140deg,rgba(255,255,255,0.9)_0%,rgba(255,247,250,0.82)_52%,rgba(255,249,235,0.76)_100%)] px-6 py-7 shadow-[0_18px_42px_rgba(36,50,79,0.14)] backdrop-blur-[2px] md:px-8 md:py-9 lg:px-10"
+            className="relative overflow-hidden rounded-[2rem] bg-[linear-gradient(135deg,#3a0f1f_0%,#6b1a30_40%,#7a2038_70%,#4a1220_100%)] px-6 py-10 shadow-[0_24px_56px_rgba(74,18,32,0.38)] md:px-10 md:py-14 lg:px-14"
           >
-            <div className="pointer-events-none absolute -left-12 top-1/2 h-36 w-36 -translate-y-1/2 rounded-full bg-primary/10 blur-3xl" />
-            <div className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-amber-300/15 blur-3xl" />
+            {/* Decorative glows */}
+            <div className="pointer-events-none absolute -left-16 -top-16 h-64 w-64 rounded-full bg-[#b23d58]/30 blur-[80px]" />
+            <div className="pointer-events-none absolute -bottom-12 -right-12 h-56 w-56 rounded-full bg-amber-400/20 blur-[70px]" />
+            <div className="pointer-events-none absolute right-1/3 top-0 h-40 w-40 rounded-full bg-[#ca8a04]/15 blur-[60px]" />
 
-            <div className="relative grid gap-6 lg:grid-cols-[1.35fr_auto] lg:items-center">
-              <div>
-                <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-white/60 px-3 py-1 text-sm font-semibold text-primary">
-                  <CheckCircle2 className="h-4 w-4" />
-                  {t('Sẵn sàng bứt tốc', 'Listo para acelerar')}
-                </div>
-                <h2 className="mb-3 font-display text-[1.85rem] font-black leading-tight tracking-tight text-[#24324f] sm:text-[2.15rem] md:text-[2.5rem]">
-                  {t('Sẵn sàng bắt đầu luyện thi?', '¿Listo para empezar a practicar?')}
-                </h2>
-                <p className="max-w-2xl text-base font-medium leading-relaxed text-[#4b5b7a] md:text-lg">
-                  {t(
-                    'Đăng ký ngay để truy cập hàng trăm câu hỏi mô phỏng thi DGT miễn phí',
-                    'Regístrate para acceder a cientos de preguntas del examen DGT gratis'
-                  )}
-                </p>
+            {/* Subtle dot-grid pattern */}
+            <svg
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0 h-full w-full opacity-[0.07]"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <defs>
+                <pattern id="cta-dots" x="0" y="0" width="24" height="24" patternUnits="userSpaceOnUse">
+                  <circle cx="2" cy="2" r="1.5" fill="white" />
+                </pattern>
+              </defs>
+              <rect width="100%" height="100%" fill="url(#cta-dots)" />
+            </svg>
 
-                <div className="mt-4 flex flex-wrap gap-2">
-                  <span className="inline-flex items-center rounded-full border border-primary/20 bg-white/55 px-3 py-1 text-sm font-semibold text-[#24324f]">
-                    {t('Miễn phí bắt đầu', 'Inicio gratis')}
-                  </span>
-                  <span className="inline-flex items-center rounded-full border border-primary/20 bg-white/55 px-3 py-1 text-sm font-semibold text-[#24324f]">
-                    {t('Chấm điểm tức thì', 'Corrección instantánea')}
-                  </span>
-                  <span className="inline-flex items-center rounded-full border border-primary/20 bg-white/55 px-3 py-1 text-sm font-semibold text-[#24324f]">
-                    {t('Song ngữ Việt - TBN', 'Bilingüe vietnamita-español')}
-                  </span>
-                </div>
+            <div className="relative flex flex-col items-center text-center">
+              {/* Badge */}
+              <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-1.5 text-sm font-semibold text-white/90 backdrop-blur-sm">
+                <CheckCircle2 className="h-4 w-4 text-amber-300" />
+                {t('Sẵn sàng bứt tốc ngay hôm nay', 'Listo para acelerar hoy mismo')}
               </div>
 
-              <div className="flex flex-col items-start gap-3 lg:items-end">
+              {/* Heading */}
+              <h2
+                className="mb-4 max-w-3xl font-display text-[2rem] font-black leading-[1.05] tracking-tight text-white sm:text-[2.5rem] md:text-[3rem] lg:text-[3.4rem]"
+              >
+                {t(
+                  'Sẵn sàng chinh phục bằng lái xe?',
+                  '¿Listo para conquistar tu examen de conducir?'
+                )}
+              </h2>
+
+              {/* Subtitle */}
+              <p className="mb-8 max-w-2xl text-base font-medium leading-relaxed text-white/75 sm:text-lg md:text-xl">
+                {t(
+                  'Hàng nghìn học viên đã đậu nhờ hệ thống mô phỏng DGT song ngữ — miễn phí, tức thì, hiệu quả.',
+                  'Miles de estudiantes han aprobado gracias al simulador DGT bilingüe — gratis, instantáneo, efectivo.'
+                )}
+              </p>
+
+              {/* Stats row */}
+              {homeSummary && (
+                <div className="mb-8 flex flex-wrap justify-center gap-4 sm:gap-8">
+                  {[
+                    {
+                      value: homeSummary.total_questions.toLocaleString(),
+                      label: t('Câu hỏi', 'Preguntas'),
+                    },
+                    {
+                      value: homeSummary.total_students.toLocaleString(),
+                      label: t('Học viên', 'Estudiantes'),
+                    },
+                    {
+                      value: `${homeSummary.pass_rate}%`,
+                      label: t('Tỷ lệ đậu', 'Tasa de aprobado'),
+                    },
+                  ].map((stat) => (
+                    <div key={stat.label} className="flex flex-col items-center">
+                      <span className="font-display text-[1.8rem] font-black leading-none text-amber-300 sm:text-[2.2rem]">
+                        {stat.value}
+                      </span>
+                      <span className="mt-0.5 text-xs font-semibold uppercase tracking-widest text-white/55 sm:text-sm">
+                        {stat.label}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Feature tags */}
+              <div className="mb-8 flex flex-wrap justify-center gap-2">
+                {[
+                  t('Miễn phí bắt đầu', 'Inicio gratis'),
+                  t('Chấm điểm tức thì', 'Corrección instantánea'),
+                  t('Song ngữ Việt – TBN', 'Bilingüe vietnamita-español'),
+                  t('Giải thích chi tiết', 'Explicaciones detalladas'),
+                ].map((tag) => (
+                  <span
+                    key={tag}
+                    className="rounded-full border border-white/15 bg-white/10 px-3.5 py-1 text-sm font-semibold text-white/85 backdrop-blur-sm"
+                  >
+                    ✓ {tag}
+                  </span>
+                ))}
+              </div>
+
+              {/* CTA Buttons */}
+              <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
                 <Link to={isAuthenticated ? '/quizzes' : '/register'}>
                   <Button
                     size="lg"
-                    className="gap-2 rounded-xl bg-[linear-gradient(135deg,#7a2038_0%,#b23d58_65%,#ca8a04_100%)] px-6 text-base font-semibold text-white shadow-[0_10px_22px_rgba(95,20,40,0.2)] hover:opacity-95"
+                    className="w-full gap-2 rounded-2xl bg-white px-8 text-base font-bold text-[#7a2038] shadow-[0_8px_26px_rgba(255,255,255,0.22)] transition-transform duration-200 hover:scale-[1.03] hover:bg-white/95 sm:w-auto"
                   >
                     {isAuthenticated
                       ? t('Làm bài thi ngay', 'Haz el examen ahora')
@@ -946,8 +1005,9 @@ const Index = () => {
                 {!isAuthenticated && (
                   <Link to="/quizzes">
                     <Button
+                      size="lg"
                       variant="outline"
-                      className="rounded-xl border-primary/30 bg-white/75 px-5 text-sm font-semibold text-primary shadow-[0_8px_18px_rgba(95,20,40,0.08)] hover:bg-white"
+                      className="w-full rounded-2xl border-white/30 bg-white/10 px-8 text-base font-semibold text-white backdrop-blur-sm hover:bg-white/20 sm:w-auto"
                     >
                       {t('Xem bộ đề trước', 'Ver exámenes primero')}
                     </Button>
