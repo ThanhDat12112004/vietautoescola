@@ -1,4 +1,7 @@
 node_modules
+# Next.js build output & cache — không commit (GitHub giới hạn 100MB/file)
+.next
+out
 .env
 .env.*
 !.env.example
