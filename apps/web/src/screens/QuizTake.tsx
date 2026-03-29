@@ -19,7 +19,9 @@ import {
   Clock,
   Eye,
   Home,
+  Lightbulb,
   RotateCcw,
+  X,
   XCircle,
 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
@@ -63,7 +65,9 @@ const QuizTake = () => {
   const [timer, setTimer] = useState(0);
   const [submitResult, setSubmitResult] = useState<SubmitAttemptResult | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const candidateName = getStoredAuth()?.user?.username || '-';
+  const authUser = getStoredAuth()?.user;
+  const candidateName =
+    (authUser?.full_name && authUser.full_name.trim()) || authUser?.username || '-';
 
   useEffect(() => {
     if (!getStoredAuth()?.token) {
@@ -153,10 +157,46 @@ const QuizTake = () => {
     };
   }, [loading, showResult, showReview]);
 
+  useEffect(() => {
+    if (!showExplanationPanel) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setShowExplanationPanel(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [showExplanationPanel]);
+
   const questions = quiz?.questions || [];
   const question = questions[currentIndex];
   const selectedId = question ? selectedAnswers[question.id] : undefined;
   const checkedForCurrent = question ? checkedMap[question.id] : undefined;
+
+  useEffect(() => {
+    if (!showExplanationPanel || mode !== 'practice' || !question?.explanation) return;
+    if (!checkedForCurrent) return;
+
+    const mq = window.matchMedia('(max-width: 767.98px)');
+    const sync = () => {
+      document.body.style.overflow = mq.matches ? 'hidden' : '';
+    };
+    sync();
+    mq.addEventListener('change', sync);
+    return () => {
+      mq.removeEventListener('change', sync);
+      document.body.style.overflow = '';
+    };
+  }, [showExplanationPanel, mode, question?.id, question?.explanation, checkedForCurrent]);
+
+  const allQuestionsAnswered = useMemo(
+    () =>
+      questions.length > 0 &&
+      questions.every(
+        (q) => selectedAnswers[q.id] !== undefined && selectedAnswers[q.id] !== null
+      ),
+    [questions, selectedAnswers]
+  );
+
+  const isLastQuestion = questions.length > 0 && currentIndex >= questions.length - 1;
 
   const detailsMap = useMemo(() => {
     const map: Record<number, CheckQuestionResult> = { ...checkedMap };
@@ -204,6 +244,15 @@ const QuizTake = () => {
 
   const handleFinish = async () => {
     if (!attemptId || isSubmitting || submitResult) return;
+    if (!allQuestionsAnswered) {
+      setError(
+        t(
+          'Vui lòng trả lời hết tất cả các câu trước khi nộp bài.',
+          'Responde todas las preguntas antes de finalizar.'
+        )
+      );
+      return;
+    }
 
     try {
       setIsSubmitting(true);
@@ -452,17 +501,12 @@ const QuizTake = () => {
 
   return (
     <div
-      className="min-h-screen md:h-screen flex flex-col overflow-y-auto md:overflow-hidden print:hidden select-none bg-[radial-gradient(circle_at_18%_12%,rgba(224,231,255,0.35),transparent_38%),radial-gradient(circle_at_84%_6%,rgba(226,232,240,0.45),transparent_34%),linear-gradient(180deg,#f8fafc_0%,#eef2f7_55%,#f5f7fb_100%)]
-                   p-0"
+      className="app-page font-sans flex h-[100dvh] max-h-[100dvh] min-h-0 flex-col overflow-hidden print:hidden select-none bg-[radial-gradient(circle_at_18%_12%,rgba(224,231,255,0.35),transparent_38%),radial-gradient(circle_at_84%_6%,rgba(226,232,240,0.45),transparent_34%),linear-gradient(180deg,#f8fafc_0%,#eef2f7_55%,#f5f7fb_100%)] p-0 md:h-screen md:max-h-screen"
     >
       <div
-        className="flex-1 flex flex-col overflow-visible md:overflow-hidden w-full rounded-[1.1rem] border border-slate-300/70 bg-white/90 shadow-[0_18px_36px_rgba(15,23,42,0.12)]
-                     p-1
-                     sm:p-2
-                     md:p-3
-                     lg:p-4"
+        className="flex min-h-0 flex-1 flex-col overflow-hidden w-full rounded-[1.1rem] border border-slate-300/70 bg-white/90 shadow-[0_18px_36px_rgba(15,23,42,0.12)] p-1 sm:p-2 md:p-3 lg:p-4"
       >
-        <div className="mb-3 grid gap-2 md:gap-3 grid-cols-[minmax(0,1fr)_auto] lg:grid-cols-[260px_1fr_160px]">
+        <div className="mb-3 shrink-0 grid gap-2 md:gap-3 grid-cols-[minmax(0,1fr)_auto] lg:grid-cols-[260px_1fr_160px]">
           <div className="col-span-2 flex items-center justify-between gap-2 rounded-lg border border-slate-300/70 bg-slate-50/90 px-2 py-2 text-sm md:px-3 lg:col-span-1 lg:row-span-2">
             <button
               type="button"
@@ -505,7 +549,7 @@ const QuizTake = () => {
             <div className="flex items-center gap-1 text-sm lg:text-base">
               <Clock className="h-3.5 w-3.5 text-muted-foreground" />
               <span
-                className={`font-mono text-sm font-bold lg:text-base ${timer < 60 ? 'text-destructive' : 'text-foreground'}`}
+                className={`font-sans tabular-nums text-sm font-bold lg:text-base ${timer < 60 ? 'text-destructive' : 'text-foreground'}`}
               >
                 {formatTime(timer)}
               </span>
@@ -514,7 +558,7 @@ const QuizTake = () => {
 
           <div className="rounded-lg border border-slate-300/70 bg-slate-50/80 px-3 py-2 text-sm lg:text-base lg:col-start-2 lg:row-start-2">
             <span className="font-bold">{t('Thí sinh', 'Aspirante')}:</span>
-            <span className="ml-1 break-words uppercase">{candidateName}</span>
+            <span className="ml-1 break-words">{candidateName}</span>
           </div>
 
           <div className="rounded-lg border border-slate-300/70 bg-slate-50/80 px-1 py-1 lg:col-start-3 lg:row-start-2">
@@ -529,16 +573,10 @@ const QuizTake = () => {
         </div>
 
         <div
-          className="flex-1 min-h-0 grid gap-2 md:gap-3 rounded-xl border border-slate-300/70 bg-slate-100/65 p-2 md:p-3
-                        grid-cols-1
-                        md:grid-cols-2"
+          className="grid min-h-0 flex-1 grid-cols-1 grid-rows-[auto_minmax(0,1fr)] gap-2 rounded-xl border border-slate-300/70 bg-slate-100/65 p-2 md:grid-rows-1 md:grid-cols-2 md:gap-3 md:items-stretch"
         >
           <div
-            className="rounded-xl border border-slate-300/70 bg-white p-3 flex flex-col overflow-visible md:overflow-hidden gap-3
-                          min-h-0
-                          md:min-h-[300px]
-                          lg:min-h-[360px]
-                          h-auto md:h-full"
+            className="flex min-h-0 flex-col gap-3 overflow-visible rounded-xl border border-slate-300/70 bg-white p-3 md:min-h-[280px] md:overflow-hidden md:h-full lg:min-h-[320px]"
           >
             <div className="w-full rounded-lg border border-slate-200 bg-slate-50 flex items-center justify-center overflow-hidden aspect-[16/10] md:aspect-auto md:flex-1">
               {question.image_url ? (
@@ -556,10 +594,11 @@ const QuizTake = () => {
             <Button
               type="button"
               variant="outline"
-              className="h-10 w-full rounded-lg border border-slate-300 bg-slate-900 text-white hover:bg-slate-800 font-semibold shadow-sm"
+              className="h-10 w-full rounded-lg border border-amber-600/45 bg-gradient-to-b from-amber-200 via-amber-300 to-amber-400/95 font-semibold text-amber-950 shadow-[0_6px_16px_rgba(180,130,10,0.28)] hover:from-amber-300 hover:via-amber-400 hover:to-amber-500 hover:border-amber-700/50 hover:text-amber-950 disabled:border-slate-200 disabled:bg-slate-100 disabled:from-slate-100 disabled:via-slate-100 disabled:to-slate-100 disabled:text-slate-400 disabled:shadow-none"
               disabled={mode !== 'practice' || !checkedForCurrent || !question.explanation}
               onClick={() => setShowExplanationPanel((prev) => !prev)}
             >
+              <Lightbulb className="h-4 w-4 text-amber-900/90" aria-hidden />
               {showExplanationPanel
                 ? t('Ẩn giải thích', 'Ocultar explicación')
                 : t('Giải thích', 'Explicación')}
@@ -569,7 +608,7 @@ const QuizTake = () => {
               checkedForCurrent &&
               showExplanationPanel &&
               question.explanation && (
-                <div className="rounded-lg border border-slate-300/70 bg-slate-50 p-3 shadow-sm">
+                <div className="hidden rounded-lg border border-slate-300/70 bg-slate-50 p-3 shadow-sm md:block">
                   <p className="mb-1 font-semibold text-sm">{t('Giải thích', 'Explicación')}</p>
                   <p className="text-muted-foreground leading-relaxed text-sm">
                     {question.explanation}
@@ -578,155 +617,129 @@ const QuizTake = () => {
               )}
           </div>
 
-          {/* RIGHT: Question + answers - responsive typography */}
-          <div
-            className="min-w-0 rounded-xl border border-slate-300/70 bg-white px-2 py-2
-                          md:px-3 md:py-2
-                          lg:px-4 lg:py-3
-                          flex flex-col"
-          >
-            {error && <p className="mb-2 text-xs text-destructive">{error}</p>}
+          {/* RIGHT: scroll question + answers; actions fixed at bottom of column */}
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-xl border border-slate-300/70 bg-white md:h-full">
+            {error && (
+              <p className="shrink-0 px-2 pt-2 text-xs text-destructive md:px-3 lg:px-4">{error}</p>
+            )}
 
-            <div className="flex-1 min-h-0 flex flex-col justify-start">
-              {/* Question number and text */}
-              <div
-                className="mb-3 flex items-start gap-2
-                              md:gap-3
-                              lg:gap-4"
-              >
-                <span
-                  className="font-black text-slate-700 leading-none
-                                text-2xl
-                                md:text-3xl
-                                lg:text-4xl
-                                xl:text-5xl"
-                >
-                  {String(question.order_number).padStart(2, '0')}.
-                </span>
-                <h3
-                  className="font-bold leading-tight pt-1
-                              text-base
-                              md:text-lg
-                              lg:text-xl
-                              xl:text-2xl"
-                >
-                  {question.question_text}
-                </h3>
-              </div>
+            <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-2 pb-2 pt-2 md:px-3 md:pb-2 md:pt-2 lg:px-4 lg:pb-3 lg:pt-3">
+              <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1 [scrollbar-gutter:stable]">
+                <div className="mb-3 flex items-start gap-2 md:gap-3 lg:gap-4">
+                  <span
+                    className="font-black leading-none text-slate-700 text-2xl md:text-3xl lg:text-4xl xl:text-5xl"
+                  >
+                    {String(question.order_number).padStart(2, '0')}.
+                  </span>
+                  <h3 className="pt-1 text-base font-bold leading-tight md:text-lg lg:text-xl xl:text-2xl">
+                    {question.question_text}
+                  </h3>
+                </div>
 
-              {/* Answer options */}
-              <div className="mt-1 flex-1 min-h-0 space-y-2.5 w-full overflow-y-auto overflow-x-hidden pr-1">
-                {question.answers.map((answer, idx) => {
-                  const detail = detailsMap[question.id];
-                  const isSelected = selectedId === answer.id;
-                  const isCorrect = detail?.correct_answer_id === answer.id;
-                  const isWrong = Boolean(detail && isSelected && !detail.is_correct);
-                  const badgeSrc = ANSWER_BADGES[idx] || null;
-                  const answerTextClass = isCorrect
-                    ? 'text-green-700'
-                    : isWrong
-                      ? 'text-destructive'
-                      : 'text-foreground';
-                  return (
-                    <button
-                      key={answer.id}
-                      onClick={() => void handleSelect(answer.id)}
-                      className={`group flex w-full items-center gap-2 rounded-xl border px-2 py-2 text-left transition-all duration-200
-                                 md:gap-3 md:px-3
-                                 lg:gap-4 lg:px-4 lg:py-3
-                                 ${
-                                   isCorrect
-                                     ? 'border-green-500 bg-green-50 shadow-sm'
-                                     : isWrong
-                                       ? 'border-destructive bg-destructive/10 shadow-sm'
-                                       : isSelected
-                                         ? 'border-slate-500 bg-slate-100 shadow-sm'
-                                         : 'border-slate-300 bg-white hover:-translate-y-[1px] hover:bg-slate-50 hover:shadow-sm'
-                                 }`}
-                    >
-                      {badgeSrc ? (
-                        <img
-                          src={badgeSrc}
-                          alt={`option-${idx + 1}`}
-                          className="shrink-0 mt-0.5 h-7 w-7 md:h-8 md:w-8 lg:h-9 lg:w-9 object-contain"
-                        />
-                      ) : (
-                        <span
-                          className="shrink-0 flex items-center justify-center rounded-full border border-primary/30 bg-primary/5 font-bold text-[#5b5b5b] mt-0.5
-                                      h-7 w-7 text-sm
-                                      md:h-8 md:w-8 md:text-base
-                                      lg:h-9 lg:w-9 lg:text-lg"
-                        >
-                          {String.fromCharCode(65 + idx)}
-                        </span>
-                      )}
-                      <span
-                        className={`flex-1 break-words leading-tight pt-0.5 text-sm md:text-base lg:text-lg ${answerTextClass}`}
+                <div className="mt-1 w-full space-y-2.5 pb-1">
+                  {question.answers.map((answer, idx) => {
+                    const detail = detailsMap[question.id];
+                    const isSelected = selectedId === answer.id;
+                    const isCorrect = detail?.correct_answer_id === answer.id;
+                    const isWrong = Boolean(detail && isSelected && !detail.is_correct);
+                    const badgeSrc = ANSWER_BADGES[idx] || null;
+                    const answerTextClass = isCorrect
+                      ? 'text-green-700'
+                      : isWrong
+                        ? 'text-destructive'
+                        : 'text-foreground';
+                    return (
+                      <button
+                        key={answer.id}
+                        onClick={() => void handleSelect(answer.id)}
+                        className={`group flex w-full items-center gap-2 rounded-xl border px-2 py-2 text-left transition-all duration-200 md:gap-3 md:px-3 lg:gap-4 lg:px-4 lg:py-3 ${
+                          isCorrect
+                            ? 'border-green-500 bg-green-50 shadow-sm'
+                            : isWrong
+                              ? 'border-destructive bg-destructive/10 shadow-sm'
+                              : isSelected
+                                ? 'border-slate-500 bg-slate-100 shadow-sm'
+                                : 'border-slate-300 bg-white hover:-translate-y-[1px] hover:bg-slate-50 hover:shadow-sm'
+                        }`}
                       >
-                        {answer.answer_text}
-                      </span>
-                    </button>
-                  );
-                })}
+                        {badgeSrc ? (
+                          <img
+                            src={badgeSrc}
+                            alt={`option-${idx + 1}`}
+                            className="mt-0.5 h-7 w-7 shrink-0 object-contain md:h-8 md:w-8 lg:h-9 lg:w-9"
+                          />
+                        ) : (
+                          <span
+                            className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-primary/30 bg-primary/5 text-sm font-bold text-[#5b5b5b] md:h-8 md:w-8 md:text-base lg:h-9 lg:w-9 lg:text-lg"
+                          >
+                            {String.fromCharCode(65 + idx)}
+                          </span>
+                        )}
+                        <span
+                          className={`flex-1 break-words pt-0.5 text-sm leading-tight md:text-base lg:text-lg ${answerTextClass}`}
+                        >
+                          {answer.answer_text}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
 
-            {/* Navigation buttons - 2 cột ở mobile, 3 cột ở desktop */}
-            <div className="mt-3 grid gap-2 w-full grid-cols-3 md:sticky md:bottom-0 md:bg-white/95 md:pt-2">
-              <Button
-                variant="outline"
-                className="rounded-xl border-slate-300 bg-white font-semibold hover:bg-slate-50 transition-colors
-                          h-10 text-sm
-                          md:h-11 md:text-base
-                          lg:h-12 lg:text-lg"
-                onClick={() => setCurrentIndex((i) => Math.max(0, i - 1))}
-                disabled={currentIndex === 0}
-              >
-                <ArrowLeft
-                  className="mr-1 text-[#f1b900]
-                                    h-3.5 w-3.5
-                                    md:h-4 md:w-4
-                                    lg:h-5 lg:w-5"
-                />
-                {t('Trước', 'ANTERIOR')}
-              </Button>
+              <div className="shrink-0 border-t border-slate-200/90 bg-white pt-3">
+                <div className="grid w-full grid-cols-2 gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="h-10 rounded-xl border-2 border-brand-burgundy/35 bg-white text-sm font-semibold text-brand-heading shadow-sm transition-colors hover:bg-brand-burgundy/[0.06] disabled:opacity-40 md:h-11 md:text-base lg:h-12 lg:text-lg"
+                    onClick={() => setCurrentIndex((i) => Math.max(0, i - 1))}
+                    disabled={currentIndex === 0}
+                  >
+                    <ArrowLeft className="mr-1 h-3.5 w-3.5 shrink-0 text-brand-cta md:h-4 md:w-4 lg:h-5 lg:w-5" />
+                    {t('Trước', 'ANTERIOR')}
+                  </Button>
 
-              <Button
-                className="rounded-xl border border-slate-300 bg-white text-foreground font-semibold hover:bg-slate-50 transition-colors
-                          h-10 text-sm
-                          md:h-11 md:text-base
-                          lg:h-12 lg:text-lg"
-                onClick={() => setCurrentIndex((i) => Math.min(questions.length - 1, i + 1))}
-                disabled={currentIndex === questions.length - 1}
-              >
-                {t('Tiếp', 'SIGUIENTE')}
-                <ArrowRight
-                  className="ml-1 text-[#f1b900]
-                                     h-3.5 w-3.5
-                                     md:h-4 md:w-4
-                                     lg:h-5 lg:w-5"
-                />
-              </Button>
-
-              <Button
-                className="rounded-xl border border-slate-800 bg-slate-900 text-white font-semibold hover:bg-slate-800 transition-colors shadow-sm
-                          h-10 text-sm
-                          md:h-11 md:text-base
-                          lg:h-12 lg:text-lg"
-                onClick={() => void handleFinish()}
-                disabled={isSubmitting || Boolean(submitResult)}
-              >
-                {isSubmitting
-                  ? t('Đang nộp...', 'Enviando...')
-                  : t('Nộp bài', 'FINALIZAR TEST')}
-              </Button>
+                  {isLastQuestion ? (
+                    <Button
+                      type="button"
+                      className="brand-cta-primary h-10 rounded-xl border-transparent text-sm font-semibold text-brand-onCta shadow-brand-cta transition hover:opacity-[0.94] disabled:pointer-events-none disabled:opacity-45 md:h-11 md:text-base lg:h-12 lg:text-lg"
+                      onClick={() => void handleFinish()}
+                      disabled={
+                        !allQuestionsAnswered || isSubmitting || Boolean(submitResult)
+                      }
+                      title={
+                        !allQuestionsAnswered
+                          ? t(
+                              'Trả lời hết các câu để nộp bài',
+                              'Responde todas las preguntas para finalizar'
+                            )
+                          : undefined
+                      }
+                    >
+                      {isSubmitting
+                        ? t('Đang nộp...', 'Enviando...')
+                        : t('Nộp bài', 'FINALIZAR TEST')}
+                    </Button>
+                  ) : (
+                    <Button
+                      type="button"
+                      className="brand-cta-primary h-10 rounded-xl border-transparent text-sm font-semibold text-brand-onCta shadow-brand-cta transition hover:opacity-[0.94] md:h-11 md:text-base lg:h-12 lg:text-lg [&_svg]:text-brand-onCta"
+                      onClick={() =>
+                        setCurrentIndex((i) => Math.min(questions.length - 1, i + 1))
+                      }
+                    >
+                      {t('Tiếp', 'SIGUIENTE')}
+                      <ArrowRight className="ml-1 h-3.5 w-3.5 shrink-0 md:h-4 md:w-4 lg:h-5 lg:w-5" />
+                    </Button>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
         <div
-          className="mt-3 rounded-xl border border-slate-300/70 bg-white p-2
-                       md:p-3 lg:p-4"
+          className="mt-3 shrink-0 rounded-xl border border-slate-300/70 bg-white p-2 md:p-3 lg:p-4"
         >
           {shouldUseTwoRowsOnMobile ? (
             <>
@@ -886,6 +899,35 @@ const QuizTake = () => {
           </div>
         </div>
       </div>
+
+      {mode === 'practice' &&
+        checkedForCurrent &&
+        showExplanationPanel &&
+        question.explanation && (
+          <div
+            className="fixed inset-0 z-[120] flex flex-col bg-background md:hidden"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="quiz-explanation-title"
+          >
+            <div className="flex shrink-0 items-center justify-between gap-3 border-b border-border bg-white/95 px-4 py-3 shadow-sm">
+              <p id="quiz-explanation-title" className="text-base font-semibold text-foreground">
+                {t('Giải thích', 'Explicación')}
+              </p>
+              <button
+                type="button"
+                onClick={() => setShowExplanationPanel(false)}
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-brand-burgundy/25 bg-white text-brand-heading shadow-sm transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                aria-label={t('Đóng', 'Cerrar')}
+              >
+                <X className="h-5 w-5" strokeWidth={2.25} />
+              </button>
+            </div>
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4">
+              <p className="text-base leading-relaxed text-muted-foreground">{question.explanation}</p>
+            </div>
+          </div>
+        )}
     </div>
   );
 };

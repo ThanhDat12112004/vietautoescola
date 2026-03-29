@@ -3,8 +3,8 @@ const { getLang } = require('../utils/lang');
 
 async function getLeaderboard(req, res, next) {
   try {
-    const limitParam = Number(req.query.limit || 20);
-    const limit = Number.isNaN(limitParam) ? 20 : Math.min(Math.max(limitParam, 1), 100);
+    const limitParam = Number(req.query.limit || 10);
+    const limit = Number.isNaN(limitParam) ? 10 : Math.min(Math.max(limitParam, 1), 100);
     const data = await statsService.getLeaderboard(limit);
     return res.json(data);
   } catch (error) {

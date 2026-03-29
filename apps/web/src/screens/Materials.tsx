@@ -1,8 +1,15 @@
-import { BookOpen, Download, Eye, FileText } from '@/components/BrandIcons';
 import Footer from '@/components/Footer';
 import Navbar from '@/components/Navbar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { useLanguage } from '@/hooks/useLanguage';
 import {
   getMaterialsBySubject,
@@ -11,36 +18,84 @@ import {
   type MaterialItem,
   type Subject,
 } from '@/lib/api';
-import { motion } from 'framer-motion';
-import { useEffect, useMemo, useState } from 'react';
+import { cn, fileExtensionFromPath, formatFileSizeFromMb } from '@/lib/utils';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
-const fadeUp = {
-  hidden: { opacity: 0, y: 20 },
-  visible: (i: number) => ({
-    opacity: 1,
-    y: 0,
-    transition: { delay: i * 0.08, duration: 0.4 },
-  }),
-};
+const ITEMS_PER_PAGE = 18;
 
-const ITEMS_PER_PAGE = 20;
+const MATERIALS_ILLUSTRATION_SRC = '/brand/document.png';
+
+function resolveMaterialPageCount(material: MaterialItem, lang: 'vi' | 'es'): number | null {
+  if (material.page_count != null && Number.isFinite(Number(material.page_count))) {
+    const n = Number(material.page_count);
+    if (n > 0) return Math.floor(n);
+  }
+  const p1 = lang === 'es' ? material.page_count_es : material.page_count_vi;
+  const p2 = lang === 'es' ? material.page_count_vi : material.page_count_es;
+  const raw =
+    p1 != null && Number.isFinite(Number(p1))
+      ? Number(p1)
+      : p2 != null && Number.isFinite(Number(p2))
+        ? Number(p2)
+        : null;
+  if (raw != null && raw > 0) return Math.floor(raw);
+  return null;
+}
+
+/** Đuôi file + số trang (PDF) + dung lượng theo ngôn ngữ UI. */
+function materialFileSummary(
+  material: MaterialItem,
+  lang: 'vi' | 'es',
+  pageLabel: (n: number) => string,
+  options?: { omitPages?: boolean }
+): string | null {
+  const pathPrimary = lang === 'es' ? material.file_path_es : material.file_path_vi;
+  const pathAlt = lang === 'es' ? material.file_path_vi : material.file_path_es;
+  const sizePrimary = lang === 'es' ? material.file_size_mb_es : material.file_size_mb_vi;
+  const sizeAlt = lang === 'es' ? material.file_size_mb_vi : material.file_size_mb_es;
+  const path = pathPrimary || pathAlt;
+  const ext = fileExtensionFromPath(path);
+  const pick =
+    sizePrimary != null && Number.isFinite(Number(sizePrimary))
+      ? Number(sizePrimary)
+      : sizeAlt != null && Number.isFinite(Number(sizeAlt))
+        ? Number(sizeAlt)
+        : null;
+  const sizeLabel = formatFileSizeFromMb(pick);
+
+  const pages = options?.omitPages ? null : resolveMaterialPageCount(material, lang);
+
+  const parts: string[] = [];
+  if (ext) parts.push(ext);
+  if (pages != null) parts.push(pageLabel(pages));
+  if (sizeLabel) parts.push(sizeLabel);
+  return parts.length ? parts.join(' · ') : null;
+}
 
 const Materials = () => {
   const { t, lang } = useLanguage();
   const [searchParams, setSearchParams] = useSearchParams();
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [activeSubject, setActiveSubject] = useState<number | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
   const [readFilter, setReadFilter] = useState<'all' | 'read' | 'unread'>('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [materials, setMaterials] = useState<MaterialItem[]>([]);
   const [subjectMaterialCounts, setSubjectMaterialCounts] = useState<Record<number, number>>({});
   const [readMaterialIds, setReadMaterialIds] = useState<number[]>([]);
+  const prevSearchForPage = useRef<string | undefined>(undefined);
   const [loadingSubjects, setLoadingSubjects] = useState(true);
   const [loadingMaterials, setLoadingMaterials] = useState(false);
   const [error, setError] = useState('');
 
   const readStorageKey = 'materials_read_ids_v1';
+
+  useEffect(() => {
+    const q = searchParams.get('q');
+    if (q) setSearchQuery(q);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- initial `q` from URL only
+  }, []);
 
   useEffect(() => {
     try {
@@ -186,13 +241,37 @@ const Materials = () => {
 
   const readMaterialSet = useMemo(() => new Set(readMaterialIds), [readMaterialIds]);
 
+  const normalizeForSearch = (value: string) =>
+    value
+      .trim()
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '');
+
   const filteredMaterials = useMemo(() => {
+    const q = normalizeForSearch(searchQuery);
     return materials.filter((material) => {
-      if (readFilter === 'all') return true;
-      const isRead = readMaterialSet.has(material.id);
-      return readFilter === 'read' ? isRead : !isRead;
+      const byRead =
+        readFilter === 'all'
+          ? true
+          : readFilter === 'read'
+            ? readMaterialSet.has(material.id)
+            : !readMaterialSet.has(material.id);
+      if (!byRead) return false;
+      if (!q) return true;
+      const blob = normalizeForSearch(
+        [
+          material.title_vi,
+          material.title_es,
+          material.title,
+          material.description_vi || '',
+          material.description_es || '',
+          material.description || '',
+        ].join(' ')
+      );
+      return blob.includes(q);
     });
-  }, [materials, readFilter, readMaterialSet]);
+  }, [materials, readFilter, readMaterialSet, searchQuery]);
 
   const readCounts = useMemo(() => {
     const done = materials.filter((material) => readMaterialSet.has(material.id)).length;
@@ -229,6 +308,19 @@ const Materials = () => {
       setActiveSubject(requestedSubjectId);
     }
   }, [requestedSubjectId, subjects]);
+
+  useEffect(() => {
+    if (prevSearchForPage.current === undefined) {
+      prevSearchForPage.current = searchQuery;
+      return;
+    }
+    if (prevSearchForPage.current === searchQuery) return;
+    prevSearchForPage.current = searchQuery;
+    setCurrentPage(1);
+    const next = new URLSearchParams(searchParams);
+    next.delete('page');
+    setSearchParams(next, { replace: true });
+  }, [searchQuery, searchParams, setSearchParams]);
 
   const totalPages = useMemo(
     () => Math.max(1, Math.ceil(filteredMaterials.length / ITEMS_PER_PAGE)),
@@ -340,227 +432,311 @@ const Materials = () => {
     window.open(resolveMediaUrl(filePath), '_blank', 'noopener,noreferrer');
   };
 
+  const uiLang: 'vi' | 'es' = lang === 'es' ? 'es' : 'vi';
+
   return (
-    <div className="app-page min-h-screen flex flex-col bg-[radial-gradient(circle_at_18%_12%,rgba(224,231,255,0.35),transparent_38%),radial-gradient(circle_at_84%_6%,rgba(226,232,240,0.45),transparent_34%),linear-gradient(180deg,#f8fafc_0%,#eef2f7_55%,#f5f7fb_100%)]">
+    <div className="app-page flex min-h-screen flex-col bg-background">
       <Navbar />
-      <div className="px-2 py-4 md:px-4 md:py-6">
-        <div className="container section-panel">
-          <div className="flex items-center gap-3 mb-2">
-            <BookOpen className="h-7 w-7 text-primary" />
-            <h1 className="font-display text-2xl md:text-3xl font-800">
-              {t('Tài liệu học tập', 'Materiales de estudio')}
-            </h1>
-          </div>
-          <p className="max-w-2xl text-sm text-muted-foreground md:text-base">
-            {t(
-              'Xem trực tiếp hoặc tải về tài liệu song ngữ để ôn tập',
-              'Visualiza directamente o descarga materiales bilingües para estudiar'
-            )}
-          </p>
-          {activeSubjectInfo && (
-            <p className="mt-2 text-sm font-semibold text-primary">
-              {t('Chủ đề đang chọn', 'Tema seleccionado')}: {activeSubjectInfo.name}
-            </p>
-          )}
-        </div>
-      </div>
-
-      <div className="flex-1 px-2 pb-5 md:px-4 md:pb-8">
-        <div className="container section-panel">
-          {loadingSubjects && (
-            <p className="text-sm text-muted-foreground">{t('Đang tải...', 'Cargando...')}</p>
-          )}
-          {!loadingSubjects && error && <p className="text-sm text-destructive mb-3">{error}</p>}
-
-          {!loadingSubjects && subjects.length > 0 && (
-            <div className="mb-6 flex flex-wrap gap-2 rounded-2xl border border-slate-300/70 bg-slate-50/85 p-2 md:gap-2.5">
-              <Button
-                size="sm"
-                variant={readFilter === 'all' ? 'default' : 'outline'}
-                className="h-8 rounded-full px-3 text-xs md:h-9 md:text-sm"
-                onClick={() => applyReadFilter('all')}
-              >
-                {t('Tất cả trạng thái', 'Todos los estados')} ({readCounts.all})
-              </Button>
-              <Button
-                size="sm"
-                variant={readFilter === 'read' ? 'default' : 'outline'}
-                className="h-8 rounded-full px-3 text-xs md:h-9 md:text-sm"
-                onClick={() => applyReadFilter('read')}
-              >
-                {t('Đã đọc', 'Leidos')} ({readCounts.read})
-              </Button>
-              <Button
-                size="sm"
-                variant={readFilter === 'unread' ? 'default' : 'outline'}
-                className="h-8 rounded-full px-3 text-xs md:h-9 md:text-sm"
-                onClick={() => applyReadFilter('unread')}
-              >
-                {t('Chưa đọc', 'No leidos')} ({readCounts.unread})
-              </Button>
-            </div>
-          )}
-
-          {!loadingSubjects && subjects.length > 0 && (
-            <div className="mb-6 flex flex-wrap gap-2 rounded-2xl border border-slate-300/70 bg-slate-50/85 p-2 md:gap-2.5">
-              <Button
-                size="sm"
-                variant={activeSubject === null ? 'default' : 'outline'}
-                className="h-8 rounded-full px-3 text-xs md:h-9 md:text-sm"
-                onClick={() => applySubjectFilter(null)}
-              >
-                {t('Tất cả', 'Todos')} ({totalMaterialCount})
-              </Button>
-              {subjects.map((subject) => (
-                <Button
-                  key={subject.id}
-                  size="sm"
-                  variant={activeSubject === subject.id ? 'default' : 'outline'}
-                  className="h-8 rounded-full px-3 text-xs md:h-9 md:text-sm"
-                  onClick={() => applySubjectFilter(subject.id)}
-                >
-                  {subject.name} ({subjectMaterialCounts[subject.id] || 0})
-                </Button>
-              ))}
-            </div>
-          )}
-
-          {activeSubjectInfo && (
-            <p className="mb-5 text-xs text-muted-foreground md:text-sm">
-              {activeSubjectInfo.description || ''}
-            </p>
-          )}
-
-          {loadingMaterials && (
-            <p className="text-sm text-muted-foreground">
-              {t('Đang tải tài liệu...', 'Cargando materiales...')}
-            </p>
-          )}
-
-          {!loadingMaterials && filteredMaterials.length === 0 && (
-            <p className="text-sm text-muted-foreground">
-              {t('Chưa có tài liệu', 'No hay materiales')}
-            </p>
-          )}
-
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            {pagedMaterials.map((material, i) => (
-              <motion.div
-                key={material.id}
-                custom={i}
-                initial="hidden"
-                animate="visible"
-                variants={fadeUp}
-              >
-                <Card className="card-hover h-full border-slate-300/70 bg-white shadow-sm">
-                  <CardContent className="flex h-full flex-col p-4 md:p-5">
-                    <div className="mb-3 flex items-start gap-3">
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100">
-                        <FileText className="h-5 w-5 text-slate-700 md:h-6 md:w-6" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="mb-1 flex items-center gap-2">
-                          <span
-                            className={`rounded-full px-2 py-0.5 text-[10px] font-medium md:text-xs ${
-                              readMaterialSet.has(material.id)
-                                ? 'bg-emerald-100 text-emerald-700'
-                                : 'bg-slate-100 text-slate-600'
-                            }`}
-                          >
-                            {readMaterialSet.has(material.id)
-                              ? t('Đã đọc', 'Leido')
-                              : t('Chưa đọc', 'No leido')}
-                          </span>
-                        </div>
-                        <h3 className="mb-0.5 truncate font-display text-sm font-bold md:text-base">
-                          {(lang === 'es' ? material.title_es : material.title_vi) ||
-                            `${material.title_vi || '-'} / ${material.title_es || '-'}`}
-                        </h3>
-                        <p className="line-clamp-2 text-xs text-muted-foreground md:text-sm">
-                          {(lang === 'es' ? material.description_es : material.description_vi) ||
-                            t('Không có mô tả', 'Sin descripción')}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="mt-auto flex items-center justify-between border-t border-border/40 pt-3">
-                      <div className="flex items-center gap-2 text-[10px] text-muted-foreground md:text-xs">
-                        <span className="rounded-md bg-muted px-1.5 py-0.5 font-bold uppercase">
-                          VI/ES
-                        </span>
-                        <span>
-                          PDF
-                          {material.file_size_mb_vi || material.file_size_mb_es
-                            ? ` · VI ${material.file_size_mb_vi || '-'} MB · ES ${material.file_size_mb_es || '-'} MB`
-                            : ''}
-                        </span>
-                      </div>
-                      <div className="flex gap-1.5">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="h-8 gap-1 border-slate-300 bg-white text-xs text-slate-700 hover:bg-slate-50 md:h-9 md:text-sm"
-                          onClick={() => openMaterialViewer(material, lang === 'es' ? 'es' : 'vi')}
-                        >
-                          <Eye className="h-3 w-3" />
-                          {t('Xem', 'Ver')}
-                        </Button>
-                        <Button
-                          variant="default"
-                          size="sm"
-                          className="h-8 gap-1 border border-slate-800 bg-slate-900 text-xs text-white hover:bg-slate-800 md:h-9 md:text-sm"
-                          onClick={() => downloadMaterial(material, lang === 'es' ? 'es' : 'vi')}
-                        >
-                          <Download className="h-3 w-3" />
-                          {t('Tải', 'Descargar')}
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            ))}
-          </div>
-
-          {filteredMaterials.length > ITEMS_PER_PAGE && (
-            <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2.5">
-              <p className="text-xs text-slate-600 md:text-sm">
-                {t('Trang', 'Página')} {effectivePage}/{totalPages} · {filteredMaterials.length}{' '}
-                {t('tài liệu', 'materiales')}
+      <div className="flex min-h-0 flex-1 flex-col">
+        <div className="border-b-2 border-primary/25 bg-card">
+          <div className="w-full px-2 py-5 sm:px-3 md:py-6">
+            <div className="max-w-3xl border-l-[3px] border-primary/60 pl-3 sm:pl-4">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-primary/80">
+                {t('Tài liệu', 'Materiales')}
               </p>
-              <div className="flex items-center gap-1.5">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="h-8 px-3 text-xs md:text-sm"
-                  onClick={() => goToPage(effectivePage - 1)}
-                  disabled={effectivePage <= 1}
-                >
-                  {t('Trước', 'Anterior')}
-                </Button>
-                {pageWindow.map((page) => (
-                  <Button
-                    key={page}
-                    size="sm"
-                    variant={page === effectivePage ? 'default' : 'outline'}
-                    className="h-8 min-w-8 px-2 text-xs md:text-sm"
-                    onClick={() => goToPage(page)}
-                  >
-                    {page}
-                  </Button>
-                ))}
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="h-8 px-3 text-xs md:text-sm"
-                  onClick={() => goToPage(effectivePage + 1)}
-                  disabled={effectivePage >= totalPages}
-                >
-                  {t('Sau', 'Siguiente')}
-                </Button>
-              </div>
+              <h1 className="mt-1.5 font-display text-[1.65rem] font-bold leading-tight tracking-tight text-foreground md:text-[2rem]">
+                {t('Tài liệu học tập', 'Materiales de estudio')}
+              </h1>
+              <p className="mt-2 max-w-2xl text-[15px] leading-relaxed text-foreground/72 md:text-[0.97rem]">
+                {t(
+                  'Xem trực tiếp hoặc tải về tài liệu song ngữ để ôn tập',
+                  'Visualiza directamente o descarga materiales bilingües para estudiar'
+                )}
+              </p>
+              {activeSubjectInfo && (
+                <p className="mt-3 text-[13px] text-foreground/70">
+                  <span className="font-semibold text-foreground">{t('Chủ đề', 'Tema')}:</span>{' '}
+                  {activeSubjectInfo.name}
+                </p>
+              )}
             </div>
-          )}
+          </div>
+        </div>
+
+        <div className="flex w-full flex-1 flex-col bg-background">
+          <div className="w-full border-b border-primary/20 bg-card px-2 py-3.5 font-sans shadow-[inset_0_1px_0_rgba(255,255,255,0.65)] sm:px-3">
+            {!loadingSubjects && subjects.length > 0 && (
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:gap-4">
+                <div className="grid min-w-0 flex-1 grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(0,14rem)_minmax(0,1fr)]">
+                  <div className="min-w-0 space-y-1.5">
+                    <label
+                      htmlFor="material-subject-filter"
+                      className="block text-xs font-semibold uppercase tracking-[0.06em] text-primary/90"
+                    >
+                      {t('Chủ đề', 'Tema')}
+                    </label>
+                    <Select
+                      value={activeSubject === null ? 'all' : String(activeSubject)}
+                      onValueChange={(v) => applySubjectFilter(v === 'all' ? null : Number(v))}
+                    >
+                      <SelectTrigger
+                        id="material-subject-filter"
+                        className="h-9 w-full border-primary/25 bg-background text-sm font-medium text-foreground shadow-sm ring-1 ring-primary/10"
+                      >
+                        <SelectValue placeholder={t('Chọn chủ đề', 'Elige un tema')} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">
+                          {t('Tất cả chủ đề', 'Todos los temas')} ({totalMaterialCount})
+                        </SelectItem>
+                        {subjects.map((subject) => (
+                          <SelectItem key={subject.id} value={String(subject.id)}>
+                            {subject.name} ({subjectMaterialCounts[subject.id] || 0})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="min-w-0 space-y-1.5 sm:col-span-2 lg:col-span-1">
+                    <label
+                      htmlFor="material-search"
+                      className="block text-xs font-semibold uppercase tracking-[0.06em] text-primary/90"
+                    >
+                      {t('Tìm kiếm', 'Buscar')}
+                    </label>
+                    <Input
+                      id="material-search"
+                      type="search"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      placeholder={t('Tiêu đề, mô tả…', 'Título, descripción…')}
+                      className="h-9 border-primary/25 bg-background px-3 text-sm font-medium text-foreground placeholder:text-muted-foreground/80 shadow-sm ring-1 ring-primary/10"
+                      autoComplete="off"
+                    />
+                  </div>
+                </div>
+
+                <div className="shrink-0 lg:ml-auto lg:flex lg:flex-col lg:items-end">
+                  <span className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.06em] text-primary/90 lg:text-right">
+                    {t('Trạng thái đọc', 'Estado')}
+                  </span>
+                  <div
+                    className="flex w-full flex-nowrap gap-0.5 rounded-full border border-primary/22 bg-primary/[0.1] p-1 shadow-sm lg:w-auto"
+                    role="group"
+                    aria-label={t('Lọc theo đã đọc', 'Filtrar por leídos')}
+                  >
+                    {(['all', 'read', 'unread'] as const).map((key) => (
+                      <button
+                        key={key}
+                        type="button"
+                        onClick={() => applyReadFilter(key)}
+                        className={cn(
+                          'min-h-8 flex-1 whitespace-nowrap rounded-full px-2.5 py-1.5 text-center text-xs font-semibold transition-[color,background-color,box-shadow,border-color] sm:px-3',
+                          readFilter === key
+                            ? 'border border-primary/20 bg-primary text-primary-foreground shadow-sm'
+                            : 'border border-transparent text-primary hover:bg-background/75 hover:shadow-sm'
+                        )}
+                      >
+                        {key === 'all' && (
+                          <>
+                            {t('Tất cả', 'Todos')} <span className="tabular-nums">({readCounts.all})</span>
+                          </>
+                        )}
+                        {key === 'read' && (
+                          <>
+                            {t('Đã đọc', 'Leídos')}{' '}
+                            <span className="tabular-nums">({readCounts.read})</span>
+                          </>
+                        )}
+                        {key === 'unread' && (
+                          <>
+                            {t('Chưa đọc', 'Pend.')}{' '}
+                            <span className="tabular-nums">({readCounts.unread})</span>
+                          </>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+            {loadingSubjects && (
+              <p className="text-sm text-muted-foreground">{t('Đang tải...', 'Cargando...')}</p>
+            )}
+          </div>
+
+          <div className="w-full flex-1 px-2 pb-0 pt-4 sm:px-3 sm:pt-5">
+            {!loadingSubjects && error && <p className="text-sm text-destructive mb-3">{error}</p>}
+
+            {activeSubjectInfo?.description && (
+              <p className="mb-4 max-w-3xl text-[13px] leading-relaxed text-foreground/68">
+                {activeSubjectInfo.description}
+              </p>
+            )}
+
+            {loadingMaterials && (
+              <p className="text-sm text-muted-foreground">
+                {t('Đang tải tài liệu...', 'Cargando materiales...')}
+              </p>
+            )}
+
+            {!loadingMaterials && materials.length === 0 && !loadingSubjects && subjects.length > 0 && (
+              <p className="text-sm text-muted-foreground">
+                {t('Chưa có tài liệu', 'No hay materiales')}
+              </p>
+            )}
+            {!loadingMaterials && materials.length > 0 && filteredMaterials.length === 0 && (
+              <p className="py-8 text-center text-sm text-muted-foreground">
+                {t('Không có tài liệu phù hợp.', 'No hay materiales que coincidan.')}
+              </p>
+            )}
+
+            {!loadingMaterials && filteredMaterials.length > 0 && (
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 md:gap-5">
+                {pagedMaterials.map((material) => {
+                  const pageCount = resolveMaterialPageCount(material, uiLang);
+                  const fileLine = materialFileSummary(
+                    material,
+                    uiLang,
+                    (n) => t(`${n} trang`, `${n} páginas`),
+                    { omitPages: true }
+                  );
+                  return (
+                    <div key={material.id}>
+                      <Card className="h-full overflow-hidden border border-foreground/10 bg-card shadow-sm transition-all hover:border-primary/25 hover:shadow-md">
+                        <CardContent className="flex h-full flex-row items-stretch gap-0 p-0">
+                          <div className="flex w-[4.75rem] shrink-0 flex-col items-center justify-center self-stretch border-r border-foreground/10 bg-primary/[0.07] px-1.5 py-2 sm:w-[5.25rem] md:w-28">
+                            <div className="flex flex-col items-center gap-0.5">
+                              <img
+                                src={MATERIALS_ILLUSTRATION_SRC}
+                                alt=""
+                                className="h-auto max-h-[4rem] w-full object-contain object-center sm:max-h-[4.25rem]"
+                                aria-hidden
+                              />
+                              <div className="flex flex-col items-center gap-0 text-center leading-none">
+                                {pageCount != null ? (
+                                  <>
+                                    <span className="font-display text-lg font-bold tabular-nums text-primary sm:text-xl">
+                                      {pageCount}
+                                    </span>
+                                    <span className="max-w-[4.5rem] text-[9px] font-semibold leading-tight text-primary/85">
+                                      {t('trang', 'pág.')}
+                                    </span>
+                                  </>
+                                ) : (
+                                  <span className="text-[10px] font-semibold leading-tight text-muted-foreground">
+                                    —
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex min-w-0 flex-1 flex-col p-4 md:p-5">
+                          <div className="mb-3">
+                            <span
+                              className={cn(
+                                'inline-block rounded border px-2 py-0.5 text-[11px] font-semibold',
+                                readMaterialSet.has(material.id)
+                                  ? 'border-emerald-900/20 bg-emerald-950/[0.06] text-emerald-900/85 dark:border-emerald-500/25 dark:bg-emerald-500/10 dark:text-emerald-100/90'
+                                  : 'border-foreground/12 bg-muted/40 text-foreground/70'
+                              )}
+                            >
+                              {readMaterialSet.has(material.id)
+                                ? t('Đã đọc', 'Leido')
+                                : t('Chưa đọc', 'No leido')}
+                            </span>
+                            <h3 className="mt-2 font-display text-[15px] font-bold leading-snug text-foreground sm:text-base md:text-[1.1rem]">
+                              {(lang === 'es' ? material.title_es : material.title_vi) ||
+                                `${material.title_vi || '-'} / ${material.title_es || '-'}`}
+                            </h3>
+                            <p className="mt-1.5 line-clamp-2 text-sm leading-relaxed text-foreground/68">
+                              {(lang === 'es' ? material.description_es : material.description_vi) ||
+                                t('Không có mô tả', 'Sin descripción')}
+                            </p>
+                          </div>
+
+                          <div className="mt-auto border-t border-foreground/10 pt-4">
+                            {fileLine && (
+                              <p className="mb-3 text-[12px] font-medium text-foreground/55">{fileLine}</p>
+                            )}
+                            <div className="flex gap-2">
+                              <div className="min-w-0 flex-1">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-9 w-full rounded-md border-2 border-[#991b1b] bg-[#B91C1C] text-[12px] font-semibold text-white shadow-[0_3px_10px_rgba(185,28,28,0.28)] transition-colors hover:border-[#7f1d1d] hover:bg-[#991b1b] hover:text-white focus-visible:ring-[#B91C1C]/40 sm:text-[13px]"
+                                  onClick={() => openMaterialViewer(material, uiLang)}
+                                >
+                                  {t('Xem', 'Ver')}
+                                </Button>
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-9 w-full rounded-md border border-gray-300 bg-[#E5E7EB] text-[12px] font-semibold text-[#374151] shadow-sm transition-colors hover:border-gray-400 hover:bg-gray-300 hover:text-[#1f2937] dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600 dark:hover:text-white sm:text-[13px]"
+                                  onClick={() => downloadMaterial(material, uiLang)}
+                                >
+                                  {t('Tải xuống', 'Descargar')}
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {!loadingMaterials && filteredMaterials.length > 0 && (
+              <div className="mt-8 -mx-2 flex flex-col items-center gap-4 border-t-2 border-primary/25 bg-card px-3 py-5 shadow-[0_-2px_12px_rgba(45,38,36,0.06)] sm:-mx-3 sm:gap-5 sm:px-4">
+                <p className="text-center text-sm font-semibold tabular-nums text-foreground sm:text-[15px]">
+                  {t('Trang', 'Página')} {effectivePage}/{totalPages} · {filteredMaterials.length}{' '}
+                  {t('tài liệu', 'materiales')}
+                </p>
+                <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-2.5">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-10 min-h-10 border-primary/30 bg-background px-4 text-sm font-semibold text-foreground shadow-sm hover:bg-primary/[0.08] sm:text-[15px]"
+                    onClick={() => goToPage(effectivePage - 1)}
+                    disabled={effectivePage <= 1}
+                  >
+                    {t('Trước', 'Anterior')}
+                  </Button>
+                  {pageWindow.map((page) => (
+                    <Button
+                      key={page}
+                      size="sm"
+                      variant="outline"
+                      className={cn(
+                        'h-10 min-h-10 min-w-10 border-primary/25 px-3 text-sm font-semibold shadow-sm sm:min-w-11 sm:text-[15px]',
+                        page === effectivePage
+                          ? 'border-primary/50 bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground'
+                          : 'bg-card text-foreground hover:bg-primary/[0.08]'
+                      )}
+                      onClick={() => goToPage(page)}
+                    >
+                      {page}
+                    </Button>
+                  ))}
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-10 min-h-10 border-primary/30 bg-background px-4 text-sm font-semibold text-foreground shadow-sm hover:bg-primary/[0.08] sm:text-[15px]"
+                    onClick={() => goToPage(effectivePage + 1)}
+                    disabled={effectivePage >= totalPages}
+                  >
+                    {t('Sau', 'Siguiente')}
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 

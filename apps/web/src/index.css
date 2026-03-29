@@ -1,4 +1,8 @@
-@import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap');
+/**
+ * Phông chữ duy nhất: Be Vietnam Pro (400–900).
+ * Tailwind: `font-sans`, `font-body`, `font-display` đều trỏ cùng stack — xem tailwind.config.js
+ */
+@import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800;900&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -47,6 +51,23 @@
     --gold: 42 85% 52%;
     --gold-foreground: 42 10% 15%;
 
+    /**
+     * Design system — màu đỏ đô / burgundy (một nguồn cho UI)
+     * Dùng qua Tailwind: text-brand-heading, border-brand-burgundy/35, text-brand-onCta, …
+     */
+    --brand-heading: #3d2230;
+    --brand-subtitle: #5f6272;
+    --brand-ink: #6b1528;
+    --brand-cta-from: #6b0f1a;
+    --brand-cta-to: #9b1b30;
+    --brand-cta-end: #9b1c31;
+    --brand-cta-on: #faf5f6;
+    --brand-cta-on-alt: #f5f5f5;
+    --brand-secondary-fg: #6b0f1a;
+    --brand-subline: #5a3d44;
+    --rgb-brand-border: 107 15 26;
+    --rgb-brand-shadow: 95 20 40;
+
     --sidebar-background: 0 0% 98%;
     --sidebar-foreground: 220 20% 18%;
     --sidebar-primary: 348 60% 32%;
@@ -58,6 +79,13 @@
   }
 
   .dark {
+    --brand-heading: #f4ecee;
+    --brand-subtitle: #b8bcc8;
+    --brand-ink: #e8b8c8;
+    --brand-cta-on: #faf5f6;
+    --brand-cta-on-alt: #f5f5f5;
+    --brand-subline: #c4b4b8;
+
     --background: 220 25% 8%;
     --foreground: 20 10% 92%;
 
@@ -127,8 +155,13 @@
     @apply border-border;
   }
 
+  html {
+    scroll-padding-top: 5rem;
+    font-family: 'Be Vietnam Pro', ui-sans-serif, system-ui, sans-serif;
+  }
+
   body {
-    @apply bg-background text-foreground font-body antialiased;
+    @apply bg-background text-foreground font-sans antialiased;
     position: relative;
     min-height: 100vh;
     overflow-x: hidden;
@@ -140,12 +173,13 @@
     position: fixed;
     inset: 0;
     z-index: -2;
-    background-image: url('/brand/background.png');
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
-    filter: blur(8px);
-    transform: scale(1.04);
+    background:
+      radial-gradient(ellipse 100% 70% at 50% -15%, rgba(255, 252, 254, 0.95), transparent 52%),
+      radial-gradient(ellipse 80% 55% at 100% 45%, rgba(232, 212, 222, 0.5), transparent 48%),
+      radial-gradient(ellipse 65% 45% at 0% 75%, rgba(220, 228, 248, 0.4), transparent 42%),
+      linear-gradient(165deg, #eef1f8 0%, #f4eef2 48%, #ebe4ea 100%);
+    filter: blur(10px);
+    transform: scale(1.06);
     pointer-events: none;
   }
 
@@ -162,8 +196,12 @@
     pointer-events: none;
   }
 
+  /** Cùng phông + cùng cỡ nền với Be Vietnam Pro trên mọi trang dùng wrapper này */
   .app-page {
+    font-family: 'Be Vietnam Pro', ui-sans-serif, system-ui, sans-serif;
     font-size: 1.08rem;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
   .app-page .text-sm {
@@ -218,7 +256,7 @@
       rgba(255, 249, 235, 0.72) 100%
     );
     box-shadow:
-      0 16px 42px rgba(95, 20, 40, 0.12),
+      0 16px 42px rgb(var(--rgb-brand-shadow) / 0.12),
       inset 0 1px 0 rgba(255, 255, 255, 0.78);
     backdrop-filter: blur(10px);
     border-radius: 1.25rem;
@@ -261,6 +299,41 @@
     );
   }
 
+  .hero-title-premium {
+    font-family: 'Be Vietnam Pro', sans-serif;
+    font-weight: 900;
+    color: #ffffff;
+    letter-spacing: -0.018em;
+    -webkit-text-stroke: 0;
+    text-shadow:
+      0 3px 14px rgba(0, 0, 0, 0.58),
+      0 10px 30px rgba(0, 0, 0, 0.42);
+  }
+
+  @media (max-width: 640px) {
+    .hero-title-premium {
+      -webkit-text-stroke: 0;
+      text-shadow:
+        0 2px 10px rgba(0, 0, 0, 0.56),
+        0 6px 18px rgba(0, 0, 0, 0.38);
+    }
+  }
+
+  .hero-subtitle-readable {
+    color: #fff7f3;
+    text-shadow:
+      0 2px 8px rgba(0, 0, 0, 0.64),
+      0 6px 18px rgba(0, 0, 0, 0.34);
+  }
+
+  @media (max-width: 640px) {
+    .hero-subtitle-readable {
+      text-shadow:
+        0 2px 7px rgba(0, 0, 0, 0.62),
+        0 4px 14px rgba(0, 0, 0, 0.32);
+    }
+  }
+
   .card-hover {
     @apply transition-all duration-300;
   }
@@ -275,7 +348,7 @@
       rgba(255, 255, 255, 0.72) 100%
     );
     border: 1px solid rgba(135, 34, 59, 0.18);
-    box-shadow: 0 12px 32px rgba(95, 20, 40, 0.12);
+    box-shadow: 0 12px 32px rgb(var(--rgb-brand-shadow) / 0.12);
     backdrop-filter: blur(10px);
   }
 
@@ -287,7 +360,7 @@
     );
     border: 1px solid rgba(135, 34, 59, 0.18);
     box-shadow:
-      0 10px 24px rgba(95, 20, 40, 0.11),
+      0 10px 24px rgb(var(--rgb-brand-shadow) / 0.11),
       inset 0 1px 0 rgba(255, 255, 255, 0.8);
     backdrop-filter: blur(8px);
     border-radius: 1rem;
@@ -296,11 +369,11 @@
   .surface-soft {
     background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(255, 249, 251, 0.88));
     border: 1px solid rgba(139, 30, 45, 0.14);
-    box-shadow: 0 12px 30px rgba(95, 20, 40, 0.1);
+    box-shadow: 0 12px 30px rgb(var(--rgb-brand-shadow) / 0.1);
   }
 
   .brand-panel {
-    border: 1px solid rgba(107, 15, 26, 0.14);
+    border: 1px solid rgb(var(--rgb-brand-border) / 0.14);
     border-radius: 1rem;
     background: linear-gradient(
       155deg,
@@ -309,42 +382,147 @@
       rgba(255, 249, 236, 0.72) 100%
     );
     box-shadow:
-      0 12px 30px rgba(95, 20, 40, 0.09),
+      0 12px 30px rgb(var(--rgb-brand-shadow) / 0.09),
       inset 0 1px 0 rgba(255, 255, 255, 0.78);
     backdrop-filter: blur(8px);
   }
 
   .brand-surface {
-    border: 1px solid rgba(107, 15, 26, 0.1);
+    border: 1px solid rgb(var(--rgb-brand-border) / 0.1);
     border-radius: 1rem;
     background: linear-gradient(
       180deg,
       rgba(255, 255, 255, 0.96) 0%,
       rgba(249, 241, 245, 0.88) 100%
     );
-    box-shadow: 0 10px 24px rgba(95, 20, 40, 0.08);
+    box-shadow: 0 10px 24px rgb(var(--rgb-brand-shadow) / 0.08);
   }
 
   .brand-heading {
-    color: #3d2230;
+    color: var(--brand-heading);
     letter-spacing: -0.02em;
   }
 
   .brand-subtitle {
-    color: #5f6272;
+    color: var(--brand-subtitle);
     font-weight: 500;
   }
 
   .brand-cta-primary {
-    background: linear-gradient(135deg, #6b0f1a 0%, #9b1b30 100%);
-    color: #f5f5f5;
-    border: 1px solid rgba(107, 15, 26, 0.56);
-    box-shadow: 0 10px 22px rgba(95, 20, 40, 0.2);
+    background: linear-gradient(135deg, var(--brand-cta-from) 0%, var(--brand-cta-to) 100%);
+    color: var(--brand-cta-on-alt);
+    border: 1px solid rgb(var(--rgb-brand-border) / 0.56);
+    box-shadow: 0 10px 22px rgb(var(--rgb-brand-shadow) / 0.2);
   }
 
   .brand-cta-secondary {
     background: rgba(255, 255, 255, 0.88);
-    color: #6b0f1a;
-    border: 1px solid rgba(107, 15, 26, 0.3);
+    color: var(--brand-secondary-fg);
+    border: 1px solid rgb(var(--rgb-brand-border) / 0.3);
+  }
+
+  /** Tiêu đề CTA — màu cố định, không shimmer */
+  .cta-headline-luxe {
+    font-family: 'Be Vietnam Pro', sans-serif;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    line-height: 1.34;
+    padding-bottom: 0.2em;
+    overflow: visible;
+    color: var(--brand-ink);
+  }
+
+  .dark .cta-headline-luxe {
+    color: hsl(var(--foreground));
+  }
+
+  .cta-subline-luxe {
+    color: var(--brand-subline);
+    font-weight: 600;
+    letter-spacing: 0.01em;
+  }
+
+  .dark .cta-subline-luxe {
+    color: hsl(var(--foreground) / 0.88);
+  }
+
+  /** Đăng nhập / đăng ký / hồ sơ — nền rose đồng bộ thương hiệu */
+  .page-auth-bg {
+    background: linear-gradient(180deg, #fff8fb 0%, hsl(var(--muted)) 48%, #f0e4ea 100%);
+  }
+
+  .auth-form-card {
+    border-radius: 1rem;
+    border: 2px solid rgba(155, 28, 49, 0.16);
+    background: rgba(255, 255, 255, 0.97);
+    box-shadow:
+      0 24px 52px rgba(107, 15, 26, 0.11),
+      inset 0 1px 0 rgba(255, 255, 255, 0.92);
+    backdrop-filter: blur(10px);
+  }
+
+  /** Cột trái / phải — layout đăng nhập & đăng ký chia đôi */
+  .auth-split-brand {
+    background: linear-gradient(165deg, #fff8fb 0%, #f3e4e9 42%, #e9d2dc 100%);
+  }
+
+  .auth-split-right {
+    background: linear-gradient(180deg, #ffffff 0%, #fffafc 100%);
+    box-shadow: -12px 0 48px rgba(107, 15, 26, 0.07);
+  }
+
+  /** Họa tiết chấm + góc vàng — cột branding đăng nhập */
+  .auth-split-brand-pattern {
+    background-image: radial-gradient(rgba(155, 28, 49, 0.09) 1px, transparent 1px);
+    background-size: 14px 14px;
+  }
+
+  .auth-split-corner-tl,
+  .auth-split-corner-br {
+    position: absolute;
+    width: 72px;
+    height: 72px;
+    pointer-events: none;
+    border-color: rgba(227, 197, 101, 0.45);
+  }
+
+  .auth-split-corner-tl {
+    top: 1.25rem;
+    left: 1.25rem;
+    border-top: 2px solid;
+    border-left: 2px solid;
+    border-radius: 4px 0 0 0;
+  }
+
+  .auth-split-corner-br {
+    bottom: 1.25rem;
+    right: 1.25rem;
+    border-bottom: 2px solid;
+    border-right: 2px solid;
+    border-radius: 0 0 4px 0;
+  }
+
+  .auth-illustration-frame {
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.65),
+      0 12px 36px rgba(107, 15, 26, 0.1);
+  }
+
+  /** Trang hồ sơ — họa tiết sáng trên nền wine */
+  .profile-hero-dots {
+    background-image: radial-gradient(rgba(255, 255, 255, 0.11) 1px, transparent 1px);
+    background-size: 20px 20px;
+  }
+
+  /* Hide scrollbar while keeping content scrollable */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+    width: 0;
+    height: 0;
   }
 }

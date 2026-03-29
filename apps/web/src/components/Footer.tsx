@@ -1,11 +1,16 @@
 import BrandLogo from '@/components/BrandLogo';
 import { useLanguage } from '@/hooks/useLanguage';
 import { getStoredAuth } from '@/lib/auth';
+import { cn } from '@/lib/utils';
 import { ArrowUpRight, Mail, MapPin, Phone } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 
-const Footer = () => {
+type FooterProps = {
+  className?: string;
+};
+
+const Footer = ({ className }: FooterProps) => {
   const { t } = useLanguage();
   const [isAdmin, setIsAdmin] = useState(false);
 
@@ -25,435 +30,228 @@ const Footer = () => {
     };
   }, []);
 
+  const socialClass =
+    'flex h-10 w-10 items-center justify-center rounded-lg border border-white/25 bg-white/10 text-[#fff5f6] transition-colors hover:border-[#E3C565]/55 hover:bg-white/15';
+
   return (
-    <>
-      <style>{`
-        .ft-root {
-          font-family: 'Be Vietnam Pro', sans-serif;
-          background: linear-gradient(180deg, #8b1e2d 0%, #7a1726 55%, #6b0f1a 100%);
-          color: #f5e9ed;
-          border-top: 1px solid rgba(227, 197, 101, 0.32);
-          position: relative;
-          overflow: hidden;
-        }
-
-        .ft-root::before {
-          content: '';
-          position: absolute;
-          top: 0;
-          left: 50%;
-          transform: translateX(-50%);
-          width: 600px;
-          height: 1px;
-          background: linear-gradient(90deg, transparent, rgba(227, 197, 101, 0.7), transparent);
-        }
-
-        .ft-glow {
-          position: absolute;
-          top: -80px;
-          left: 50%;
-          transform: translateX(-50%);
-          width: 500px;
-          height: 160px;
-          background: radial-gradient(ellipse, rgba(227, 197, 101, 0.16) 0%, transparent 70%);
-          pointer-events: none;
-        }
-
-        .ft-inner {
-          width: 100%;
-          padding: 0 clamp(12px, 2.8vw, 32px);
-          position: relative;
-          z-index: 1;
-        }
-
-        .ft-grid {
-          display: grid;
-          grid-template-columns: 1.8fr 1fr 1fr 1.3fr;
-          gap: 48px;
-          padding: 56px 0 48px;
-        }
-
-        @media (max-width: 900px) {
-          .ft-grid {
-            grid-template-columns: 1fr 1fr;
-            gap: 36px;
-            padding: 40px 0 36px;
-          }
-        }
-
-        @media (max-width: 540px) {
-          .ft-grid {
-            grid-template-columns: 1fr;
-            gap: 28px;
-            padding: 36px 0 28px;
-          }
-        }
-
-        .ft-brand-desc {
-          font-size: 15px;
-          line-height: 1.7;
-          color: rgba(250, 237, 241, 0.92);
-          margin-top: 14px;
-          max-width: 320px;
-        }
-
-        .ft-brand-row {
-          display: inline-flex;
-          align-items: center;
-          gap: 10px;
-          margin-left: -2px;
-        }
-
-        .ft-brand-name {
-          font-family: 'Be Vietnam Pro', sans-serif;
-          font-size: 32px;
-          font-weight: 900;
-          letter-spacing: -0.01em;
-          color: #fff5f8;
-          line-height: 1;
-        }
-
-        .ft-brand-name span {
-          color: #e3c565;
-        }
-
-        @media (max-width: 540px) {
-          .ft-brand-name {
-            font-size: 22px;
-          }
-        }
-
-        .ft-socials {
-          display: flex;
-          gap: 8px;
-          margin-top: 20px;
-        }
-
-        .ft-social-btn {
-          width: 34px;
-          height: 34px;
-          border-radius: 8px;
-          border: 1px solid rgba(255, 236, 242, 0.35);
-          background: rgba(255, 255, 255, 0.08);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          cursor: pointer;
-          transition: all 0.2s;
-          color: #fff5f8;
-          text-decoration: none;
-        }
-
-        .ft-social-btn:hover {
-          border-color: rgba(227, 197, 101, 0.8);
-          background: rgba(255, 255, 255, 0.16);
-          color: #fff;
-          transform: translateY(-2px);
-        }
-
-        .ft-social-btn svg {
-          width: 14px;
-          height: 14px;
-          fill: currentColor;
-        }
-
-        .ft-col-title {
-          font-family: 'Be Vietnam Pro', sans-serif;
-          font-size: 18px;
-          color: #fff5f8;
-          letter-spacing: 0.01em;
-          margin-bottom: 16px;
-          position: relative;
-          padding-bottom: 10px;
-        }
-
-        .ft-col-title::after {
-          content: '';
-          position: absolute;
-          bottom: 0;
-          left: 0;
-          width: 24px;
-          height: 1.5px;
-          background: linear-gradient(90deg, #e3c565, transparent);
-          border-radius: 99px;
-        }
-
-        .ft-link-list {
-          display: flex;
-          flex-direction: column;
-          gap: 10px;
-        }
-
-        .ft-link {
-          font-size: 15.5px;
-          color: rgba(252, 236, 242, 0.92);
-          text-decoration: none;
-          transition: all 0.2s;
-          display: flex;
-          align-items: center;
-          gap: 4px;
-          width: fit-content;
-        }
-
-        .ft-link:hover {
-          color: #fff;
-          gap: 6px;
-        }
-
-        .ft-link-arrow {
-          width: 14px;
-          height: 14px;
-          opacity: 0;
-          transition: opacity 0.2s;
-          flex-shrink: 0;
-        }
-
-        .ft-link:hover .ft-link-arrow {
-          opacity: 1;
-        }
-
-        .ft-contact-item {
-          display: flex;
-          align-items: flex-start;
-          gap: 10px;
-          font-size: 14.5px;
-          color: rgba(252, 236, 242, 0.92);
-          line-height: 1.5;
-        }
-
-        .ft-contact-icon {
-          width: 34px;
-          height: 34px;
-          border-radius: 7px;
-          background: rgba(255, 255, 255, 0.1);
-          border: 1px solid rgba(255, 238, 243, 0.35);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          flex-shrink: 0;
-          margin-top: -1px;
-        }
-
-        .ft-contact-icon svg {
-          width: 15px;
-          height: 15px;
-          color: #fff4f7;
-        }
-
-        .ft-divider {
-          height: 1px;
-          background: linear-gradient(90deg, transparent, rgba(255, 235, 241, 0.35) 20%, rgba(255, 235, 241, 0.35) 80%, transparent);
-        }
-
-        .ft-bottom {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          padding: 18px 0 20px;
-          gap: 16px;
-          flex-wrap: wrap;
-        }
-
-        .ft-copy {
-          font-size: 14px;
-          color: rgba(252, 236, 242, 0.88);
-          letter-spacing: 0.02em;
-        }
-
-        .ft-copy span {
-          color: #e3c565;
-        }
-
-        .ft-bottom-links {
-          display: flex;
-          gap: 20px;
-        }
-
-        .ft-bottom-link {
-          font-size: 14px;
-          color: rgba(252, 236, 242, 0.88);
-          text-decoration: none;
-          transition: color 0.2s;
-          letter-spacing: 0.02em;
-        }
-
-        .ft-bottom-link:hover {
-          color: #fff;
-        }
-
-        .ft-badge {
-          display: inline-flex;
-          align-items: center;
-          gap: 5px;
-          padding: 4px 10px;
-          border-radius: 20px;
-          border: 1px solid rgba(227, 197, 101, 0.6);
-          background: rgba(227, 197, 101, 0.14);
-          font-size: 12px;
-          font-weight: 600;
-          color: #fff3d1;
-          letter-spacing: 0.05em;
-          text-transform: uppercase;
-          margin-bottom: 12px;
-        }
-
-        .ft-badge-dot {
-          width: 5px;
-          height: 5px;
-          border-radius: 50%;
-          background: #e3c565;
-          animation: pulse 2s ease-in-out infinite;
-        }
-
-        @keyframes pulse {
-          0%,
-          100% {
-            opacity: 1;
-            transform: scale(1);
-          }
-
-          50% {
-            opacity: 0.5;
-            transform: scale(0.85);
-          }
-        }
-      `}</style>
-
-      <footer className="ft-root">
-        <div className="ft-glow" />
-        <div className="ft-inner">
-          <div className="ft-grid">
-            <div>
-              <div className="ft-badge">
-                <span className="ft-badge-dot" />
-                {t('Đang hoạt động', 'En linea')}
-              </div>
-              <Link to="/" style={{ display: 'inline-block', textDecoration: 'none' }}>
-                <div className="ft-brand-row">
-                  <BrandLogo imageClassName="h-11" />
-                  <span className="ft-brand-name">
-                    Việt <span>Autoescuela</span>
-                  </span>
+    <footer
+      className={cn(
+        'mt-auto w-full border-t border-black/20 bg-gradient-to-b from-[#8B1E2D] to-[#6B0F1A] text-[#fff5f6] shadow-[0_-4px_24px_rgba(58,10,20,0.12)]',
+        className
+      )}
+    >
+      <div className="w-full max-w-none px-3 py-8 sm:px-4 sm:py-10 md:px-5 lg:px-6">
+        {/* Lưới 10 phần (lg+): logo 4 | mỗi nhóm link 2 (chia đều 6 phần còn lại) */}
+        <div className="grid grid-cols-1 gap-10 md:grid-cols-2 md:items-start lg:grid-cols-10 lg:gap-x-6 lg:gap-y-0 xl:gap-x-8">
+          <div className="flex w-full min-w-0 flex-col gap-3 border-b border-white/10 pb-8 md:border-b-0 md:pb-0 lg:col-span-4 lg:pr-2">
+            <Link
+              to="/"
+              className="group flex w-fit max-w-full flex-col gap-3 no-underline sm:flex-row sm:items-center sm:gap-3"
+              aria-label={t('Về trang chủ Viet Autoescuela', 'Ir al inicio Viet Autoescuela')}
+            >
+              <BrandLogo className="shrink-0" imageClassName="h-24 w-auto sm:h-28" />
+              <div className="min-w-0 text-left">
+                <div className="text-lg font-extrabold leading-tight tracking-tight text-white sm:text-xl">
+                  Việt <span className="text-[#E3C565]">Autoescuela</span>
                 </div>
-              </Link>
-              <p className="ft-brand-desc">
-                {t(
-                  'Hệ thống học và luyện thi bằng lái xe Tây Ban Nha',
-                  'Sistema de aprendizaje y preparacion para el examen de conducir en Espana'
-                )}
-              </p>
-              <div className="ft-socials">
-                <a href="#" className="ft-social-btn" aria-label="Facebook">
-                  <svg viewBox="0 0 24 24">
-                    <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z" />
-                  </svg>
-                </a>
-                <a href="#" className="ft-social-btn" aria-label="Zalo">
-                  <svg viewBox="0 0 24 24">
-                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-                  </svg>
-                </a>
-                <a href="#" className="ft-social-btn" aria-label="YouTube">
-                  <svg viewBox="0 0 24 24">
-                    <path d="M22.54 6.42a2.78 2.78 0 0 0-1.95-1.96C18.88 4 12 4 12 4s-6.88 0-8.59.46a2.78 2.78 0 0 0-1.95 1.96A29 29 0 0 0 1 12a29 29 0 0 0 .46 5.58A2.78 2.78 0 0 0 3.41 19.6C5.12 20 12 20 12 20s6.88 0 8.59-.46a2.78 2.78 0 0 0 1.95-1.95A29 29 0 0 0 23 12a29 29 0 0 0-.46-5.58z" />
-                    <polygon
-                      points="9.75 15.02 15.5 12 9.75 8.98 9.75 15.02"
-                      style={{ fill: '#fff8f9' }}
-                    />
-                  </svg>
-                </a>
+                <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-white/65 sm:text-[11px]">
+                  {t('Ôn thi DGT · Chuẩn Tây Ban Nha', 'DGT · España')}
+                </p>
               </div>
-            </div>
-
-            <div>
-              <h4 className="ft-col-title">{t('Học tập', 'Aprendizaje')}</h4>
-              <div className="ft-link-list">
-                <Link to="/quizzes" className="ft-link">
-                  {t('Làm bài thi', 'Examenes')}
-                  <ArrowUpRight className="ft-link-arrow" />
-                </Link>
-                <Link to="/materials" className="ft-link">
-                  {t('Tài liệu', 'Materiales')}
-                  <ArrowUpRight className="ft-link-arrow" />
-                </Link>
-                <Link to="/leaderboard" className="ft-link">
-                  {t('Bảng xếp hạng', 'Ranking')}
-                  <ArrowUpRight className="ft-link-arrow" />
-                </Link>
-              </div>
-            </div>
-
-            <div>
-              <h4 className="ft-col-title">{t('Tài khoản', 'Cuenta')}</h4>
-              <div className="ft-link-list">
-                <Link to="/login" className="ft-link">
-                  {t('Đăng nhập', 'Iniciar sesion')}
-                  <ArrowUpRight className="ft-link-arrow" />
-                </Link>
-                <Link to="/register" className="ft-link">
-                  {t('Đăng ký', 'Registrarse')}
-                  <ArrowUpRight className="ft-link-arrow" />
-                </Link>
-                <Link to="/profile" className="ft-link">
-                  {t('Hồ sơ', 'Perfil')}
-                  <ArrowUpRight className="ft-link-arrow" />
-                </Link>
-                {isAdmin && (
-                  <Link to="/admin" className="ft-link">
-                    {t('Quản trị', 'Administracion')}
-                    <ArrowUpRight className="ft-link-arrow" />
-                  </Link>
-                )}
-              </div>
-            </div>
-
-            <div>
-              <h4 className="ft-col-title">{t('Liên hệ', 'Contacto')}</h4>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                <div className="ft-contact-item">
-                  <div className="ft-contact-icon">
-                    <Mail />
-                  </div>
-                  <span>support@vietautoescola.com</span>
-                </div>
-                <div className="ft-contact-item">
-                  <div className="ft-contact-icon">
-                    <Phone />
-                  </div>
-                  <span>+34 900 000 000</span>
-                </div>
-                <div className="ft-contact-item">
-                  <div className="ft-contact-icon">
-                    <MapPin />
-                  </div>
-                  <span>Madrid, Espana</span>
-                </div>
-              </div>
+            </Link>
+            <p className="w-full min-w-0 text-xs leading-relaxed text-white/75 sm:text-sm">
+              {t(
+                'Hệ thống học và luyện thi bằng lái xe Tây Ban Nha.',
+                'Preparación para el permiso de conducir en España.'
+              )}
+            </p>
+            <div className="flex gap-2 pt-1">
+              <a
+                href="https://www.facebook.com/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className={socialClass}
+                aria-label="Facebook"
+              >
+                <svg className="h-[18px] w-[18px]" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z" />
+                </svg>
+              </a>
+              <a
+                href="https://zalo.me/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className={socialClass}
+                aria-label="Zalo"
+              >
+                <svg className="h-[18px] w-[18px]" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                </svg>
+              </a>
+              <a
+                href="https://www.youtube.com/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className={socialClass}
+                aria-label="YouTube"
+              >
+                <svg className="h-[18px] w-[18px]" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M22.54 6.42a2.78 2.78 0 0 0-1.95-1.96C18.88 4 12 4 12 4s-6.88 0-8.59.46a2.78 2.78 0 0 0-1.95 1.96A29 29 0 0 0 1 12a29 29 0 0 0 .46 5.58A2.78 2.78 0 0 0 3.41 19.6C5.12 20 12 20 12 20s6.88 0 8.59-.46a2.78 2.78 0 0 0 1.95-1.95A29 29 0 0 0 23 12a29 29 0 0 0-.46-5.58z" />
+                </svg>
+              </a>
             </div>
           </div>
 
-          <div className="ft-divider" />
+          <div className="lg:col-span-2">
+            <h4 className="mb-4 text-sm font-semibold text-white">
+              {t('Học tập', 'Aprendizaje')}
+            </h4>
+            <ul className="flex flex-col gap-2.5">
+              <li>
+                <Link
+                  to="/quizzes"
+                  className="group inline-flex items-center gap-1 text-sm text-white/75 transition-colors hover:text-[#E3C565]"
+                >
+                  {t('Làm bài thi', 'Examenes')}
+                  <ArrowUpRight className="h-3.5 w-3.5 opacity-0 transition-opacity group-hover:opacity-100" />
+                </Link>
+              </li>
+              <li>
+                <Link
+                  to="/materials"
+                  className="group inline-flex items-center gap-1 text-sm text-white/75 transition-colors hover:text-[#E3C565]"
+                >
+                  {t('Tài liệu', 'Materiales')}
+                  <ArrowUpRight className="h-3.5 w-3.5 opacity-0 transition-opacity group-hover:opacity-100" />
+                </Link>
+              </li>
+              <li>
+                <Link
+                  to="/leaderboard"
+                  className="group inline-flex items-center gap-1 text-sm text-white/75 transition-colors hover:text-[#E3C565]"
+                >
+                  {t('Bảng xếp hạng', 'Ranking')}
+                  <ArrowUpRight className="h-3.5 w-3.5 opacity-0 transition-opacity group-hover:opacity-100" />
+                </Link>
+              </li>
+            </ul>
+          </div>
 
-          <div className="ft-bottom">
-            <p className="ft-copy">
-              © 2026 <span>Viet Auto Escola</span>.{' '}
-              {t('Bảo lưu mọi quyền.', 'Todos los derechos reservados.')}
-            </p>
-            <div className="ft-bottom-links">
-              <a href="#" className="ft-bottom-link">
-                {t('Chính sách bảo mật', 'Privacidad')}
-              </a>
-              <a href="#" className="ft-bottom-link">
-                {t('Điều khoản sử dụng', 'Terminos')}
-              </a>
-              <a href="#" className="ft-bottom-link">
-                {t('Hỗ trợ', 'Soporte')}
-              </a>
-            </div>
+          <div className="lg:col-span-2">
+            <h4 className="mb-4 text-sm font-semibold text-white">
+              {t('Tài khoản', 'Cuenta')}
+            </h4>
+            <ul className="flex flex-col gap-2.5">
+              <li>
+                <Link
+                  to="/login"
+                  className="group inline-flex items-center gap-1 text-sm text-white/75 transition-colors hover:text-[#E3C565]"
+                >
+                  {t('Đăng nhập', 'Iniciar sesion')}
+                  <ArrowUpRight className="h-3.5 w-3.5 opacity-0 transition-opacity group-hover:opacity-100" />
+                </Link>
+              </li>
+              <li>
+                <Link
+                  to="/register"
+                  className="group inline-flex items-center gap-1 text-sm text-white/75 transition-colors hover:text-[#E3C565]"
+                >
+                  {t('Đăng ký', 'Registrarse')}
+                  <ArrowUpRight className="h-3.5 w-3.5 opacity-0 transition-opacity group-hover:opacity-100" />
+                </Link>
+              </li>
+              <li>
+                <Link
+                  to="/profile"
+                  className="group inline-flex items-center gap-1 text-sm text-white/75 transition-colors hover:text-[#E3C565]"
+                >
+                  {t('Hồ sơ', 'Perfil')}
+                  <ArrowUpRight className="h-3.5 w-3.5 opacity-0 transition-opacity group-hover:opacity-100" />
+                </Link>
+              </li>
+              {isAdmin && (
+                <li>
+                  <Link
+                    to="/admin"
+                    className="group inline-flex items-center gap-1 text-sm text-white/75 transition-colors hover:text-[#E3C565]"
+                  >
+                    {t('Quản trị', 'Administracion')}
+                    <ArrowUpRight className="h-3.5 w-3.5 opacity-0 transition-opacity group-hover:opacity-100" />
+                  </Link>
+                </li>
+              )}
+            </ul>
+          </div>
+
+          <div className="lg:col-span-2">
+            <h4 className="mb-4 text-sm font-semibold text-white">
+              {t('Liên hệ', 'Contacto')}
+            </h4>
+            <ul className="flex flex-col gap-3 text-sm text-white/75">
+              <li className="flex items-start gap-3">
+                <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-white/20 bg-white/10 text-[#E3C565]">
+                  <Mail className="h-3.5 w-3.5" />
+                </span>
+                <a
+                  className="hover:text-[#E3C565] hover:underline"
+                  href="mailto:support@vietautoescola.com"
+                >
+                  support@vietautoescola.com
+                </a>
+              </li>
+              <li className="flex items-start gap-3">
+                <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-white/20 bg-white/10 text-[#E3C565]">
+                  <Phone className="h-3.5 w-3.5" />
+                </span>
+                <a className="hover:text-[#E3C565] hover:underline" href="tel:+34900000000">
+                  +34 900 000 000
+                </a>
+              </li>
+              <li className="flex items-start gap-3">
+                <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-white/20 bg-white/10 text-[#E3C565]">
+                  <MapPin className="h-3.5 w-3.5" />
+                </span>
+                <a
+                  className="hover:text-[#E3C565] hover:underline"
+                  href="https://maps.google.com/?q=Madrid,España"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Madrid, España
+                </a>
+              </li>
+            </ul>
           </div>
         </div>
-      </footer>
-    </>
+
+        <div className="mt-10 flex flex-col gap-4 border-t border-white/15 pt-8 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-xs text-white/65 sm:text-sm">
+            © 2026 <span className="font-medium text-[#E3C565]">Viet Autoescuela</span>.{' '}
+            {t('Bảo lưu mọi quyền.', 'Todos los derechos reservados.')}
+          </p>
+          <div className="flex flex-wrap gap-x-5 gap-y-2 text-xs sm:text-sm">
+            <a
+              href="mailto:support@vietautoescola.com?subject=Chinh%20sach%20bao%20mat"
+              className="text-white/65 transition-colors hover:text-[#E3C565]"
+            >
+              {t('Chính sách bảo mật', 'Privacidad')}
+            </a>
+            <a
+              href="mailto:support@vietautoescola.com?subject=Dieu%20khoan%20su%20dung"
+              className="text-white/65 transition-colors hover:text-[#E3C565]"
+            >
+              {t('Điều khoản sử dụng', 'Terminos')}
+            </a>
+            <a
+              href="mailto:support@vietautoescola.com"
+              className="text-white/65 transition-colors hover:text-[#E3C565]"
+            >
+              {t('Hỗ trợ', 'Soporte')}
+            </a>
+          </div>
+        </div>
+      </div>
+    </footer>
   );
 };
 

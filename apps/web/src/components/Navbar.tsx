@@ -1,7 +1,8 @@
 import {
   BookOpen,
+  Check,
+  ChevronDown,
   FileText,
-  Globe2,
   Home,
   LogOut,
   Menu,
@@ -19,12 +20,109 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { cn } from '@/lib/utils';
 import { useLanguage } from '@/hooks/useLanguage';
 import { logout, resolveMediaUrl } from '@/lib/api';
+import type { Language } from '@/lib/data';
 import { clearAuth, getStoredAuth, type AuthUser } from '@/lib/auth';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+
+function NavbarLanguageMenu({
+  lang,
+  setLang,
+  t,
+  align,
+  compact,
+}: {
+  lang: Language;
+  setLang: (next: Language) => void;
+  t: (vi: string, es: string) => string;
+  align: 'end' | 'start';
+  compact?: boolean;
+}) {
+  const options: { code: Language; flag: string; title: string; hint: string }[] = [
+    {
+      code: 'vi',
+      flag: '🇻🇳',
+      title: t('Tiếng Việt', 'Tiếng Việt'),
+      hint: t('Giao diện & bài thi/tài liệu bằng tiếng Việt', 'Interfaz y contenidos en vietnamita'),
+    },
+    {
+      code: 'es',
+      flag: '🇪🇸',
+      title: t('Español', 'Español'),
+      hint: t('Giao diện & bài thi/tài liệu bằng tiếng Tây Ban Nha', 'Interfaz y contenidos en español'),
+    },
+  ];
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          aria-label={t('Chọn ngôn ngữ', 'Seleccionar idioma')}
+          aria-haspopup="menu"
+          className={cn(
+            'lang-menu-trigger inline-flex items-center gap-2 rounded-full border border-primary/20 bg-gradient-to-b from-white to-[#fff8f9] px-3 py-2 text-sm font-semibold text-[#2f171b] shadow-sm transition-[border-color,box-shadow,background-color] hover:border-primary/32 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2',
+            compact && 'px-2.5 py-1.5 text-[13px]',
+          )}
+        >
+          <span className={cn('select-none leading-none', compact ? 'text-base' : 'text-lg')} aria-hidden>
+            {lang === 'vi' ? '🇻🇳' : '🇪🇸'}
+          </span>
+          <span className="min-w-[1.75rem] tabular-nums tracking-tight text-primary">
+            {lang === 'vi' ? 'VI' : 'ES'}
+          </span>
+          <ChevronDown
+            className={cn(
+              'lang-menu-chevron shrink-0 text-primary/75 transition-transform duration-200',
+              compact ? 'h-3.5 w-3.5' : 'h-4 w-4',
+            )}
+          />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent
+        align={align}
+        sideOffset={8}
+        className="min-w-[14.5rem] border-primary/18 p-2 shadow-[0_16px_40px_rgba(58,10,20,0.12)]"
+      >
+        <DropdownMenuLabel className="px-2.5 pb-1 pt-1 text-[10px] font-bold uppercase tracking-[0.14em] text-primary/65">
+          {t('Ngôn ngữ', 'Idioma')}
+        </DropdownMenuLabel>
+        <div className="flex flex-col gap-1 pt-0.5">
+          {options.map((opt) => {
+            const active = lang === opt.code;
+            return (
+              <DropdownMenuItem
+                key={opt.code}
+                className={cn(
+                  'dd-item flex cursor-pointer items-center gap-3 rounded-xl px-2.5 py-2.5 focus:bg-primary/[0.08]',
+                  active && 'bg-primary/[0.1]',
+                )}
+                onClick={() => setLang(opt.code)}
+              >
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/[0.08] text-lg leading-none">
+                  {opt.flag}
+                </span>
+                <div className="min-w-0 flex-1 text-left">
+                  <div className="text-sm font-bold text-[#2f171b]">{opt.title}</div>
+                  <div className="text-[11px] font-medium leading-tight text-muted-foreground">{opt.hint}</div>
+                </div>
+                {active ? (
+                  <Check className="h-4 w-4 shrink-0 text-primary" aria-hidden />
+                ) : (
+                  <span className="h-4 w-4 shrink-0" aria-hidden />
+                )}
+              </DropdownMenuItem>
+            );
+          })}
+        </div>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
 
 const Navbar = () => {
   const { lang, setLang, t } = useLanguage();
@@ -78,7 +176,7 @@ const Navbar = () => {
   const navItems = [
     { path: '/', label: t('Trang chủ', 'Inicio'), icon: Home },
     { path: '/quizzes', label: t('Làm bài thi', 'Exámenes'), icon: BookOpen },
-    { path: '/materials', label: t('Tài liệu', 'Materiales'), icon: FileText },
+    { path: '/materials', label: t('Tài liệu', 'Temario'), icon: FileText },
     { path: '/leaderboard', label: t('Xếp hạng', 'Ranking'), icon: Trophy },
     ...(isAdmin ? [{ path: '/admin', label: t('Quản trị', 'Admin'), icon: ShieldCheck }] : []),
   ];
@@ -86,7 +184,7 @@ const Navbar = () => {
   const desktopNavItems = [
     { path: '/', label: t('Trang chủ', 'Inicio'), icon: Home },
     { path: '/quizzes', label: t('Bài thi', 'Exámenes'), icon: BookOpen },
-    { path: '/materials', label: t('Tài liệu', 'Materiales'), icon: FileText },
+    { path: '/materials', label: t('Tài liệu', 'Temario'), icon: FileText },
     { path: '/leaderboard', label: t('Xếp hạng', 'Ranking'), icon: Trophy },
   ];
 
@@ -187,7 +285,13 @@ const Navbar = () => {
           background: rgba(139, 30, 45, 0.08) !important;
         }
 
+        .lang-menu-trigger[data-state='open'] .lang-menu-chevron {
+          transform: rotate(180deg);
+        }
+
         .desktop-nav-strip {
+          width: 100%;
+          max-width: 100%;
           background: linear-gradient(180deg, #8B1E2D 0%, #6B0F1A 100%);
           border-top: 1px solid rgba(255, 255, 255, 0.14);
           border-bottom: 1px solid rgba(60, 10, 18, 0.7);
@@ -218,7 +322,7 @@ const Navbar = () => {
         }
 
         .desktop-nav-tile {
-          min-height: 102px;
+          min-height: 92px;
           display: flex;
           flex-direction: column;
           align-items: center;
@@ -232,7 +336,7 @@ const Navbar = () => {
         }
 
         .desktop-nav-strip.compact .desktop-nav-tile {
-          min-height: 66px;
+          min-height: 58px;
           gap: 6px;
         }
 
@@ -293,48 +397,46 @@ const Navbar = () => {
           font-size: 0.88rem;
         }
 
-        @media (max-width: 1023px) {
+        @media (max-width: 1024px) {
           .desktop-nav-tile {
-            min-height: 86px;
-            gap: 8px;
+            min-height: 56px;
+            gap: 0;
+          }
+
+          .desktop-nav-strip.compact .desktop-nav-tile {
+            min-height: 48px;
           }
 
           .desktop-nav-tile-badge {
-            width: 34px;
-            height: 34px;
-            border-radius: 7px;
-          }
-
-          .desktop-nav-tile-icon {
-            width: 17px;
-            height: 17px;
+            display: none;
           }
 
           .desktop-nav-tile-label {
             font-size: 0.95rem;
+            line-height: 1.1;
+          }
+
+          .desktop-nav-strip.compact .desktop-nav-tile-label {
+            font-size: 0.84rem;
           }
         }
 
         @media (max-width: 639px) {
           .desktop-nav-tile {
-            min-height: 74px;
-            gap: 6px;
+            min-height: 52px;
           }
 
-          .desktop-nav-tile-badge {
-            width: 30px;
-            height: 30px;
-            border-radius: 6px;
-          }
-
-          .desktop-nav-tile-icon {
-            width: 15px;
-            height: 15px;
+          .desktop-nav-strip.compact .desktop-nav-tile {
+            min-height: 46px;
           }
 
           .desktop-nav-tile-label {
-            font-size: 0.8rem;
+            font-size: 0.82rem;
             line-height: 1.05;
+          }
+
+          .desktop-nav-strip.compact .desktop-nav-tile-label {
+            font-size: 0.76rem;
           }
         }
       `}</style>
@@ -374,68 +476,25 @@ const Navbar = () => {
             }}
           >
             <span className="sm:hidden">
-              <BrandLogo imageClassName="h-9" withText textClassName="text-[1.08rem] font-black tracking-tight" />
+              <BrandLogo
+                imageClassName="h-11"
+                withText
+                textClassName="text-[1.08rem] font-black tracking-tight"
+              />
             </span>
             <span className="hidden sm:inline-flex">
-              <BrandLogo imageClassName="h-12" withText textClassName="text-[1.62rem] font-black tracking-tight" />
+              <BrandLogo
+                imageClassName="h-14"
+                withText
+                textClassName="text-[1.62rem] font-black tracking-tight"
+              />
             </span>
           </Link>
 
           <div className="hidden lg:block" />
 
           <div className="hidden lg:flex" style={{ alignItems: 'center', gap: 10 }}>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button
-                  type="button"
-                  aria-label={t('Chọn ngôn ngữ', 'Seleccionar idioma')}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 6,
-                    border: '1px solid rgba(107,15,26,0.28)',
-                    background: 'rgba(255,252,252,0.96)',
-                    borderRadius: 10,
-                    padding: '6px 10px',
-                    color: '#5e3a41',
-                    fontSize: 14,
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    fontFamily: 'inherit',
-                  }}
-                >
-                  <Globe2 style={{ width: 15, height: 15, color: '#8B1E2D' }} />
-                  <span>{lang === 'vi' ? '🇻🇳 VI' : '🇪🇸 ES'}</span>
-                  <span style={{ fontSize: 10, color: '#8B1E2D' }}>▼</span>
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent
-                align="end"
-                style={{
-                  minWidth: 120,
-                  background: 'rgba(255,252,252,0.98)',
-                  border: '1px solid rgba(107,15,26,0.2)',
-                  borderRadius: 10,
-                  boxShadow: '0 12px 28px rgba(83,24,32,0.14)',
-                  padding: 6,
-                }}
-              >
-                <DropdownMenuItem
-                  className="dd-item"
-                  onClick={() => setLang('vi')}
-                  style={{ borderRadius: 8, fontWeight: 700, color: '#5e3a41', cursor: 'pointer' }}
-                >
-                  🇻🇳 VI
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  className="dd-item"
-                  onClick={() => setLang('es')}
-                  style={{ borderRadius: 8, fontWeight: 700, color: '#5e3a41', cursor: 'pointer' }}
-                >
-                  🇪🇸 ES
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <NavbarLanguageMenu lang={lang} setLang={setLang} t={t} align="end" />
 
             {isAuthenticated ? (
               <DropdownMenu>
@@ -604,17 +663,17 @@ const Navbar = () => {
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
-              <div style={{ display: 'flex', gap: 8 }}>
+              <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
                 <Link to="/login" style={{ textDecoration: 'none' }}>
                   <button
                     style={{
-                      padding: '8px 16px',
-                      borderRadius: 8,
+                      padding: '10px 18px',
+                      borderRadius: 9,
                       border: '1px solid rgba(107,15,26,0.35)',
                       background: 'transparent',
                       color: '#6d434a',
-                      fontSize: 13.5,
-                      fontWeight: 500,
+                      fontSize: 15,
+                      fontWeight: 600,
                       cursor: 'pointer',
                       transition: 'all 0.2s',
                       fontFamily: 'inherit',
@@ -634,12 +693,12 @@ const Navbar = () => {
                 <Link to="/register" style={{ textDecoration: 'none' }}>
                   <button
                     style={{
-                      padding: '8px 16px',
-                      borderRadius: 8,
+                      padding: '10px 18px',
+                      borderRadius: 9,
                       border: '1px solid #8B1E2D',
                       background: 'linear-gradient(135deg, #8B1E2D 0%, #9B1B30 100%)',
                       color: '#fff6f7',
-                      fontSize: 13.5,
+                      fontSize: 15,
                       fontWeight: 700,
                       cursor: 'pointer',
                       transition: 'all 0.2s',
@@ -663,58 +722,7 @@ const Navbar = () => {
           </div>
 
           <div className="flex items-center gap-3 lg:hidden">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button
-                  type="button"
-                  aria-label={t('Chọn ngôn ngữ', 'Seleccionar idioma')}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 6,
-                    border: '1px solid rgba(107,15,26,0.28)',
-                    background: 'rgba(255,252,252,0.96)',
-                    borderRadius: 8,
-                    padding: '4px 8px',
-                    fontSize: 13,
-                    fontWeight: 700,
-                    color: '#8B1E2D',
-                    cursor: 'pointer',
-                    fontFamily: 'inherit',
-                  }}
-                >
-                  <Globe2 style={{ width: 14, height: 14, color: '#8B1E2D' }} />
-                  <span>{lang === 'vi' ? 'VI' : 'ES'}</span>
-                  <span style={{ fontSize: 9 }}>▼</span>
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent
-                align="start"
-                style={{
-                  minWidth: 110,
-                  background: 'rgba(255,252,252,0.98)',
-                  border: '1px solid rgba(107,15,26,0.2)',
-                  borderRadius: 10,
-                  boxShadow: '0 12px 28px rgba(83,24,32,0.14)',
-                  padding: 6,
-                }}
-              >
-                <DropdownMenuItem
-                  className="dd-item"
-                  onClick={() => setLang('vi')}
-                  style={{ borderRadius: 8, fontWeight: 700, color: '#5e3a41', cursor: 'pointer' }}
-                >
-                  🇻🇳 VI
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  className="dd-item"
-                  onClick={() => setLang('es')}
-                  style={{ borderRadius: 8, fontWeight: 700, color: '#5e3a41', cursor: 'pointer' }}
-                >
-                  🇪🇸 ES
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <NavbarLanguageMenu lang={lang} setLang={setLang} t={t} align="start" compact />
             <button
               onClick={() => setMobileOpen(!mobileOpen)}
               style={{
@@ -890,12 +898,12 @@ const Navbar = () => {
                         <button
                           style={{
                             width: '100%',
-                            padding: '10px',
+                            padding: '12px',
                             borderRadius: 10,
                             border: '1px solid rgba(107,15,26,0.3)',
                             background: 'transparent',
                             color: '#6b434a',
-                            fontSize: 14,
+                            fontSize: 15,
                             fontWeight: 600,
                             cursor: 'pointer',
                             fontFamily: 'inherit',
@@ -912,12 +920,12 @@ const Navbar = () => {
                         <button
                           style={{
                             width: '100%',
-                            padding: '10px',
+                            padding: '12px',
                             borderRadius: 10,
                             border: 'none',
                             background: 'linear-gradient(135deg, #8B1E2D 0%, #9B1B30 100%)',
                             color: '#fff6f7',
-                            fontSize: 14,
+                            fontSize: 15,
                             fontWeight: 700,
                             cursor: 'pointer',
                             fontFamily: 'inherit',
@@ -935,11 +943,13 @@ const Navbar = () => {
         </AnimatePresence>
       </nav>
 
-      <div className="desktop-nav-strip desktop-nav-strip--base">
+      <div className="desktop-nav-strip desktop-nav-strip--base w-full min-w-0">
         {renderDesktopMenuStrip(false)}
       </div>
 
-      <div className={`desktop-nav-strip desktop-nav-strip--sticky compact${scrolled ? ' visible' : ''}`}>
+      <div
+        className={`desktop-nav-strip desktop-nav-strip--sticky compact w-full min-w-0${scrolled ? ' visible' : ''}`}
+      >
         {renderDesktopMenuStrip(true)}
       </div>
     </>

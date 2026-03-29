@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none" aria-hidden="true">
+  <defs>
+    <linearGradient id="r3g" x1="32" y1="6" x2="32" y2="58" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#E8A87C"/>
+      <stop offset="0.45" stop-color="#C4713A"/>
+      <stop offset="1" stop-color="#7A3E1D"/>
+    </linearGradient>
+  </defs>
+  <circle cx="32" cy="32" r="29" fill="url(#r3g)" stroke="#8B4513" stroke-width="1.5"/>
+  <circle cx="32" cy="32" r="22" fill="none" stroke="#F4D4BC" stroke-width="2" opacity="0.5"/>
+  <text x="32" y="41" text-anchor="middle" font-family="system-ui,-apple-system,BlinkMacSystemFont,sans-serif" font-size="26" font-weight="800" fill="#3D2010">3</text>
+</svg>

@@ -130,6 +130,33 @@ function buildStoredMediaPath(uploaded: { key?: string; cdn_url?: string } | nul
   }
 }
 
+function parseMaterialPageCountFromForm(s: string): number | null {
+  if (s === '' || s == null) return null;
+  const n = Number(s);
+  return Number.isFinite(n) && n >= 0 ? Math.floor(n) : null;
+}
+
+function fileNameFromStoredPath(path: string): string {
+  if (!path) return '';
+  const parts = path.split('/').filter(Boolean);
+  return parts[parts.length - 1] || '';
+}
+
+function isPdfFile(file: File): boolean {
+  const t = (file.type || '').toLowerCase();
+  if (t === 'application/pdf') return true;
+  return file.name.toLowerCase().endsWith('.pdf');
+}
+
+/** Hiển thị vai trò tài khoản bằng ngôn ngữ người dùng (không dùng mã tiếng Anh thuần). */
+function formatUserRole(role: string, lang: 'vi' | 'es'): string {
+  const r = String(role || '').toLowerCase();
+  if (r === 'admin') return lang === 'vi' ? 'Quản trị viên' : 'Administración';
+  if (r === 'teacher') return lang === 'vi' ? 'Giáo viên' : 'Profesor';
+  if (r === 'student') return lang === 'vi' ? 'Học viên' : 'Alumno';
+  return role || '—';
+}
+
 const DEFAULT_QUIZ_TYPE_CODE = 'general';
 
 export default function Admin() {
@@ -191,14 +218,29 @@ export default function Admin() {
     file_path_es: '',
     file_size_mb_vi: '',
     file_size_mb_es: '',
+    page_count_vi: '',
+    page_count_es: '',
   });
-  const [materialFiles, setMaterialFiles] = useState<{ vi: File | null; es: File | null }>({
-    vi: null,
-    es: null,
-  });
-  const [editMaterialFiles, setEditMaterialFiles] = useState<{ vi: File | null; es: File | null }>({
-    vi: null,
-    es: null,
+  const [materialCreateStaged, setMaterialCreateStaged] = useState<{
+    vi: {
+      fileName: string;
+      path: string;
+      sizeMb: number | null;
+      pageCount: number | null;
+    } | null;
+    es: {
+      fileName: string;
+      path: string;
+      sizeMb: number | null;
+      pageCount: number | null;
+    } | null;
+  }>({ vi: null, es: null });
+  const [materialCreateUploading, setMaterialCreateUploading] = useState({ vi: false, es: false });
+  const [materialCreateFileKey, setMaterialCreateFileKey] = useState(0);
+  const [editMaterialUploading, setEditMaterialUploading] = useState({ vi: false, es: false });
+  const [editMaterialPickedFileName, setEditMaterialPickedFileName] = useState({
+    vi: '',
+    es: '',
   });
   const [materialForm, setMaterialForm] = useState({
     title_vi: '',
@@ -662,31 +704,32 @@ export default function Admin() {
   async function onCreateBilingualMaterial(event: React.FormEvent) {
     event.preventDefault();
     if (!selectedSubjectId) return;
-    if (!materialFiles.vi || !materialFiles.es) {
+    if (!materialCreateStaged.vi || !materialCreateStaged.es) {
       showError(
-        lang === 'vi' ? 'Cần chọn đủ file VI và ES' : 'Debes seleccionar ambos archivos VI y ES'
+        lang === 'vi'
+          ? 'Cần chọn và tải lên đủ file VI và ES (số trang PDF lấy tự động từ file)'
+          : 'Debes subir ambos archivos VI y ES (páginas PDF automáticas)'
       );
       return;
     }
     try {
-      const uploadedVi = await uploadMaterialFile(materialFiles.vi, 'vi');
-      const uploadedEs = await uploadMaterialFile(materialFiles.es, 'es');
+      const sv = materialCreateStaged.vi;
+      const se = materialCreateStaged.es;
       await createBilingualMaterial(
         selectedSubjectId,
         {
           ...materialForm,
-          file_path_vi: buildStoredMediaPath(uploadedVi),
-          file_size_mb_vi: uploadedVi.size
-            ? Number((uploadedVi.size / (1024 * 1024)).toFixed(2))
-            : null,
-          file_path_es: buildStoredMediaPath(uploadedEs),
-          file_size_mb_es: uploadedEs.size
-            ? Number((uploadedEs.size / (1024 * 1024)).toFixed(2))
-            : null,
+          file_path_vi: sv.path,
+          file_size_mb_vi: sv.sizeMb,
+          page_count_vi: sv.pageCount,
+          file_path_es: se.path,
+          file_size_mb_es: se.sizeMb,
+          page_count_es: se.pageCount,
         }
       );
       setMaterialForm({ title_vi: '', description_vi: '', title_es: '', description_es: '' });
-      setMaterialFiles({ vi: null, es: null });
+      setMaterialCreateStaged({ vi: null, es: null });
+      setMaterialCreateFileKey((k) => k + 1);
       await loadMaterials(selectedSubjectId);
       showSuccess('Đã thêm tài liệu song ngữ', 'Material bilingüe agregado');
     } catch (error) {
@@ -696,7 +739,11 @@ export default function Admin() {
 
   function onStartEditMaterial(item: any) {
     setEditingMaterialId(item.id);
-    setEditMaterialFiles({ vi: null, es: null });
+    setEditMaterialUploading({ vi: false, es: false });
+    setEditMaterialPickedFileName({
+      vi: fileNameFromStoredPath(String(item.file_path_vi || '')),
+      es: fileNameFromStoredPath(String(item.file_path_es || '')),
+    });
     setEditMaterialForm({
       title_vi: item.title_vi || '',
       title_es: item.title_es || '',
@@ -706,12 +753,15 @@ export default function Admin() {
       file_path_es: item.file_path_es || '',
       file_size_mb_vi: item.file_size_mb_vi == null ? '' : String(item.file_size_mb_vi),
       file_size_mb_es: item.file_size_mb_es == null ? '' : String(item.file_size_mb_es),
+      page_count_vi: item.page_count_vi == null ? '' : String(item.page_count_vi),
+      page_count_es: item.page_count_es == null ? '' : String(item.page_count_es),
     });
   }
 
   function onCancelEditMaterial() {
     setEditingMaterialId(null);
-    setEditMaterialFiles({ vi: null, es: null });
+    setEditMaterialUploading({ vi: false, es: false });
+    setEditMaterialPickedFileName({ vi: '', es: '' });
     setEditMaterialForm({
       title_vi: '',
       title_es: '',
@@ -721,41 +771,31 @@ export default function Admin() {
       file_path_es: '',
       file_size_mb_vi: '',
       file_size_mb_es: '',
+      page_count_vi: '',
+      page_count_es: '',
     });
   }
 
   async function onSaveEditMaterial(item: any) {
     try {
-      let filePathVi = editMaterialForm.file_path_vi;
-      let filePathEs = editMaterialForm.file_path_es;
-      let fileSizeVi = editMaterialForm.file_size_mb_vi
+      const fileSizeVi = editMaterialForm.file_size_mb_vi
         ? Number(editMaterialForm.file_size_mb_vi)
         : null;
-      let fileSizeEs = editMaterialForm.file_size_mb_es
+      const fileSizeEs = editMaterialForm.file_size_mb_es
         ? Number(editMaterialForm.file_size_mb_es)
         : null;
-
-      if (editMaterialFiles.vi) {
-        const uploadedVi = await uploadMaterialFile(editMaterialFiles.vi, 'vi');
-        filePathVi = buildStoredMediaPath(uploadedVi);
-        fileSizeVi = uploadedVi.size ? Number((uploadedVi.size / (1024 * 1024)).toFixed(2)) : null;
-      }
-
-      if (editMaterialFiles.es) {
-        const uploadedEs = await uploadMaterialFile(editMaterialFiles.es, 'es');
-        filePathEs = buildStoredMediaPath(uploadedEs);
-        fileSizeEs = uploadedEs.size ? Number((uploadedEs.size / (1024 * 1024)).toFixed(2)) : null;
-      }
 
       await updateAdminMaterial(item.id, {
         title_vi: editMaterialForm.title_vi,
         title_es: editMaterialForm.title_es,
         description_vi: editMaterialForm.description_vi,
         description_es: editMaterialForm.description_es,
-        file_path_vi: filePathVi,
-        file_path_es: filePathEs,
+        file_path_vi: editMaterialForm.file_path_vi,
+        file_path_es: editMaterialForm.file_path_es,
         file_size_mb_vi: fileSizeVi,
         file_size_mb_es: fileSizeEs,
+        page_count_vi: parseMaterialPageCountFromForm(editMaterialForm.page_count_vi),
+        page_count_es: parseMaterialPageCountFromForm(editMaterialForm.page_count_es),
       });
       await loadMaterials(selectedSubjectId!);
       onCancelEditMaterial();
@@ -1270,15 +1310,50 @@ export default function Admin() {
 
   if (!isAdmin) return null;
 
-  const tabButtons = [
-    { id: 'users' as const, label: lang === 'vi' ? 'Người dùng' : 'Usuarios', icon: Users },
-    { id: 'materials' as const, label: lang === 'vi' ? 'Tài liệu' : 'Materiales', icon: BookOpen },
-    { id: 'quizzes' as const, label: lang === 'vi' ? 'Đề thi' : 'Exámenes', icon: FileText },
+  const tabButtons: {
+    id: 'users' | 'materials' | 'quizzes';
+    label: string;
+    desc: string;
+    icon: typeof Users;
+  }[] = [
+    {
+      id: 'users',
+      label: lang === 'vi' ? 'Học viên & tài khoản' : 'Usuarios y cuentas',
+      desc:
+        lang === 'vi'
+          ? 'Xem danh sách, chỉnh sửa, khóa hoặc mở đăng nhập'
+          : 'Ver listado, editar datos, bloquear o activar cuentas',
+      icon: Users,
+    },
+    {
+      id: 'materials',
+      label: lang === 'vi' ? 'Tài liệu (PDF)' : 'Materiales (PDF)',
+      desc:
+        lang === 'vi'
+          ? 'Chủ đề, tải lên và quản lý file cho học viên'
+          : 'Temas, subir archivos y gestionar materiales',
+      icon: BookOpen,
+    },
+    {
+      id: 'quizzes',
+      label: lang === 'vi' ? 'Bài thi & câu hỏi' : 'Exámenes y preguntas',
+      desc:
+        lang === 'vi'
+          ? 'Loại đề, tạo bài và chỉnh câu hỏi trắc nghiệm'
+          : 'Tipos de examen, crear tests y editar preguntas',
+      icon: FileText,
+    },
   ];
 
   return (
     <div className="app-page admin-polish min-h-screen flex flex-col bg-[radial-gradient(circle_at_18%_12%,rgba(224,231,255,0.35),transparent_38%),radial-gradient(circle_at_84%_6%,rgba(226,232,240,0.45),transparent_34%),linear-gradient(180deg,#f8fafc_0%,#eef2f7_55%,#f5f7fb_100%)]">
       <style>{`
+        .admin-polish {
+          font-family: 'Be Vietnam Pro', ui-sans-serif, system-ui, sans-serif;
+          -webkit-font-smoothing: antialiased;
+          -moz-osx-font-smoothing: grayscale;
+        }
+
         .admin-polish input,
         .admin-polish textarea {
           border-radius: 0.75rem;
@@ -1315,6 +1390,17 @@ export default function Admin() {
           outline: none;
           box-shadow: 0 0 0 3px rgba(122, 32, 56, 0.12);
         }
+
+        .admin-surface-view {
+          border: 1px solid rgba(14, 165, 233, 0.35);
+          background: linear-gradient(135deg, rgba(240, 249, 255, 0.95) 0%, rgba(255, 255, 255, 0.98) 100%);
+          box-shadow: inset 3px 0 0 0 #0ea5e9;
+        }
+        .admin-surface-edit {
+          border: 1px solid rgba(122, 32, 56, 0.35);
+          background: linear-gradient(135deg, rgba(255, 248, 249, 0.98) 0%, rgba(255, 255, 255, 0.97) 100%);
+          box-shadow: inset 3px 0 0 0 #7a2038;
+        }
       `}</style>
       <Navbar />
       <main className="flex-1 px-2 md:px-4 py-3 md:py-4">
@@ -1335,23 +1421,78 @@ export default function Admin() {
             </div>
           )}
 
+          <header className="mb-4 rounded-2xl border border-[#7a2038]/14 bg-[linear-gradient(135deg,rgba(255,255,255,0.97)_0%,rgba(255,246,248,0.92)_100%)] px-4 py-4 shadow-sm md:px-5 md:py-5">
+            <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[#7a2038]/75">
+              {lang === 'vi' ? 'Dành cho người quản lý nội dung' : 'Para gestores de contenidos'}
+            </p>
+            <h1 className="mt-1 font-display text-xl font-bold tracking-tight text-[#5a1428] md:text-2xl">
+              {lang === 'vi' ? 'Trang quản trị' : 'Panel de administración'}
+            </h1>
+            <p className="mt-2 max-w-3xl text-sm leading-relaxed text-[#4a383e] md:text-[15px]">
+              {lang === 'vi'
+                ? 'Tại đây bạn quản lý toàn bộ nội dung hiển thị cho học viên trên website: tài khoản, tài liệu PDF và bài thi. Giao diện chia theo từng bước — không cần biết lập trình; chỉ cần chọn mục bên trái rồi thao tác theo form.'
+                : 'Aquí se gestiona lo que ven los alumnos en la web: cuentas, materiales PDF y exámenes. La pantalla está organizada por pasos; no hace falta saber de informática: elija una sección a la izquierda y siga los formularios.'}
+            </p>
+            <ul className="mt-4 grid gap-3 sm:grid-cols-3">
+              <li className="rounded-xl border border-[#dbe3ee] bg-white/90 px-3 py-3 text-left shadow-sm">
+                <span className="text-xs font-bold text-[#7a2038]">
+                  {lang === 'vi' ? '1. Tài khoản' : '1. Cuentas'}
+                </span>
+                <p className="mt-1 text-[13px] leading-snug text-[#5c4a50]">
+                  {lang === 'vi'
+                    ? 'Theo dõi người đăng ký, hỗ trợ đổi email/mật khẩu, khóa tài khoản nếu cần.'
+                    : 'Ver quién se ha registrado, ayudar con email/contraseña y bloquear cuentas.'}
+                </p>
+              </li>
+              <li className="rounded-xl border border-[#dbe3ee] bg-white/90 px-3 py-3 text-left shadow-sm">
+                <span className="text-xs font-bold text-[#7a2038]">
+                  {lang === 'vi' ? '2. Tài liệu' : '2. Materiales'}
+                </span>
+                <p className="mt-1 text-[13px] leading-snug text-[#5c4a50]">
+                  {lang === 'vi'
+                    ? 'Tạo chủ đề, đăng file PDF cho tiếng Việt và tiếng Tây Ban Nha.'
+                    : 'Crear temas y subir PDF en vietnamita y español.'}
+                </p>
+              </li>
+              <li className="rounded-xl border border-[#dbe3ee] bg-white/90 px-3 py-3 text-left shadow-sm">
+                <span className="text-xs font-bold text-[#7a2038]">
+                  {lang === 'vi' ? '3. Bài thi' : '3. Exámenes'}
+                </span>
+                <p className="mt-1 text-[13px] leading-snug text-[#5c4a50]">
+                  {lang === 'vi'
+                    ? 'Đặt loại đề, thêm bài thi và nhập câu hỏi trắc nghiệm.'
+                    : 'Definir tipos, crear exámenes y preguntas tipo test.'}
+                </p>
+              </li>
+            </ul>
+          </header>
+
           <div className="flex flex-col sm:flex-row gap-2">
-            <aside className="rounded-2xl border border-[#7a2038]/18 bg-white/90 p-3 shadow-sm backdrop-blur-sm sm:w-56 sm:shrink-0">
-              <div className="space-y-1">
+            <aside className="rounded-2xl border border-[#7a2038]/18 bg-white/90 p-3 shadow-sm backdrop-blur-sm sm:w-64 sm:shrink-0">
+              <p className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-wide text-[#7a2038]/70">
+                {lang === 'vi' ? 'Chọn nội dung cần làm' : 'Elija qué gestionar'}
+              </p>
+              <div className="space-y-2">
                 {tabButtons.map((tab) => {
                   const Icon = tab.icon;
                   return (
                     <button
                       key={tab.id}
+                      type="button"
                       onClick={() => setActiveTab(tab.id)}
-                      className={`w-full flex items-center gap-2 px-3 py-2 rounded-sm border font-semibold text-sm transition-colors ${
+                      className={`w-full rounded-xl border px-3 py-2.5 text-left transition-colors ${
                         activeTab === tab.id
                           ? 'border-[#7a2038]/60 bg-[linear-gradient(135deg,#f6d7e0_0%,#fbe8d4_100%)] text-[#6b1b31] shadow-[0_8px_18px_rgba(95,20,40,0.10)]'
                           : 'border-[#bcbcbc] bg-white text-[#5f5f5f] hover:bg-[#f9f3f6]'
                       }`}
                     >
-                      <Icon className="h-4 w-4" />
-                      {tab.label}
+                      <span className="flex items-center gap-2">
+                        <Icon className="h-4 w-4 shrink-0" />
+                        <span className="text-sm font-bold leading-tight">{tab.label}</span>
+                      </span>
+                      <span className="mt-1 block pl-6 text-[11px] font-normal leading-snug text-[#666]">
+                        {tab.desc}
+                      </span>
                     </button>
                   );
                 })}
@@ -1365,17 +1506,22 @@ export default function Admin() {
                   {/* Users List */}
                   <div className="border border-[#dbe3ee] bg-white rounded-2xl shadow-sm p-4 md:p-5">
                     <h3 className="font-bold text-[#5a1428] mb-3 text-base md:text-lg">
-                      {lang === 'vi' ? 'Danh sách người dùng' : 'Lista de usuarios'} (
+                      {lang === 'vi' ? 'Danh sách tài khoản' : 'Listado de cuentas'} (
                       {filteredUsers.length})
                     </h3>
+                    <p className="mb-3 text-sm text-[#5c4a50]">
+                      {lang === 'vi'
+                        ? 'Mỗi dòng là một người đã đăng ký. Bạn có thể tìm theo tên đăng nhập, email hoặc họ tên; dùng ngày đăng ký để lọc theo thời gian.'
+                        : 'Cada fila es una persona registrada. Puede buscar por usuario, email o nombre; use las fechas para filtrar.'}
+                    </p>
                     <div className="mb-3">
                       <Input
                         value={userSearch}
                         onChange={(e) => setUserSearch(e.target.value)}
                         placeholder={
                           lang === 'vi'
-                            ? 'Tìm theo username, email, họ tên, vai trò...'
-                            : 'Buscar por usuario, email, nombre, rol...'
+                            ? 'Tìm theo tên đăng nhập, email hoặc họ tên…'
+                            : 'Buscar por usuario, email o nombre…'
                         }
                         className="h-9 border-[#d2d2d2] bg-white"
                       />
@@ -1442,7 +1588,7 @@ export default function Admin() {
                               <span
                                 className={`text-xs px-2 py-0.5 rounded border ${item.role === 'admin' ? 'border-red-300 bg-red-50 text-red-700' : item.role === 'teacher' ? 'border-blue-300 bg-blue-50 text-blue-700' : 'border-green-300 bg-green-50 text-green-700'}`}
                               >
-                                {item.role}
+                                {formatUserRole(item.role, lang)}
                               </span>
                               <span
                                 className={`text-xs px-2 py-0.5 rounded border ${item.is_active ? 'border-green-300 bg-green-50 text-green-700' : 'border-gray-300 bg-gray-100 text-gray-600'}`}
@@ -1467,17 +1613,25 @@ export default function Admin() {
                               variant="outline"
                               size="sm"
                               onClick={() => onViewUserDashboard(item)}
-                              className="h-8 border-[#d2d2d2] bg-white hover:bg-[#fdf5f8]"
+                              title={lang === 'vi' ? 'Xem điểm & lịch sử (không sửa)' : 'Ver puntos e historial'}
+                              className="h-8 gap-1 border-sky-300/80 bg-sky-50/90 text-sky-900 hover:bg-sky-100"
                             >
-                              <Eye className="h-3.5 w-3.5" />
+                              <Eye className="h-3.5 w-3.5 shrink-0" />
+                              <span className="hidden text-xs font-semibold sm:inline">
+                                {lang === 'vi' ? 'Xem' : 'Ver'}
+                              </span>
                             </Button>
                             <Button
                               variant="outline"
                               size="sm"
                               onClick={() => onStartEditUser(item)}
-                              className="h-8 border-[#d2d2d2] bg-white hover:bg-[#fdf5f8]"
+                              title={lang === 'vi' ? 'Sửa thông tin tài khoản' : 'Editar cuenta'}
+                              className="h-8 gap-1 border-[#c49aa4] bg-[#fff5f6] text-[#5a1428] hover:bg-[#fce8ec]"
                             >
-                              <Edit className="h-3.5 w-3.5" />
+                              <Edit className="h-3.5 w-3.5 shrink-0" />
+                              <span className="hidden text-xs font-semibold sm:inline">
+                                {lang === 'vi' ? 'Sửa' : 'Editar'}
+                              </span>
                             </Button>
                             <Button
                               variant="outline"
@@ -1501,7 +1655,20 @@ export default function Admin() {
                             </Button>
                           </div>
                           {viewingUserId === item.id && (
-                            <div className="w-full mt-2 border border-[#d2d2d2] bg-[#f9f9f9] p-3 rounded-sm">
+                            <div className="admin-surface-view w-full mt-3 rounded-xl p-3 md:p-4">
+                              <div className="mb-3 flex flex-wrap items-center gap-2 border-b border-sky-200/90 pb-2">
+                                <Eye className="h-4 w-4 shrink-0 text-sky-700" aria-hidden />
+                                <span className="text-xs font-bold uppercase tracking-wide text-sky-900">
+                                  {lang === 'vi'
+                                    ? 'Chế độ xem — chỉ đọc, không thay đổi dữ liệu'
+                                    : 'Solo lectura — no modifica datos'}
+                                </span>
+                                <span className="text-[11px] font-medium text-sky-800/90">
+                                  {lang === 'vi'
+                                    ? 'Tóm tắt điểm và các lần làm bài gần đây.'
+                                    : 'Resumen de puntos e intentos recientes.'}
+                                </span>
+                              </div>
                               {viewingUserLoading && (
                                 <div className="text-sm text-[#5b5b5b]">
                                   {lang === 'vi' ? 'Đang tải hồ sơ...' : 'Cargando perfil...'}
@@ -1535,19 +1702,37 @@ export default function Admin() {
                                     </div>
                                   </div>
                                   <div>
-                                    <div className="text-xs text-[#5b5b5b] mb-1">
+                                    <div className="mb-1.5 text-xs font-semibold text-[#5a1428]">
                                       {lang === 'vi' ? 'Lịch sử làm bài gần nhất' : 'Historial reciente'}
                                     </div>
-                                    <div className="max-h-56 overflow-auto space-y-1">
+                                    <div className="mb-1 hidden grid-cols-[1fr_auto_auto_auto] gap-2 rounded bg-sky-100/60 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-sky-900 md:grid">
+                                      <span>{lang === 'vi' ? 'Tên bài' : 'Examen'}</span>
+                                      <span>{lang === 'vi' ? '% đúng' : '%'}</span>
+                                      <span>{lang === 'vi' ? 'Điểm' : 'Nota'}</span>
+                                      <span>{lang === 'vi' ? 'Câu đúng' : 'Aciertos'}</span>
+                                    </div>
+                                    <div className="max-h-56 space-y-1 overflow-auto">
                                       {viewingUserDashboard.history.slice(0, 10).map((h) => (
                                         <div
                                           key={h.id}
-                                          className="text-xs border border-[#d2d2d2] bg-white rounded-sm p-2 flex flex-wrap gap-2 justify-between"
+                                          className="grid grid-cols-1 gap-1 rounded border border-sky-100 bg-white/95 p-2 text-xs sm:grid-cols-[1fr_auto_auto_auto] sm:items-center sm:gap-2"
                                         >
-                                          <span className="text-[#5a1428] font-semibold">{h.quiz_title}</span>
-                                          <span>{Number(h.percentage || 0).toFixed(2)}%</span>
-                                          <span>{Number(h.score || 0).toFixed(2)}</span>
-                                          <span>
+                                          <span className="min-w-0 font-semibold text-[#5a1428]">
+                                            {h.quiz_title}
+                                          </span>
+                                          <span className="text-[#5b5b5b]">
+                                            <span className="font-medium text-sky-800">
+                                              {Number(h.percentage || 0).toFixed(1)}%
+                                            </span>
+                                            <span className="md:hidden"> · </span>
+                                          </span>
+                                          <span className="text-[#5b5b5b]">
+                                            {lang === 'vi' ? 'Điểm:' : 'Nota:'}{' '}
+                                            <span className="font-semibold text-[#5a1428]">
+                                              {Number(h.score || 0).toFixed(1)}
+                                            </span>
+                                          </span>
+                                          <span className="text-[#5b5b5b]">
                                             {h.correct_count}/{h.total_questions}
                                           </span>
                                         </div>
@@ -1559,9 +1744,20 @@ export default function Admin() {
                             </div>
                           )}
                           {editingUserId === item.id && (
-                            <div className="w-full mt-2 border border-[#d2d2d2] bg-[#f9f9f9] p-3 rounded-sm grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                            <div className="admin-surface-edit w-full mt-3 rounded-xl p-3 md:p-4">
+                              <div className="mb-3 flex flex-wrap items-center gap-2 border-b border-[#e8c4c8] pb-2">
+                                <Edit className="h-4 w-4 shrink-0 text-[#7a2038]" aria-hidden />
+                                <span className="text-xs font-bold uppercase tracking-wide text-[#6b1b31]">
+                                  {lang === 'vi'
+                                    ? 'Chế độ chỉnh sửa — thay đổi được lưu khi bấm Lưu'
+                                    : 'Edición — los cambios se guardan al pulsar Guardar'}
+                                </span>
+                              </div>
+                              <div className="grid grid-cols-1 gap-2 md:grid-cols-2 lg:grid-cols-3">
                               <div>
-                                <Label className="text-xs text-[#5b5b5b]">Username</Label>
+                                <Label className="text-xs text-[#5b5b5b]">
+                                  {lang === 'vi' ? 'Tên đăng nhập' : 'Usuario'}
+                                </Label>
                                 <Input
                                   value={editUserForm.username}
                                   onChange={(e) =>
@@ -1571,7 +1767,9 @@ export default function Admin() {
                                 />
                               </div>
                               <div>
-                                <Label className="text-xs text-[#5b5b5b]">Email</Label>
+                                <Label className="text-xs text-[#5b5b5b]">
+                                  {lang === 'vi' ? 'Email' : 'Correo'}
+                                </Label>
                                 <Input
                                   type="email"
                                   value={editUserForm.email}
@@ -1614,7 +1812,7 @@ export default function Admin() {
                                       {lang === 'vi' ? 'Giáo viên' : 'Profesor'}
                                     </SelectItem>
                                     <SelectItem value="admin">
-                                      {lang === 'vi' ? 'Quản trị' : 'Admin'}
+                                      {lang === 'vi' ? 'Quản trị viên' : 'Administración'}
                                     </SelectItem>
                                   </SelectContent>
                                 </Select>
@@ -1676,6 +1874,7 @@ export default function Admin() {
                                 </Button>
                               </div>
                             </div>
+                            </div>
                           )}
                         </div>
                       ))}
@@ -1688,11 +1887,17 @@ export default function Admin() {
                 <div className="space-y-4">
                   <div className="flex flex-wrap gap-2">
                     {[
-                      { id: 'subjects', label: lang === 'vi' ? 'Chủ đề tài liệu' : 'Temas' },
-                      { id: 'create', label: lang === 'vi' ? 'Nhập tài liệu' : 'Crear material' },
+                      {
+                        id: 'subjects',
+                        label: lang === 'vi' ? 'Nhóm chủ đề' : 'Temas y categorías',
+                      },
+                      {
+                        id: 'create',
+                        label: lang === 'vi' ? 'Thêm tài liệu mới' : 'Subir material nuevo',
+                      },
                       {
                         id: 'list',
-                        label: lang === 'vi' ? 'Danh sách tài liệu' : 'Lista materiales',
+                        label: lang === 'vi' ? 'Xem & chỉnh sửa' : 'Ver y editar',
                       },
                     ].map((tab) => (
                       <button
@@ -1714,9 +1919,14 @@ export default function Admin() {
                     <div className="border border-[#dbe3ee] bg-white rounded-2xl shadow-sm p-4 md:p-5">
                       <h3 className="font-bold text-[#5a1428] mb-3 text-base md:text-lg">
                         {lang === 'vi'
-                          ? 'Quản trị chủ đề tài liệu'
-                          : 'Gestión de temas de materiales'}
+                          ? 'Nhóm chủ đề (để phân loại tài liệu)'
+                          : 'Temas (para organizar los materiales)'}
                       </h3>
+                      <p className="mb-3 text-sm text-[#5c4a50]">
+                        {lang === 'vi'
+                          ? 'Mỗi chủ đề là một “ngăn” tên riêng bằng tiếng Việt và tiếng Tây Ban Nha. Sau khi tạo chủ đề, bạn chuyển sang tab “Thêm tài liệu” để đăng file PDF.'
+                          : 'Cada tema tiene nombre en vietnamita y español. Luego vaya a “Subir material” para asociar PDFs.'}
+                      </p>
                       <form
                         onSubmit={onCreateSubject}
                         className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2 mb-3"
@@ -1798,7 +2008,16 @@ export default function Admin() {
                               </div>
                             </div>
                             {editingSubjectId === item.id && (
-                              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2 mt-2">
+                              <div className="admin-surface-edit mt-3 rounded-xl p-3">
+                                <div className="mb-2 flex flex-wrap items-center gap-2 border-b border-[#e8c4c8] pb-2">
+                                  <Edit className="h-3.5 w-3.5 shrink-0 text-[#7a2038]" aria-hidden />
+                                  <span className="text-[11px] font-bold uppercase tracking-wide text-[#6b1b31]">
+                                    {lang === 'vi'
+                                      ? 'Sửa tên & mô tả chủ đề — Lưu để áp dụng'
+                                      : 'Editar tema — Guardar para aplicar'}
+                                  </span>
+                                </div>
+                              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2">
                                 <Input
                                   value={editSubjectForm.name_vi}
                                   onChange={(e) =>
@@ -1856,6 +2075,7 @@ export default function Admin() {
                                     {lang === 'vi' ? 'Hủy' : 'Cancelar'}
                                   </Button>
                                 </div>
+                              </div>
                               </div>
                             )}
                           </div>
@@ -1925,22 +2145,94 @@ export default function Admin() {
                               />
                             </div>
                             <div>
-                              <Label className="text-xs text-[#5b5b5b]">File</Label>
+                              <Label className="text-xs text-[#5b5b5b]">
+                                File{' '}
+                                <span className="text-[#7a2038] font-semibold">
+                                  ({lang === 'vi' ? 'chỉ PDF' : 'solo PDF'})
+                                </span>
+                              </Label>
                               <Input
+                                key={`create-vi-${materialCreateFileKey}`}
                                 type="file"
-                                onChange={(e) =>
-                                  setMaterialFiles({
-                                    ...materialFiles,
-                                    vi: e.target.files?.[0] || null,
-                                  })
-                                }
-                                required
+                                accept="application/pdf,.pdf"
+                                disabled={materialCreateUploading.vi}
+                                onChange={async (e) => {
+                                  const f = e.target.files?.[0] || null;
+                                  if (!f) {
+                                    setMaterialCreateStaged((s) => ({ ...s, vi: null }));
+                                    return;
+                                  }
+                                  if (!isPdfFile(f)) {
+                                    showError(
+                                      lang === 'vi'
+                                        ? 'Chỉ chấp nhận file PDF (.pdf)'
+                                        : 'Solo se aceptan archivos PDF (.pdf)'
+                                    );
+                                    e.target.value = '';
+                                    return;
+                                  }
+                                  setMaterialCreateUploading((u) => ({ ...u, vi: true }));
+                                  try {
+                                    const uploaded = await uploadMaterialFile(f, 'vi');
+                                    setMaterialCreateStaged((s) => ({
+                                      ...s,
+                                      vi: {
+                                        fileName: f.name,
+                                        path: buildStoredMediaPath(uploaded),
+                                        sizeMb: uploaded.size
+                                          ? Number((uploaded.size / (1024 * 1024)).toFixed(2))
+                                          : null,
+                                        pageCount:
+                                          uploaded.page_count != null &&
+                                          Number.isFinite(Number(uploaded.page_count))
+                                            ? Math.floor(Number(uploaded.page_count))
+                                            : null,
+                                      },
+                                    }));
+                                  } catch (err) {
+                                    showError(
+                                      err instanceof Error ? err.message : 'Upload error'
+                                    );
+                                    setMaterialCreateStaged((s) => ({ ...s, vi: null }));
+                                  } finally {
+                                    setMaterialCreateUploading((u) => ({ ...u, vi: false }));
+                                  }
+                                }}
                                 className="border-[#d2d2d2] bg-white h-9"
                               />
-                              {materialFiles.vi && (
-                                <span className="text-xs text-[#5b5b5b]">
-                                  {materialFiles.vi.name}
-                                </span>
+                              {materialCreateUploading.vi && (
+                                <div className="text-xs text-[#5b5b5b] mt-1">
+                                  {lang === 'vi' ? 'Đang tải lên...' : 'Subiendo...'}
+                                </div>
+                              )}
+                              {materialCreateStaged.vi && !materialCreateUploading.vi && (
+                                <div className="mt-2 space-y-1">
+                                  <div className="text-xs font-medium text-[#5a1428] break-all">
+                                    {lang === 'vi' ? 'File PDF:' : 'PDF:'}{' '}
+                                    {materialCreateStaged.vi.fileName}
+                                  </div>
+                                  <div>
+                                    <span className="text-xs text-[#5b5b5b]">URL (VI)</span>
+                                    <a
+                                      href={resolveMediaUrl(materialCreateStaged.vi.path)}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="text-xs text-[#7a2038] underline break-all block"
+                                    >
+                                      {materialCreateStaged.vi.path}
+                                    </a>
+                                  </div>
+                                  <div className="text-xs text-[#5b5b5b]">
+                                    {lang === 'vi' ? 'Dung lượng' : 'Tamaño'}:{' '}
+                                    {materialCreateStaged.vi.sizeMb ?? '—'} MB
+                                  </div>
+                                  <div className="text-xs text-[#5b5b5b]">
+                                    {lang === 'vi' ? 'Số trang PDF' : 'Páginas PDF'}:{' '}
+                                    {materialCreateStaged.vi.pageCount != null
+                                      ? materialCreateStaged.vi.pageCount
+                                      : '—'}
+                                  </div>
+                                </div>
                               )}
                             </div>
                           </div>
@@ -1974,22 +2266,94 @@ export default function Admin() {
                               />
                             </div>
                             <div>
-                              <Label className="text-xs text-[#5b5b5b]">Archivo</Label>
+                              <Label className="text-xs text-[#5b5b5b]">
+                                Archivo{' '}
+                                <span className="text-[#7a2038] font-semibold">
+                                  ({lang === 'vi' ? 'chỉ PDF' : 'solo PDF'})
+                                </span>
+                              </Label>
                               <Input
+                                key={`create-es-${materialCreateFileKey}`}
                                 type="file"
-                                onChange={(e) =>
-                                  setMaterialFiles({
-                                    ...materialFiles,
-                                    es: e.target.files?.[0] || null,
-                                  })
-                                }
-                                required
+                                accept="application/pdf,.pdf"
+                                disabled={materialCreateUploading.es}
+                                onChange={async (e) => {
+                                  const f = e.target.files?.[0] || null;
+                                  if (!f) {
+                                    setMaterialCreateStaged((s) => ({ ...s, es: null }));
+                                    return;
+                                  }
+                                  if (!isPdfFile(f)) {
+                                    showError(
+                                      lang === 'vi'
+                                        ? 'Chỉ chấp nhận file PDF (.pdf)'
+                                        : 'Solo se aceptan archivos PDF (.pdf)'
+                                    );
+                                    e.target.value = '';
+                                    return;
+                                  }
+                                  setMaterialCreateUploading((u) => ({ ...u, es: true }));
+                                  try {
+                                    const uploaded = await uploadMaterialFile(f, 'es');
+                                    setMaterialCreateStaged((s) => ({
+                                      ...s,
+                                      es: {
+                                        fileName: f.name,
+                                        path: buildStoredMediaPath(uploaded),
+                                        sizeMb: uploaded.size
+                                          ? Number((uploaded.size / (1024 * 1024)).toFixed(2))
+                                          : null,
+                                        pageCount:
+                                          uploaded.page_count != null &&
+                                          Number.isFinite(Number(uploaded.page_count))
+                                            ? Math.floor(Number(uploaded.page_count))
+                                            : null,
+                                      },
+                                    }));
+                                  } catch (err) {
+                                    showError(
+                                      err instanceof Error ? err.message : 'Upload error'
+                                    );
+                                    setMaterialCreateStaged((s) => ({ ...s, es: null }));
+                                  } finally {
+                                    setMaterialCreateUploading((u) => ({ ...u, es: false }));
+                                  }
+                                }}
                                 className="border-[#d2d2d2] bg-white h-9"
                               />
-                              {materialFiles.es && (
-                                <span className="text-xs text-[#5b5b5b]">
-                                  {materialFiles.es.name}
-                                </span>
+                              {materialCreateUploading.es && (
+                                <div className="text-xs text-[#5b5b5b] mt-1">
+                                  {lang === 'vi' ? 'Đang tải lên...' : 'Subiendo...'}
+                                </div>
+                              )}
+                              {materialCreateStaged.es && !materialCreateUploading.es && (
+                                <div className="mt-2 space-y-1">
+                                  <div className="text-xs font-medium text-[#5a1428] break-all">
+                                    {lang === 'vi' ? 'File PDF:' : 'PDF:'}{' '}
+                                    {materialCreateStaged.es.fileName}
+                                  </div>
+                                  <div>
+                                    <span className="text-xs text-[#5b5b5b]">URL (ES)</span>
+                                    <a
+                                      href={resolveMediaUrl(materialCreateStaged.es.path)}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="text-xs text-[#7a2038] underline break-all block"
+                                    >
+                                      {materialCreateStaged.es.path}
+                                    </a>
+                                  </div>
+                                  <div className="text-xs text-[#5b5b5b]">
+                                    {lang === 'vi' ? 'Dung lượng' : 'Tamaño'}:{' '}
+                                    {materialCreateStaged.es.sizeMb ?? '—'} MB
+                                  </div>
+                                  <div className="text-xs text-[#5b5b5b]">
+                                    {lang === 'vi' ? 'Số trang PDF' : 'Páginas PDF'}:{' '}
+                                    {materialCreateStaged.es.pageCount != null
+                                      ? materialCreateStaged.es.pageCount
+                                      : '—'}
+                                  </div>
+                                </div>
                               )}
                             </div>
                           </div>
@@ -1997,6 +2361,12 @@ export default function Admin() {
                         <div className="md:col-span-2">
                           <Button
                             type="submit"
+                            disabled={
+                              materialCreateUploading.vi ||
+                              materialCreateUploading.es ||
+                              !materialCreateStaged.vi ||
+                              !materialCreateStaged.es
+                            }
                             className="h-9 bg-[#7a2038] hover:bg-[#5a1428] text-white font-bold"
                           >
                             {lang === 'vi' ? 'Thêm tài liệu' : 'Agregar material'}
@@ -2013,6 +2383,11 @@ export default function Admin() {
                         {lang === 'vi' ? 'Danh sách tài liệu' : 'Lista de materiales'} (
                         {filteredMaterials.length})
                       </h3>
+                      <p className="mb-3 text-sm text-[#5c4a50]">
+                        {lang === 'vi'
+                          ? 'Chọn chủ đề để lọc. Biểu tượng tải xuống mở PDF (chỉ xem). Biểu tượng bút mở form chỉnh sửa bên dưới — vùng có viền đỏ đậm là chế độ sửa.'
+                          : 'Elija un tema para filtrar. La descarga abre el PDF (solo lectura). El lápiz abre el formulario de edición debajo — el borde granate indica modo edición.'}
+                      </p>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
                         <div>
                           <Label className="text-xs text-[#5b5b5b]">
@@ -2093,9 +2468,13 @@ export default function Admin() {
                                 variant="outline"
                                 size="sm"
                                 onClick={() => onStartEditMaterial(item)}
-                                className="h-8 border-[#d2d2d2] bg-white hover:bg-[#fdf5f8]"
+                                title={lang === 'vi' ? 'Chỉnh sửa tài liệu' : 'Editar material'}
+                                className="h-8 gap-1 border-[#c49aa4] bg-[#fff8f9] text-[#5a1428] hover:bg-[#fce8ec]"
                               >
-                                <Edit className="h-3.5 w-3.5" />
+                                <Edit className="h-3.5 w-3.5 shrink-0" />
+                                <span className="hidden text-xs font-semibold sm:inline">
+                                  {lang === 'vi' ? 'Sửa' : 'Editar'}
+                                </span>
                               </Button>
                               <Button
                                 variant="outline"
@@ -2107,7 +2486,16 @@ export default function Admin() {
                               </Button>
                             </div>
                             {editingMaterialId === item.id && (
-                              <div className="w-full mt-2 border border-[#d2d2d2] bg-[#f9f9f9] p-3 rounded-sm grid grid-cols-1 md:grid-cols-2 gap-2">
+                              <div className="admin-surface-edit w-full mt-3 rounded-xl p-3 md:p-4">
+                                <div className="mb-3 flex flex-wrap items-center gap-2 border-b border-[#e8c4c8] pb-2">
+                                  <Edit className="h-4 w-4 shrink-0 text-[#7a2038]" aria-hidden />
+                                  <span className="text-xs font-bold uppercase tracking-wide text-[#6b1b31]">
+                                    {lang === 'vi'
+                                      ? 'Chỉnh sửa tài liệu — tiêu đề, mô tả & file PDF'
+                                      : 'Editar material — título, descripción y PDF'}
+                                  </span>
+                                </div>
+                              <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
                                 <div>
                                   <Label className="text-xs text-[#5b5b5b]">Tiêu đề (VI)</Label>
                                   <Input
@@ -2164,46 +2552,142 @@ export default function Admin() {
                                 </div>
                                 <div>
                                   <Label className="text-xs text-[#5b5b5b]">
-                                    {lang === 'vi' ? 'File mới (VI)' : 'Archivo nuevo (VI)'}
+                                    {lang === 'vi' ? 'File mới (VI)' : 'Archivo nuevo (VI)'}{' '}
+                                    <span className="text-[#7a2038] font-semibold">
+                                      ({lang === 'vi' ? 'chỉ PDF' : 'solo PDF'})
+                                    </span>
                                   </Label>
                                   <Input
+                                    key={`edit-mat-vi-${editingMaterialId}`}
                                     type="file"
-                                    onChange={(e) =>
-                                      setEditMaterialFiles({
-                                        ...editMaterialFiles,
-                                        vi: e.target.files?.[0] || null,
-                                      })
-                                    }
+                                    accept="application/pdf,.pdf"
+                                    disabled={editMaterialUploading.vi}
+                                    onChange={async (e) => {
+                                      const f = e.target.files?.[0] || null;
+                                      if (!f) return;
+                                      if (!isPdfFile(f)) {
+                                        showError(
+                                          lang === 'vi'
+                                            ? 'Chỉ chấp nhận file PDF (.pdf)'
+                                            : 'Solo se aceptan archivos PDF (.pdf)'
+                                        );
+                                        e.target.value = '';
+                                        return;
+                                      }
+                                      setEditMaterialUploading((u) => ({ ...u, vi: true }));
+                                      try {
+                                        const uploaded = await uploadMaterialFile(f, 'vi');
+                                        setEditMaterialPickedFileName((p) => ({ ...p, vi: f.name }));
+                                        setEditMaterialForm((prev) => ({
+                                          ...prev,
+                                          file_path_vi: buildStoredMediaPath(uploaded),
+                                          file_size_mb_vi: uploaded.size
+                                            ? String(
+                                                Number(
+                                                  (uploaded.size / (1024 * 1024)).toFixed(2)
+                                                )
+                                              )
+                                            : '',
+                                          page_count_vi:
+                                            uploaded.page_count != null &&
+                                            Number.isFinite(Number(uploaded.page_count))
+                                              ? String(Math.floor(Number(uploaded.page_count)))
+                                              : '',
+                                        }));
+                                      } catch (err) {
+                                        showError(
+                                          err instanceof Error ? err.message : 'Upload error'
+                                        );
+                                      } finally {
+                                        setEditMaterialUploading((u) => ({ ...u, vi: false }));
+                                      }
+                                    }}
                                     className="h-9 border-[#d2d2d2] bg-white"
                                   />
+                                  {editMaterialPickedFileName.vi ? (
+                                    <div className="text-xs font-medium text-[#5a1428] mt-1 break-all">
+                                      {lang === 'vi' ? 'File PDF:' : 'PDF:'}{' '}
+                                      {editMaterialPickedFileName.vi}
+                                    </div>
+                                  ) : null}
                                   <div className="text-xs text-[#5b5b5b] mt-1">
-                                    {editMaterialFiles.vi
-                                      ? editMaterialFiles.vi.name
+                                    {editMaterialUploading.vi
+                                      ? lang === 'vi'
+                                        ? 'Đang tải lên...'
+                                        : 'Subiendo...'
                                       : lang === 'vi'
-                                        ? 'Để trống nếu giữ file hiện tại'
-                                        : 'Dejar vacío para mantener archivo actual'}
+                                        ? 'Chọn PDF khác để thay thế — URL, dung lượng và số trang cập nhật tự động.'
+                                        : 'Elija otro PDF — URL, tamaño y páginas se actualizan solos.'}
                                   </div>
                                 </div>
                                 <div>
                                   <Label className="text-xs text-[#5b5b5b]">
-                                    {lang === 'vi' ? 'File mới (ES)' : 'Archivo nuevo (ES)'}
+                                    {lang === 'vi' ? 'File mới (ES)' : 'Archivo nuevo (ES)'}{' '}
+                                    <span className="text-[#7a2038] font-semibold">
+                                      ({lang === 'vi' ? 'chỉ PDF' : 'solo PDF'})
+                                    </span>
                                   </Label>
                                   <Input
+                                    key={`edit-mat-es-${editingMaterialId}`}
                                     type="file"
-                                    onChange={(e) =>
-                                      setEditMaterialFiles({
-                                        ...editMaterialFiles,
-                                        es: e.target.files?.[0] || null,
-                                      })
-                                    }
+                                    accept="application/pdf,.pdf"
+                                    disabled={editMaterialUploading.es}
+                                    onChange={async (e) => {
+                                      const f = e.target.files?.[0] || null;
+                                      if (!f) return;
+                                      if (!isPdfFile(f)) {
+                                        showError(
+                                          lang === 'vi'
+                                            ? 'Chỉ chấp nhận file PDF (.pdf)'
+                                            : 'Solo se aceptan archivos PDF (.pdf)'
+                                        );
+                                        e.target.value = '';
+                                        return;
+                                      }
+                                      setEditMaterialUploading((u) => ({ ...u, es: true }));
+                                      try {
+                                        const uploaded = await uploadMaterialFile(f, 'es');
+                                        setEditMaterialPickedFileName((p) => ({ ...p, es: f.name }));
+                                        setEditMaterialForm((prev) => ({
+                                          ...prev,
+                                          file_path_es: buildStoredMediaPath(uploaded),
+                                          file_size_mb_es: uploaded.size
+                                            ? String(
+                                                Number(
+                                                  (uploaded.size / (1024 * 1024)).toFixed(2)
+                                                )
+                                              )
+                                            : '',
+                                          page_count_es:
+                                            uploaded.page_count != null &&
+                                            Number.isFinite(Number(uploaded.page_count))
+                                              ? String(Math.floor(Number(uploaded.page_count)))
+                                              : '',
+                                        }));
+                                      } catch (err) {
+                                        showError(
+                                          err instanceof Error ? err.message : 'Upload error'
+                                        );
+                                      } finally {
+                                        setEditMaterialUploading((u) => ({ ...u, es: false }));
+                                      }
+                                    }}
                                     className="h-9 border-[#d2d2d2] bg-white"
                                   />
+                                  {editMaterialPickedFileName.es ? (
+                                    <div className="text-xs font-medium text-[#5a1428] mt-1 break-all">
+                                      {lang === 'vi' ? 'File PDF:' : 'PDF:'}{' '}
+                                      {editMaterialPickedFileName.es}
+                                    </div>
+                                  ) : null}
                                   <div className="text-xs text-[#5b5b5b] mt-1">
-                                    {editMaterialFiles.es
-                                      ? editMaterialFiles.es.name
+                                    {editMaterialUploading.es
+                                      ? lang === 'vi'
+                                        ? 'Đang tải lên...'
+                                        : 'Subiendo...'
                                       : lang === 'vi'
-                                        ? 'Để trống nếu giữ file hiện tại'
-                                        : 'Dejar vacío para mantener archivo actual'}
+                                        ? 'Chọn PDF khác để thay thế — URL, dung lượng và số trang cập nhật tự động.'
+                                        : 'Elija otro PDF — URL, tamaño y páginas se actualizan solos.'}
                                   </div>
                                 </div>
                                 <div>
@@ -2220,6 +2704,12 @@ export default function Admin() {
                                     {lang === 'vi' ? 'Dung lượng' : 'Tamaño'}:{' '}
                                     {editMaterialForm.file_size_mb_vi || '-'} MB
                                   </div>
+                                  <div className="text-xs text-[#5b5b5b] mt-1">
+                                    {lang === 'vi' ? 'Số trang PDF' : 'Páginas PDF'}:{' '}
+                                    {editMaterialForm.page_count_vi !== ''
+                                      ? editMaterialForm.page_count_vi
+                                      : '—'}
+                                  </div>
                                 </div>
                                 <div>
                                   <Label className="text-xs text-[#5b5b5b]">URL (ES)</Label>
@@ -2235,10 +2725,17 @@ export default function Admin() {
                                     {lang === 'vi' ? 'Dung lượng' : 'Tamaño'}:{' '}
                                     {editMaterialForm.file_size_mb_es || '-'} MB
                                   </div>
+                                  <div className="text-xs text-[#5b5b5b] mt-1">
+                                    {lang === 'vi' ? 'Số trang PDF' : 'Páginas PDF'}:{' '}
+                                    {editMaterialForm.page_count_es !== ''
+                                      ? editMaterialForm.page_count_es
+                                      : '—'}
+                                  </div>
                                 </div>
                                 <div className="md:col-span-2 flex gap-2">
                                   <Button
                                     size="sm"
+                                    disabled={editMaterialUploading.vi || editMaterialUploading.es}
                                     onClick={() => onSaveEditMaterial(item)}
                                     className="h-9 bg-[#7a2038] hover:bg-[#5a1428] text-white"
                                   >
@@ -2254,6 +2751,7 @@ export default function Admin() {
                                   </Button>
                                 </div>
                               </div>
+                              </div>
                             )}
                           </div>
                         ))}
@@ -2267,9 +2765,18 @@ export default function Admin() {
                 <div className="space-y-4">
                   <div className="flex flex-wrap gap-2">
                     {[
-                      { id: 'types', label: lang === 'vi' ? 'Loại đề' : 'Tipos' },
-                      { id: 'create', label: lang === 'vi' ? 'Nhập đề' : 'Crear examen' },
-                      { id: 'list', label: lang === 'vi' ? 'Danh sách đề' : 'Lista exámenes' },
+                      {
+                        id: 'types',
+                        label: lang === 'vi' ? 'Nhóm loại bài thi' : 'Tipos de examen',
+                      },
+                      {
+                        id: 'create',
+                        label: lang === 'vi' ? 'Tạo bài thi mới' : 'Crear examen nuevo',
+                      },
+                      {
+                        id: 'list',
+                        label: lang === 'vi' ? 'Xem & chỉnh sửa' : 'Ver y editar',
+                      },
                     ].map((tab) => (
                       <button
                         key={tab.id}
@@ -2288,8 +2795,15 @@ export default function Admin() {
                   {quizzesSubTab === 'types' && (
                     <div className="border border-[#dbe3ee] bg-white rounded-2xl shadow-sm p-4 md:p-5">
                       <h3 className="font-bold text-[#5a1428] mb-3 text-base md:text-lg">
-                        {lang === 'vi' ? 'Quản trị loại đề' : 'Gestionar tipos de examen'}
+                        {lang === 'vi'
+                          ? 'Nhóm loại bài thi (ví dụ: lý thuyết, biển báo…)'
+                          : 'Tipos de examen (p. ej. teoría, señales…)'}
                       </h3>
+                      <p className="mb-3 text-sm text-[#5c4a50]">
+                        {lang === 'vi'
+                          ? 'Loại đề giúp gom bài thi theo từng mục. Học viên chọn loại khi làm bài trên trang web.'
+                          : 'Los tipos agrupan los exámenes. El alumno elige el tipo al practicar en la web.'}
+                      </p>
                       <form
                         onSubmit={onCreateQuizType}
                         className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-3"
@@ -2348,7 +2862,16 @@ export default function Admin() {
                             className="p-2 border border-[#d2d2d2] bg-white rounded-sm flex items-center justify-between gap-2"
                           >
                             {editingQuizTypeId === typeItem.id ? (
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 w-full">
+                              <div className="admin-surface-edit w-full rounded-xl p-3">
+                                <div className="mb-2 flex flex-wrap items-center gap-2 border-b border-[#e8c4c8] pb-2">
+                                  <Edit className="h-3.5 w-3.5 text-[#7a2038]" aria-hidden />
+                                  <span className="text-[11px] font-bold uppercase text-[#6b1b31]">
+                                    {lang === 'vi'
+                                      ? 'Sửa loại bài thi'
+                                      : 'Editar tipo de examen'}
+                                  </span>
+                                </div>
+                              <div className="grid w-full grid-cols-1 gap-2 md:grid-cols-2">
                                 <Input
                                   value={editQuizTypeValue.name_vi}
                                   onChange={(e) =>
@@ -2406,6 +2929,7 @@ export default function Admin() {
                                     {lang === 'vi' ? 'Hủy' : 'Cancelar'}
                                   </Button>
                                 </div>
+                              </div>
                               </div>
                             ) : (
                               <>
@@ -2766,6 +3290,11 @@ export default function Admin() {
                         {lang === 'vi' ? 'Danh sách đề thi' : 'Lista de exámenes'} (
                         {filteredAdminQuizzes.length})
                       </h3>
+                      <p className="mb-3 text-sm text-[#5c4a50]">
+                        {lang === 'vi'
+                          ? 'Bấm bút chì để mở khu chỉnh sửa (tiêu đề, mô tả, câu hỏi). Khu có viền đỏ bên trái là đang sửa. Biểu tượng mắt bật/tắt hiển thị bài thi cho học viên.'
+                          : 'Use el lápiz para editar (título, descripción, preguntas). El borde granate indica edición. El icono del ojo activa/desactiva el examen para los alumnos.'}
+                      </p>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
                         <div>
                           <Label className="text-xs text-[#5b5b5b]">
@@ -2841,9 +3370,13 @@ export default function Admin() {
                                 variant="outline"
                                 size="sm"
                                 onClick={() => onStartEditQuiz(item)}
-                                className="h-8 border-[#d2d2d2] bg-white hover:bg-[#fdf5f8]"
+                                title={lang === 'vi' ? 'Chỉnh sửa đề thi' : 'Editar examen'}
+                                className="h-8 gap-1 border-[#c49aa4] bg-[#fff8f9] text-[#5a1428] hover:bg-[#fce8ec]"
                               >
-                                <Edit className="h-3.5 w-3.5" />
+                                <Edit className="h-3.5 w-3.5 shrink-0" />
+                                <span className="hidden text-xs font-semibold sm:inline">
+                                  {lang === 'vi' ? 'Sửa' : 'Editar'}
+                                </span>
                               </Button>
                               <Button
                                 variant="outline"
@@ -2867,7 +3400,16 @@ export default function Admin() {
                               </Button>
                             </div>
                             {editingQuizId === item.id && (
-                              <div className="w-full mt-2 border border-[#d2d2d2] bg-[#f9f9f9] p-3 rounded-sm grid grid-cols-1 md:grid-cols-2 gap-2">
+                              <div className="admin-surface-edit w-full mt-3 rounded-xl p-3 md:p-4">
+                                <div className="mb-3 flex flex-wrap items-center gap-2 border-b border-[#e8c4c8] pb-2">
+                                  <Edit className="h-4 w-4 shrink-0 text-[#7a2038]" aria-hidden />
+                                  <span className="text-xs font-bold uppercase tracking-wide text-[#6b1b31]">
+                                    {lang === 'vi'
+                                      ? 'Chỉnh sửa bài thi — thông tin & câu hỏi bên dưới'
+                                      : 'Editar examen — datos y preguntas'}
+                                  </span>
+                                </div>
+                              <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
                                 <div>
                                   <Label className="text-xs text-[#5b5b5b]">
                                     {lang === 'vi' ? 'Loại đề' : 'Tipo'}
@@ -3339,6 +3881,7 @@ export default function Admin() {
                                     {lang === 'vi' ? 'Hủy' : 'Cancelar'}
                                   </Button>
                                 </div>
+                              </div>
                               </div>
                             )}
                           </div>

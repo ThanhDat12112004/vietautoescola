@@ -26,7 +26,9 @@ module.exports = {
         24: 'repeat(24, minmax(0, 1fr))',
         25: 'repeat(25, minmax(0, 1fr))',
       },
+      /** Một phông duy nhất: Be Vietnam Pro (`font-sans` = mặc định toàn app) */
       fontFamily: {
+        sans: ["'Be Vietnam Pro'", 'ui-sans-serif', 'system-ui', 'sans-serif'],
         display: ["'Be Vietnam Pro'", 'sans-serif'],
         body: ["'Be Vietnam Pro'", 'sans-serif'],
       },
@@ -86,6 +88,25 @@ module.exports = {
         'hover-surface': 'hsl(var(--hover-surface))',
         'text-muted-dark': 'hsl(var(--text-muted-dark))',
         'card-overlay': 'hsl(var(--card-overlay))',
+        /** Design system — đồng bộ với :root trong index.css */
+        brand: {
+          heading: 'var(--brand-heading)',
+          subtitle: 'var(--brand-subtitle)',
+          ink: 'var(--brand-ink)',
+          subline: 'var(--brand-subline)',
+          onCta: 'var(--brand-cta-on)',
+          cta: {
+            DEFAULT: 'var(--brand-cta-from)',
+            end: 'var(--brand-cta-end)',
+          },
+          burgundy: 'rgb(var(--rgb-brand-border) / <alpha-value>)',
+        },
+      },
+      boxShadow: {
+        'brand-sm': '0 10px 22px rgb(var(--rgb-brand-shadow) / 0.1)',
+        'brand-md': '0 12px 30px rgb(var(--rgb-brand-shadow) / 0.14)',
+        'brand-lg': '0 16px 42px rgb(var(--rgb-brand-shadow) / 0.12)',
+        'brand-cta': '0 10px 22px rgb(var(--rgb-brand-shadow) / 0.2)',
       },
       borderRadius: {
         lg: 'var(--radius)',

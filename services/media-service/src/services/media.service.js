@@ -1,15 +1,19 @@
+const pdfParse = require('pdf-parse');
 const { saveImageFile, saveAvatarFile, saveMaterialFile } = require('./storage.service');
 
-const allowedMaterialMimeTypes = new Set([
-  'application/pdf',
-  'application/msword',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-  'application/vnd.ms-powerpoint',
-  'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-  'application/vnd.ms-excel',
-  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-  'text/plain',
-]);
+async function tryPdfPageCount(buffer) {
+  if (!buffer || !Buffer.isBuffer(buffer)) return null;
+  try {
+    const data = await pdfParse(buffer);
+    const n = data?.numpages;
+    return Number.isInteger(n) && n > 0 ? n : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Materials: PDF only (page count + storage use .pdf). */
+const allowedMaterialMimeTypes = new Set(['application/pdf']);
 
 async function uploadQuestionImage(file) {
   if (!file) {
@@ -53,7 +57,11 @@ async function uploadMaterialFile(file, langCode) {
   }
 
   const uploaded = await saveMaterialFile(file, langCode);
-  return { key: uploaded.key, cdn_url: uploaded.cdnUrl, size: uploaded.size };
+  let pageCount = null;
+  if (file.mimetype === 'application/pdf') {
+    pageCount = await tryPdfPageCount(file.buffer);
+  }
+  return { key: uploaded.key, cdn_url: uploaded.cdnUrl, size: uploaded.size, page_count: pageCount };
 }
 
 module.exports = { uploadQuestionImage, uploadAvatarImage, uploadMaterialFile };

@@ -70,7 +70,9 @@ CREATE TABLE reference_materials (
     file_path_vi     VARCHAR(255) NOT NULL,
     file_path_es     VARCHAR(255) NOT NULL,
     file_size_mb_vi  DECIMAL(6,2) DEFAULT NULL,
+    page_count_vi    INT DEFAULT NULL,
     file_size_mb_es  DECIMAL(6,2) DEFAULT NULL,
+    page_count_es    INT DEFAULT NULL,
     uploaded_by      BIGINT NOT NULL,
     uploaded_at      DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (material_type_id) REFERENCES material_types(id) ON DELETE CASCADE,
@@ -208,13 +210,15 @@ INSERT INTO reference_materials (
     file_path_vi,
     file_path_es,
     file_size_mb_vi,
+    page_count_vi,
     file_size_mb_es,
+    page_count_es,
     uploaded_by
 )
 VALUES
-(1, 'Ly thuyet giao thong co ban', 'Teoria basica de trafico', 'Tai lieu PDF tong hop ly thuyet can nho.', 'Documento PDF con teoria esencial del examen.', '/docs/vi/ly-thuyet-co-ban.pdf', '/docs/es/teoria-basica.pdf', 2.40, 2.55, 1),
-(1, 'Cau truc de thi co ban', 'Estructura del examen base', 'Tong hop cau truc de thi va meo lam bai.', 'Resumen de estructura y consejos para el examen.', '/docs/vi/cau-truc-de-thi-co-ban.pdf', '/docs/es/estructura-examen-base.pdf', 2.10, 2.20, 1),
-(1, 'Meo nho bien bao', 'Guia rapida de senales', 'Tai lieu tong hop cac nhom bien bao thuong gap.', 'Material de referencia con grupos de senales frecuentes.', '/docs/vi/meo-nho-bien-bao.pdf', '/docs/es/guia-rapida-senales.pdf', 2.05, 2.05, 1)
+(1, 'Ly thuyet giao thong co ban', 'Teoria basica de trafico', 'Tai lieu PDF tong hop ly thuyet can nho.', 'Documento PDF con teoria esencial del examen.', '/docs/vi/ly-thuyet-co-ban.pdf', '/docs/es/teoria-basica.pdf', 2.40, 48, 2.55, 50, 1),
+(1, 'Cau truc de thi co ban', 'Estructura del examen base', 'Tong hop cau truc de thi va meo lam bai.', 'Resumen de estructura y consejos para el examen.', '/docs/vi/cau-truc-de-thi-co-ban.pdf', '/docs/es/estructura-examen-base.pdf', 2.10, 32, 2.20, 32, 1),
+(1, 'Meo nho bien bao', 'Guia rapida de senales', 'Tai lieu tong hop cac nhom bien bao thuong gap.', 'Material de referencia con grupos de senales frecuentes.', '/docs/vi/meo-nho-bien-bao.pdf', '/docs/es/guia-rapida-senales.pdf', 2.05, 24, 2.05, 24, 1)
 ON DUPLICATE KEY UPDATE
 title_vi = VALUES(title_vi),
 title_es = VALUES(title_es),
@@ -223,7 +227,9 @@ description_es = VALUES(description_es),
 file_path_vi = VALUES(file_path_vi),
 file_path_es = VALUES(file_path_es),
 file_size_mb_vi = VALUES(file_size_mb_vi),
-file_size_mb_es = VALUES(file_size_mb_es);
+page_count_vi = VALUES(page_count_vi),
+file_size_mb_es = VALUES(file_size_mb_es),
+page_count_es = VALUES(page_count_es);
 
 INSERT INTO quizzes (
     id, category_id, quiz_type_id,
@@ -386,7 +392,9 @@ INSERT INTO reference_materials (
     file_path_vi,
     file_path_es,
     file_size_mb_vi,
+    page_count_vi,
     file_size_mb_es,
+    page_count_es,
     uploaded_by
 )
 SELECT
@@ -398,7 +406,9 @@ SELECT
     CONCAT('/docs/vi/', LOWER(mt.code), '-p', doc.doc_no, '.pdf') AS file_path_vi,
     CONCAT('/docs/es/', LOWER(mt.code), '-p', doc.doc_no, '.pdf') AS file_path_es,
     ROUND(1 + ((mt.id + doc.doc_no) % 11) * 0.27, 2) AS file_size_mb_vi,
+    12 + ((mt.id + doc.doc_no) % 40) AS page_count_vi,
     ROUND(1 + ((mt.id + doc.doc_no + 3) % 11) * 0.27, 2) AS file_size_mb_es,
+    12 + ((mt.id + doc.doc_no + 1) % 40) AS page_count_es,
     1
 FROM material_types mt
 JOIN (

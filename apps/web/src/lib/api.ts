@@ -299,6 +299,7 @@ export type MaterialItem = {
   description: string | null;
   file_path: string;
   file_size_mb: number | null;
+  page_count?: number | null;
   title_vi: string;
   title_es: string;
   description_vi: string | null;
@@ -307,6 +308,8 @@ export type MaterialItem = {
   file_path_es: string;
   file_size_mb_vi: number | null;
   file_size_mb_es: number | null;
+  page_count_vi?: number | null;
+  page_count_es?: number | null;
   uploaded_at: string;
 };
 
@@ -407,7 +410,7 @@ export async function submitAttempt(attemptId: number, answers: Record<string, n
   });
 }
 
-export async function getLeaderboard(limit = 20) {
+export async function getLeaderboard(limit = 10) {
   return apiRequest<LeaderboardUser[]>(`/stats/leaderboard?limit=${limit}`);
 }
 

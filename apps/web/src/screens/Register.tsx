@@ -1,14 +1,11 @@
-import BrandLogo from '@/components/BrandLogo';
-import Footer from '@/components/Footer';
-import Navbar from '@/components/Navbar';
+import AuthSplitLayout from '@/components/AuthSplitLayout';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/hooks/useLanguage';
 import { register } from '@/lib/api';
-import { Lock, Mail, User } from 'lucide-react';
+import { Eye, EyeOff, Lock, Mail, User } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
@@ -50,6 +47,7 @@ const Register = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const [form, setForm] = useState({ username: '', email: '', password: '', fullName: '' });
+  const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState('');
 
@@ -110,104 +108,117 @@ const Register = () => {
   };
 
   return (
-    <div className="app-page min-h-screen flex flex-col bg-[radial-gradient(circle_at_18%_12%,rgba(224,231,255,0.35),transparent_38%),radial-gradient(circle_at_84%_6%,rgba(226,232,240,0.45),transparent_34%),linear-gradient(180deg,#f8fafc_0%,#eef2f7_55%,#f5f7fb_100%)]">
-      <Navbar />
-      <div className="flex flex-1 items-center justify-center px-4 py-12">
-        <Card className="w-full max-w-md border border-slate-300/70 bg-white/95 shadow-[0_18px_38px_rgba(15,23,42,0.12)] backdrop-blur-[2px]">
-          <CardHeader className="text-center pb-2">
-            <div className="flex justify-center mb-4">
-              <BrandLogo imageClassName="h-16" />
+    <AuthSplitLayout>
+      <div className="space-y-8">
+        <header>
+          <h1 className="font-display text-3xl font-extrabold tracking-tight text-primary">
+            {t('Đăng ký tài khoản', 'Crear cuenta')}
+          </h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            {t(
+              'Tạo tài khoản miễn phí để bắt đầu luyện thi',
+              'Crea tu cuenta gratis para empezar'
+            )}
+          </p>
+        </header>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {formError && (
+            <div className="rounded-xl border border-destructive/25 bg-destructive/10 px-3 py-2.5 text-sm font-medium text-destructive">
+              {formError}
             </div>
-            <h1 className="font-display text-2xl font-800 text-slate-800">
-              {t('Đăng ký tài khoản', 'Crear cuenta')}
-            </h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              {t(
-                'Tạo tài khoản miễn phí để bắt đầu luyện thi',
-                'Crea tu cuenta gratis para empezar'
-              )}
-            </p>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {formError && (
-                <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-700">
-                  {formError}
-                </div>
-              )}
-              <div className="space-y-2">
-                <Label htmlFor="fullName">{t('Họ và tên', 'Nombre completo')}</Label>
-                <div className="relative">
-                  <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="fullName"
-                    placeholder={t('Nguyễn Văn A', 'María García')}
-                    className="pl-10"
-                    value={form.fullName}
-                    onChange={(e) => setForm({ ...form, fullName: e.target.value })}
-                    required
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="username">{t('Tên đăng nhập', 'Nombre de usuario')}</Label>
-                <div className="relative">
-                  <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="username"
-                    placeholder="username123"
-                    className="pl-10"
-                    value={form.username}
-                    onChange={(e) => setForm({ ...form, username: e.target.value })}
-                    required
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="name@example.com"
-                    className="pl-10"
-                    value={form.email}
-                    onChange={(e) => setForm({ ...form, email: e.target.value })}
-                    required
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="password">{t('Mật khẩu', 'Contraseña')}</Label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="password"
-                    type="password"
-                    placeholder="••••••••"
-                    className="pl-10"
-                    value={form.password}
-                    onChange={(e) => setForm({ ...form, password: e.target.value })}
-                    required
-                  />
-                </div>
-              </div>
-              <Button type="submit" className="w-full border border-slate-800 bg-slate-900 font-semibold text-white shadow-sm hover:bg-slate-800" size="lg">
-                {isSubmitting ? t('Đang xử lý...', 'Procesando...') : t('Đăng ký', 'Registrarse')}
-              </Button>
-            </form>
-            <p className="text-center text-sm text-muted-foreground mt-6">
-              {t('Đã có tài khoản?', '¿Ya tienes cuenta?')}{' '}
-              <Link to="/login" className="text-primary font-medium hover:underline">
-                {t('Đăng nhập', 'Iniciar sesión')}
-              </Link>
-            </p>
-          </CardContent>
-        </Card>
+          )}
+          <div className="space-y-2">
+            <Label htmlFor="fullName" className="text-foreground">
+              {t('Họ và tên', 'Nombre completo')}
+            </Label>
+            <div className="relative">
+              <User className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-primary/50" />
+              <Input
+                id="fullName"
+                placeholder={t('Nguyễn Văn A', 'María García')}
+                className="border-primary/20 pl-10 transition-colors focus-visible:border-primary/45 focus-visible:ring-primary/20"
+                value={form.fullName}
+                onChange={(e) => setForm({ ...form, fullName: e.target.value })}
+                required
+              />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="username" className="text-foreground">
+              {t('Tên đăng nhập', 'Nombre de usuario')}
+            </Label>
+            <div className="relative">
+              <User className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-primary/50" />
+              <Input
+                id="username"
+                placeholder="username123"
+                className="border-primary/20 pl-10 transition-colors focus-visible:border-primary/45 focus-visible:ring-primary/20"
+                value={form.username}
+                onChange={(e) => setForm({ ...form, username: e.target.value })}
+                required
+              />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="email" className="text-foreground">
+              Email
+            </Label>
+            <div className="relative">
+              <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-primary/50" />
+              <Input
+                id="email"
+                type="email"
+                placeholder="name@example.com"
+                className="border-primary/20 pl-10 transition-colors focus-visible:border-primary/45 focus-visible:ring-primary/20"
+                value={form.email}
+                onChange={(e) => setForm({ ...form, email: e.target.value })}
+                required
+              />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="password" className="text-foreground">
+              {t('Mật khẩu', 'Contraseña')}
+            </Label>
+            <div className="relative">
+              <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-primary/50" />
+              <Input
+                id="password"
+                type={showPassword ? 'text' : 'password'}
+                placeholder="••••••••"
+                className="border-primary/20 pl-10 pr-11 transition-colors focus-visible:border-primary/45 focus-visible:ring-primary/20"
+                value={form.password}
+                onChange={(e) => setForm({ ...form, password: e.target.value })}
+                required
+              />
+              <button
+                type="button"
+                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1.5 text-primary/55 transition hover:bg-primary/[0.08] hover:text-primary"
+                onClick={() => setShowPassword((v) => !v)}
+                aria-label={showPassword ? t('Ẩn mật khẩu', 'Ocultar contraseña') : t('Hiện mật khẩu', 'Mostrar contraseña')}
+              >
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
+          </div>
+          <Button
+            type="submit"
+            size="lg"
+            className="brand-cta-primary mt-2 h-12 w-full rounded-xl font-semibold shadow-md transition hover:opacity-[0.96]"
+          >
+            {isSubmitting ? t('Đang xử lý...', 'Procesando...') : t('Đăng ký', 'Registrarse')}
+          </Button>
+        </form>
+
+        <p className="text-center text-sm text-muted-foreground">
+          {t('Đã có tài khoản?', '¿Ya tienes cuenta?')}{' '}
+          <Link to="/login" className="font-semibold text-primary underline-offset-4 hover:underline">
+            {t('Đăng nhập', 'Iniciar sesión')}
+          </Link>
+        </p>
       </div>
-      <Footer />
-    </div>
+    </AuthSplitLayout>
   );
 };
 

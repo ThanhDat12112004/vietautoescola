@@ -150,15 +150,18 @@ async function findReferenceMaterials(subjectId, lang) {
        file_path_es,
        file_size_mb_vi,
        file_size_mb_es,
+       page_count_vi,
+       page_count_es,
        CASE WHEN ? = 'es' THEN title_es ELSE title_vi END AS title,
        CASE WHEN ? = 'es' THEN description_es ELSE description_vi END AS description,
        CASE WHEN ? = 'es' THEN file_path_es ELSE file_path_vi END AS file_path,
        CASE WHEN ? = 'es' THEN file_size_mb_es ELSE file_size_mb_vi END AS file_size_mb,
+       CASE WHEN ? = 'es' THEN page_count_es ELSE page_count_vi END AS page_count,
        uploaded_at
      FROM reference_materials
      WHERE material_type_id = ?
      ORDER BY uploaded_at DESC`,
-    [lang, lang, lang, lang, subjectId]
+    [lang, lang, lang, lang, lang, subjectId]
   );
 
   return rows;
@@ -178,10 +181,12 @@ async function createReferenceMaterial(payload) {
         file_path_vi,
         file_path_es,
         file_size_mb_vi,
+        page_count_vi,
         file_size_mb_es,
+        page_count_es,
         uploaded_by
       )
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       randomId,
       payload.subject_id,
@@ -192,7 +197,9 @@ async function createReferenceMaterial(payload) {
       payload.file_path_vi,
       payload.file_path_es,
       payload.file_size_mb_vi || null,
+      payload.page_count_vi != null ? Number(payload.page_count_vi) : null,
       payload.file_size_mb_es || null,
+      payload.page_count_es != null ? Number(payload.page_count_es) : null,
       payload.uploaded_by,
     ]
   );
@@ -215,7 +222,9 @@ async function updateReferenceMaterial(materialId, payload) {
          file_path_vi = ?,
          file_path_es = ?,
          file_size_mb_vi = ?,
-         file_size_mb_es = ?
+         page_count_vi = ?,
+         file_size_mb_es = ?,
+         page_count_es = ?
      WHERE id = ?`,
     [
       payload.title_vi,
@@ -225,7 +234,9 @@ async function updateReferenceMaterial(materialId, payload) {
       payload.file_path_vi,
       payload.file_path_es,
       payload.file_size_mb_vi || null,
+      payload.page_count_vi != null ? Number(payload.page_count_vi) : null,
       payload.file_size_mb_es || null,
+      payload.page_count_es != null ? Number(payload.page_count_es) : null,
       materialId,
     ]
   );

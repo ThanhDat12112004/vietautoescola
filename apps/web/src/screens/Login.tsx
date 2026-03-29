@@ -1,15 +1,12 @@
-import BrandLogo from '@/components/BrandLogo';
-import Footer from '@/components/Footer';
-import Navbar from '@/components/Navbar';
+import AuthSplitLayout from '@/components/AuthSplitLayout';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/hooks/useLanguage';
 import { login } from '@/lib/api';
 import { saveAuth } from '@/lib/auth';
-import { Lock, Mail } from 'lucide-react';
+import { Eye, EyeOff, Lock, Mail } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
@@ -56,6 +53,7 @@ const Login = () => {
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState('');
 
@@ -102,75 +100,86 @@ const Login = () => {
   };
 
   return (
-    <div className="app-page min-h-screen flex flex-col bg-[radial-gradient(circle_at_18%_12%,rgba(224,231,255,0.35),transparent_38%),radial-gradient(circle_at_84%_6%,rgba(226,232,240,0.45),transparent_34%),linear-gradient(180deg,#f8fafc_0%,#eef2f7_55%,#f5f7fb_100%)]">
-      <Navbar />
-      <div className="flex flex-1 items-center justify-center px-4 py-12">
-        <Card className="w-full max-w-md border border-slate-300/70 bg-white/95 shadow-[0_18px_38px_rgba(15,23,42,0.12)] backdrop-blur-[2px]">
-          <CardHeader className="text-center pb-2">
-            <div className="flex justify-center mb-4">
-              <BrandLogo imageClassName="h-16" />
+    <AuthSplitLayout>
+      <div className="space-y-8">
+        <header>
+          <h1 className="font-display text-3xl font-extrabold tracking-tight text-primary">
+            {t('Đăng nhập', 'Iniciar sesión')}
+          </h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            {t('Đăng nhập để tiếp tục luyện thi', 'Inicia sesión para seguir practicando')}
+          </p>
+        </header>
+
+        <form onSubmit={handleSubmit} className="space-y-5">
+          {formError && (
+            <div className="rounded-xl border border-destructive/25 bg-destructive/10 px-3 py-2.5 text-sm font-medium text-destructive">
+              {formError}
             </div>
-            <h1 className="font-display text-2xl font-800 text-slate-800">{t('Đăng nhập', 'Iniciar sesión')}</h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              {t('Đăng nhập để tiếp tục luyện thi', 'Inicia sesión para seguir practicando')}
-            </p>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {formError && (
-                <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-700">
-                  {formError}
-                </div>
-              )}
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="email"
-                    type="email"
-                    autoComplete="username"
-                    placeholder="name@example.com"
-                    className="pl-10"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="password">{t('Mật khẩu', 'Contraseña')}</Label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="password"
-                    type="password"
-                    autoComplete="current-password"
-                    placeholder="••••••••"
-                    className="pl-10"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                  />
-                </div>
-              </div>
-              <Button type="submit" className="w-full border border-slate-800 bg-slate-900 font-semibold text-white shadow-sm hover:bg-slate-800" size="lg">
-                {isSubmitting
-                  ? t('Đang xử lý...', 'Procesando...')
-                  : t('Đăng nhập', 'Iniciar sesión')}
-              </Button>
-            </form>
-            <p className="text-center text-sm text-muted-foreground mt-6">
-              {t('Chưa có tài khoản?', '¿No tienes cuenta?')}{' '}
-              <Link to="/register" className="text-primary font-medium hover:underline">
-                {t('Đăng ký ngay', 'Regístrate')}
-              </Link>
-            </p>
-          </CardContent>
-        </Card>
+          )}
+          <div className="space-y-2">
+            <Label htmlFor="email" className="text-foreground">
+              Email
+            </Label>
+            <div className="relative">
+              <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-primary/50" />
+              <Input
+                id="email"
+                type="email"
+                autoComplete="username"
+                placeholder="name@example.com"
+                className="border-primary/20 pl-10 transition-colors focus-visible:border-primary/45 focus-visible:ring-primary/20"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="password" className="text-foreground">
+              {t('Mật khẩu', 'Contraseña')}
+            </Label>
+            <div className="relative">
+              <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-primary/50" />
+              <Input
+                id="password"
+                type={showPassword ? 'text' : 'password'}
+                autoComplete="current-password"
+                placeholder="••••••••"
+                className="border-primary/20 pl-10 pr-11 transition-colors focus-visible:border-primary/45 focus-visible:ring-primary/20"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+              <button
+                type="button"
+                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1.5 text-primary/55 transition hover:bg-primary/[0.08] hover:text-primary"
+                onClick={() => setShowPassword((v) => !v)}
+                aria-label={showPassword ? t('Ẩn mật khẩu', 'Ocultar contraseña') : t('Hiện mật khẩu', 'Mostrar contraseña')}
+              >
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
+          </div>
+          <Button
+            type="submit"
+            size="lg"
+            className="brand-cta-primary h-12 w-full rounded-xl font-semibold shadow-md transition hover:opacity-[0.96]"
+          >
+            {isSubmitting
+              ? t('Đang xử lý...', 'Procesando...')
+              : t('Đăng nhập', 'Iniciar sesión')}
+          </Button>
+        </form>
+
+        <p className="text-center text-sm text-muted-foreground">
+          {t('Chưa có tài khoản?', '¿No tienes cuenta?')}{' '}
+          <Link to="/register" className="font-semibold text-primary underline-offset-4 hover:underline">
+            {t('Đăng ký ngay', 'Regístrate')}
+          </Link>
+        </p>
       </div>
-      <Footer />
-    </div>
+    </AuthSplitLayout>
   );
 };
 

@@ -1,6 +1,6 @@
 const statsRepository = require('../repositories/stats.repository');
 
-async function getLeaderboard(limit = 20) {
+async function getLeaderboard(limit = 10) {
   return statsRepository.findLeaderboard(limit);
 }
 

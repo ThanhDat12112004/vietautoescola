@@ -172,6 +172,41 @@ export const User = (props: IconProps) => (
   </svg>
 );
 
+export const ChevronDown = (props: IconProps) => (
+  <svg viewBox="0 0 24 24" aria-hidden="true" {...baseProps} {...props}>
+    <path d="m7 10 5 5 5-5" />
+  </svg>
+);
+
+export const Check = (props: IconProps) => (
+  <svg viewBox="0 0 24 24" aria-hidden="true" {...baseProps} {...props}>
+    <path d="m5.2 12.2 4.3 4.2L18.8 7" />
+  </svg>
+);
+
+export const Camera = (props: IconProps) => (
+  <svg viewBox="0 0 24 24" aria-hidden="true" {...baseProps} {...props}>
+    <path d="M4 9.2A1.8 1.8 0 0 1 5.8 7.4h2.4l1.1-1.5a1.8 1.8 0 0 1 1.4-.7h3.6a1.8 1.8 0 0 1 1.4.7l1.1 1.5h2.4A1.8 1.8 0 0 1 20 9.2v8.6a1.8 1.8 0 0 1-1.8 1.8H5.8A1.8 1.8 0 0 1 4 17.8V9.2Z" />
+    <circle cx="12" cy="13.5" r="3.2" />
+  </svg>
+);
+
+export const Lock = (props: IconProps) => (
+  <svg viewBox="0 0 24 24" aria-hidden="true" {...baseProps} {...props}>
+    <path d="M8.5 10V7a3.5 3.5 0 0 1 7 0v3" />
+    <rect x="5" y="10" width="14" height="11" rx="2.2" />
+    <circle cx="12" cy="15.2" r="1.3" />
+  </svg>
+);
+
+/** Bút chì — sửa tên / chỉnh sửa */
+export const Pencil = (props: IconProps) => (
+  <svg viewBox="0 0 24 24" aria-hidden="true" {...baseProps} {...props}>
+    <path d="M12 20h9" />
+    <path d="M16.5 3.5c.8-.8 2.1-.8 2.8 0l1.2 1.2c.8.8.8 2 0 2.8L9 19l-4 1 1-4 10.5-10.5Z" />
+  </svg>
+);
+
 export const X = (props: IconProps) => (
   <svg viewBox="0 0 24 24" aria-hidden="true" {...baseProps} {...props}>
     <path d="m6 6 12 12" />

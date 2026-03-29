@@ -108,10 +108,12 @@ async function createReferenceMaterial(req, res, next) {
     description_vi,
     file_path_vi,
     file_size_mb_vi,
+    page_count_vi,
     title_es,
     description_es,
     file_path_es,
     file_size_mb_es,
+    page_count_es,
   } = req.body;
   if (!title_vi || !file_path_vi || !title_es || !file_path_es) {
     return res.status(400).json({
@@ -126,10 +128,12 @@ async function createReferenceMaterial(req, res, next) {
       description_vi,
       file_path_vi,
       file_size_mb_vi,
+      page_count_vi,
       title_es,
       description_es,
       file_path_es,
       file_size_mb_es,
+      page_count_es,
       uploaded_by: req.user.id,
     });
 
@@ -150,10 +154,12 @@ async function createReferenceMaterialsBilingual(req, res, next) {
     description_vi,
     file_path_vi,
     file_size_mb_vi,
+    page_count_vi,
     title_es,
     description_es,
     file_path_es,
     file_size_mb_es,
+    page_count_es,
   } = req.body;
 
   if (!title_vi || !file_path_vi || !title_es || !file_path_es) {
@@ -169,10 +175,12 @@ async function createReferenceMaterialsBilingual(req, res, next) {
       description_vi,
       file_path_vi,
       file_size_mb_vi,
+      page_count_vi,
       title_es,
       description_es,
       file_path_es,
       file_size_mb_es,
+      page_count_es,
       uploaded_by: req.user.id,
     });
 
@@ -193,10 +201,12 @@ async function updateReferenceMaterial(req, res, next) {
     description_vi,
     file_path_vi,
     file_size_mb_vi,
+    page_count_vi,
     title_es,
     description_es,
     file_path_es,
     file_size_mb_es,
+    page_count_es,
   } = req.body;
   if (!title_vi || !file_path_vi || !title_es || !file_path_es) {
     return res.status(400).json({
@@ -210,10 +220,12 @@ async function updateReferenceMaterial(req, res, next) {
       description_vi,
       file_path_vi,
       file_size_mb_vi,
+      page_count_vi,
       title_es,
       description_es,
       file_path_es,
       file_size_mb_es,
+      page_count_es,
     });
 
     return res.json(result);
