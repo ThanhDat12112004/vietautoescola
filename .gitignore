@@ -9,9 +9,3 @@ pnpm-debug.log*
 dist
 coverage
 .DS_Store
-
-# Next.js (apps/web)
-apps/web/.next
-apps/web/out
-**/.tsbuildinfo
-.logs

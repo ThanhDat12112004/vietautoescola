@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 960" fill="none" aria-hidden="true">
+  <defs>
+    <linearGradient id="s-bg" x1="60" y1="0" x2="60" y2="960" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFBFC"/>
+      <stop offset="0.35" stop-color="#FDF2F5"/>
+      <stop offset="0.72" stop-color="#F5E4EA"/>
+      <stop offset="1" stop-color="#EDD8DF"/>
+    </linearGradient>
+    <linearGradient id="s-gold" x1="36" y1="96" x2="84" y2="384" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFE566"/>
+      <stop offset="0.45" stop-color="#E8B923"/>
+      <stop offset="1" stop-color="#9A7209"/>
+    </linearGradient>
+    <linearGradient id="s-wine" x1="60" y1="0" x2="60" y2="960" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#B84D62"/>
+      <stop offset="1" stop-color="#5C1F2A"/>
+    </linearGradient>
+    <linearGradient id="s-edge" x1="0" y1="0" x2="120" y2="0" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#9E3348" stop-opacity="0.4"/>
+      <stop offset="0.1" stop-color="#9E3348" stop-opacity="0"/>
+      <stop offset="0.9" stop-color="#9E3348" stop-opacity="0"/>
+      <stop offset="1" stop-color="#9E3348" stop-opacity="0.4"/>
+    </linearGradient>
+  </defs>
+  <rect width="120" height="960" fill="url(#s-bg)"/>
+  <rect width="120" height="960" fill="url(#s-edge)"/>
+  <!-- Thanh v�ng d?c d�y (g?n full b? ngang d?i) -->
+  <rect x="38" y="44" width="44" height="872" rx="22" fill="url(#s-gold)" opacity="0.92"/>
+  <rect x="44" y="52" width="32" height="856" rx="16" fill="#FFF8E0" fill-opacity="0.35"/>
+  <!-- Sao -->
+  <path fill="url(#s-gold)" stroke="#B8890F" stroke-width="1.2" d="M60 36l7.5 15 16.8 2.4-12.2 11.8 2.8 16.7-14.9-7.8-14.9 7.8 2.8-16.7-12.2-11.8 16.8-2.4z"/>
+  <!-- Cup r?ng -->
+  <path fill="url(#s-gold)" d="M60 142c-20 0-36 14-38 32h76c-2-18-18-32-38-32z"/>
+  <ellipse cx="60" cy="182" rx="38" ry="5" fill="#6B5208" fill-opacity="0.4"/>
+  <path fill="url(#s-gold)" d="M30 186h60v5c0 11-10 20-22 20H52c-12 0-22-9-22-20v-5z"/>
+  <rect x="52" y="212" width="16" height="44" rx="4" fill="url(#s-wine)"/>
+  <path fill="url(#s-wine)" d="M36 264h48a5 5 0 015 5v8H31v-8a5 5 0 015-5z"/>
+  <!-- Ch?m trang tr� to h?n -->
+  <circle cx="60" cy="360" r="6" fill="#9E3348" fill-opacity="0.4"/>
+  <circle cx="60" cy="460" r="5.5" fill="#E8B923" fill-opacity="0.55"/>
+  <circle cx="60" cy="560" r="6" fill="#9E3348" fill-opacity="0.32"/>
+  <circle cx="60" cy="660" r="5.5" fill="#E8B923" fill-opacity="0.5"/>
+  <circle cx="60" cy="760" r="6" fill="#9E3348" fill-opacity="0.3"/>
+  <path stroke="#9E3348" stroke-opacity="0.22" stroke-width="2" fill="none" d="M22 400c12-16 26-22 38-24M98 420c-12 16-26 22-38 24"/>
+  <path stroke="#9E3348" stroke-opacity="0.22" stroke-width="2" fill="none" d="M98 560c-12-16-26-22-38-24M22 580c12 16 26 22 38 24"/>
+  <path stroke="#9E3348" stroke-opacity="0.2" stroke-width="2.5" fill="none" d="M16 860c16 10 72 10 88 0"/>
+  <circle cx="60" cy="900" r="10" fill="url(#s-gold)" stroke="#B8890F" stroke-width="1.5"/>
+</svg>

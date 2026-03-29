@@ -1,0 +1,75 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 560" fill="none" aria-hidden="true">
+  <defs>
+    <linearGradient id="lb-bg" x1="200" y1="0" x2="200" y2="560" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFBFC"/>
+      <stop offset="0.45" stop-color="#FDF2F5"/>
+      <stop offset="1" stop-color="#F0E4E8"/>
+    </linearGradient>
+    <linearGradient id="lb-gold" x1="120" y1="120" x2="300" y2="380" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFE566"/>
+      <stop offset="0.35" stop-color="#E8B923"/>
+      <stop offset="0.7" stop-color="#C49212"/>
+      <stop offset="1" stop-color="#8A6510"/>
+    </linearGradient>
+    <linearGradient id="lb-gold-d" x1="200" y1="200" x2="200" y2="360" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#B8890F"/>
+      <stop offset="1" stop-color="#6B5208"/>
+    </linearGradient>
+    <linearGradient id="lb-wine" x1="200" y1="0" x2="200" y2="400" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#A8384F"/>
+      <stop offset="1" stop-color="#6B2230"/>
+    </linearGradient>
+    <linearGradient id="lb-wine-light" x1="0" y1="0" x2="400" y2="0" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#7A2038" stop-opacity="0.12"/>
+      <stop offset="0.5" stop-color="#7A2038" stop-opacity="0"/>
+      <stop offset="1" stop-color="#7A2038" stop-opacity="0.12"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="400" height="560" fill="url(#lb-bg)"/>
+  <rect width="400" height="560" fill="url(#lb-wine-light)"/>
+
+  <!-- Vòng nguyệt quế trái -->
+  <path fill="#7A2038" fill-opacity="0.18" d="M48 180c28-42 62-62 98-68-8 38-6 78 12 112-36 4-70-16-98-44-16-28-20-58-12-100z"/>
+  <path fill="#7A2038" fill-opacity="0.12" d="M58 220c18-28 40-44 64-50-4 24-2 50 8 72-24 2-48-8-64-26-10-18-12-38-8-96z"/>
+
+  <!-- Vòng nguyệt quế phải (mirror) -->
+  <path fill="#7A2038" fill-opacity="0.18" d="M352 180c-28-42-62-62-98-68 8 38 6 78-12 112 36 4 70-16 98-44 16-28 20-58 12-100z"/>
+  <path fill="#7A2038" fill-opacity="0.12" d="M342 220c-18-28-40-44-64-50 4 24 2 50-8 72 24 2 48-8 64-26 10-18 12-38 8-96z"/>
+
+  <!-- Đế -->
+  <path fill="url(#lb-wine)" d="M88 420h224c8 0 14 6 14 14v8c0 8-6 14-14 14H88c-8 0-14-6-14-14v-8c0-8 6-14 14-14z"/>
+  <rect x="140" y="380" width="120" height="48" rx="6" fill="url(#lb-wine)"/>
+  <path fill="url(#lb-wine)" d="M160 380h80v12c0 6-4 10-10 10h-60c-6 0-10-4-10-10v-12z" opacity="0.85"/>
+
+  <!-- Thân đế trụ -->
+  <path fill="url(#lb-wine)" d="M175 320h50v60h-50c-10 0-18-8-18-18v-24c0-10 8-18 18-18z"/>
+  <rect x="188" y="280" width="24" height="44" rx="4" fill="url(#lb-wine)"/>
+
+  <!-- Cup chính -->
+  <path fill="url(#lb-gold)" d="M200 100c-52 0-94 36-102 84h204c-8-48-50-84-102-84z"/>
+  <ellipse cx="200" cy="188" rx="102" ry="14" fill="url(#lb-gold-d)"/>
+
+  <!-- Miệng cup highlight -->
+  <ellipse cx="200" cy="108" rx="88" ry="10" fill="#FFF5CC" fill-opacity="0.35"/>
+
+  <!-- Thân cup -->
+  <path fill="url(#lb-gold)" d="M118 184h164v8c0 28-22 50-50 50h-64c-28 0-50-22-50-50v-8z"/>
+  <path fill="url(#lb-gold-d)" d="M130 228c12 14 30 22 50 22h40c20 0 38-8 50-22v36c0 8-6 14-14 14H144c-8 0-14-6-14-14v-36z"/>
+
+  <!-- Quai trái -->
+  <path fill="none" stroke="url(#lb-gold)" stroke-width="10" stroke-linecap="round" d="M118 170c-28 0-50 22-50 50s22 50 50 50"/>
+  <!-- Quai phải -->
+  <path fill="none" stroke="url(#lb-gold)" stroke-width="10" stroke-linecap="round" d="M282 170c28 0 50 22 50 50s-22 50-50 50"/>
+
+  <!-- Ngôi sao trên cup -->
+  <path fill="#FFF8E0" fill-opacity="0.9" d="M200 52l8 18 18 2-14 12 4 18-16-9-16 9 4-18-14-12 18-2z"/>
+
+  <!-- Hạt trang trí -->
+  <circle cx="200" cy="400" r="4" fill="#7A2038" fill-opacity="0.35"/>
+  <circle cx="168" cy="408" r="3" fill="#7A2038" fill-opacity="0.25"/>
+  <circle cx="232" cy="408" r="3" fill="#7A2038" fill-opacity="0.25"/>
+
+  <!-- Đường cong trang trí dưới -->
+  <path stroke="#7A2038" stroke-opacity="0.2" stroke-width="2" fill="none" d="M60 480c80-20 200-20 280 0"/>
+</svg>
