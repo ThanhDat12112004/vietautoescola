@@ -1,7 +1,12 @@
 const statsRepository = require('../repositories/stats.repository');
 
-async function getLeaderboard(limit = 10) {
-  return statsRepository.findLeaderboard(limit);
+function normalizePeriod(period) {
+  const value = String(period || 'all').trim().toLowerCase();
+  return value === 'week' || value === 'month' ? value : 'all';
+}
+
+async function getLeaderboard(limit = 10, period = 'all') {
+  return statsRepository.findLeaderboardByPeriod(normalizePeriod(period), limit);
 }
 
 async function getHomeSummary() {
@@ -21,8 +26,8 @@ async function getUserDashboard(userId, lang) {
   return { stats, history };
 }
 
-async function getMyLeaderboardRank(userId) {
-  const row = await statsRepository.findUserLeaderboardRank(userId);
+async function getMyLeaderboardRank(userId, period = 'all') {
+  const row = await statsRepository.findUserLeaderboardRankByPeriod(userId, normalizePeriod(period));
   if (!row) {
     const appError = new Error('User not found');
     appError.status = 404;
@@ -37,4 +42,14 @@ async function getMyLeaderboardRank(userId) {
   };
 }
 
-module.exports = { getLeaderboard, getHomeSummary, getUserDashboard, getMyLeaderboardRank };
+async function getMyLeaderboardAround(userId, period = 'all', radius = 3) {
+  return statsRepository.findLeaderboardAroundUser(userId, normalizePeriod(period), radius);
+}
+
+module.exports = {
+  getLeaderboard,
+  getHomeSummary,
+  getUserDashboard,
+  getMyLeaderboardRank,
+  getMyLeaderboardAround,
+};

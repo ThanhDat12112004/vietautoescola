@@ -8,7 +8,7 @@ LOG_FILE="$LOG_DIR/dev.log"
 ENV_FILE="$ROOT_DIR/.env"
 
 # All local app ports used by this monorepo services.
-APP_PORTS=(1234 8080 4001 4002 4003 4004 4005)
+APP_PORTS=(3000 8080 4001 4002 4003 4004 4005)
 
 mkdir -p "$LOG_DIR"
 

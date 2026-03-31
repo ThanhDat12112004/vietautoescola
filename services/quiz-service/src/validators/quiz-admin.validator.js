@@ -52,7 +52,6 @@ const questionSchema = z
 
 const createManualQuizSchema = z.object({
   category_id: z.number().int().positive().optional().nullable(),
-  quiz_type: z.string().trim().min(1).default('general'),
   title_vi: z.string().trim().min(1),
   title_es: z.string().trim().min(1),
   description_vi: z.string().trim().optional().nullable(),
@@ -88,7 +87,6 @@ const detailQuestionSchema = z
 
 const updateQuizDetailSchema = z.object({
   category_id: z.number().int().positive().optional().nullable(),
-  quiz_type: z.union([z.string().trim().min(1), z.number().int().positive()]),
   title_vi: z.string().trim().min(1),
   title_es: z.string().trim().min(1),
   description_vi: z.string().trim().optional().nullable(),

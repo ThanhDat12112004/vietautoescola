@@ -39,8 +39,74 @@ function normalizeQuizTypeId(value) {
   return legacyMap[String(value || '').trim().toLowerCase()] || 1;
 }
 
+async function resolveQuizTypeId(payload = {}) {
+  const categoryId = Number(payload.category_id);
+  if (Number.isFinite(categoryId) && categoryId > 0) {
+    const byCategory = await quizRepository.findFirstTypeIdByCategoryId(categoryId);
+    if (byCategory) return byCategory;
+  }
+  return normalizeQuizTypeId(payload.quiz_type_id ?? payload.quiz_type);
+}
+
 async function listQuizzes(lang, userId = null) {
   return quizRepository.findAllActiveQuizzes(lang, userId);
+}
+
+async function listTopicGroups(lang) {
+  return quizRepository.findAllTopicGroups(lang);
+}
+
+async function listTopicGroupsForAdmin() {
+  return quizRepository.findAllTopicGroupsForAdmin();
+}
+
+async function createTopicGroup(payload) {
+  try {
+    const id = await quizRepository.createTopicGroup(payload);
+    return { id };
+  } catch (error) {
+    if (error.code === 'ER_DUP_ENTRY') {
+      const appError = new Error('Topic group code already exists');
+      appError.status = 409;
+      throw appError;
+    }
+    throw error;
+  }
+}
+
+async function updateTopicGroup(topicGroupId, payload) {
+  try {
+    const affected = await quizRepository.updateTopicGroupById(topicGroupId, payload);
+    if (!affected) {
+      const appError = new Error('Topic group not found');
+      appError.status = 404;
+      throw appError;
+    }
+    return { id: topicGroupId };
+  } catch (error) {
+    if (error.code === 'ER_DUP_ENTRY') {
+      const appError = new Error('Topic group code already exists');
+      appError.status = 409;
+      throw appError;
+    }
+    throw error;
+  }
+}
+
+async function deleteTopicGroup(topicGroupId) {
+  const usedCount = await quizRepository.countCategoriesByTopicGroupId(topicGroupId);
+  if (usedCount > 0) {
+    const appError = new Error('Cannot delete topic group because it is being used');
+    appError.status = 409;
+    throw appError;
+  }
+  const affected = await quizRepository.deleteTopicGroupById(topicGroupId);
+  if (!affected) {
+    const appError = new Error('Topic group not found');
+    appError.status = 404;
+    throw appError;
+  }
+  return { id: topicGroupId };
 }
 
 async function listCategories(lang) {
@@ -69,6 +135,11 @@ async function createType(payload) {
       appError.status = 409;
       throw appError;
     }
+    if (error.code === 'ER_NO_REFERENCED_ROW_2') {
+      const appError = new Error('Quiz topic group not found');
+      appError.status = 400;
+      throw appError;
+    }
 
     throw error;
   }
@@ -95,6 +166,11 @@ async function updateType(typeId, payload) {
     if (error.code === 'ER_DUP_ENTRY') {
       const appError = new Error('Type already exists');
       appError.status = 409;
+      throw appError;
+    }
+    if (error.code === 'ER_NO_REFERENCED_ROW_2') {
+      const appError = new Error('Quiz topic group not found');
+      appError.status = 400;
       throw appError;
     }
 
@@ -226,9 +302,10 @@ async function getQuizDetail(quizId, lang) {
 
 async function createManualQuiz(payload) {
   try {
+    const quizTypeId = await resolveQuizTypeId(payload);
     return await quizRepository.createManualQuiz({
       ...payload,
-      quiz_type_id: normalizeQuizTypeId(payload.quiz_type_id ?? payload.quiz_type),
+      quiz_type_id: quizTypeId,
       questions: normalizeQuestionMediaRefs(payload.questions || []),
     });
   } catch (error) {
@@ -247,9 +324,10 @@ async function listQuizzesForAdmin() {
 }
 
 async function updateQuiz(quizId, payload) {
+  const quizTypeId = await resolveQuizTypeId(payload);
   const normalizedPayload = {
     ...payload,
-    quiz_type_id: normalizeQuizTypeId(payload.quiz_type_id ?? payload.quiz_type),
+    quiz_type_id: quizTypeId,
   };
 
   const affected = await quizRepository.updateQuizById(quizId, normalizedPayload);
@@ -274,9 +352,10 @@ async function getQuizDetailForAdmin(quizId) {
 }
 
 async function updateQuizDetail(quizId, payload) {
+  const quizTypeId = await resolveQuizTypeId(payload);
   const normalizedPayload = {
     ...payload,
-    quiz_type_id: normalizeQuizTypeId(payload.quiz_type_id ?? payload.quiz_type),
+    quiz_type_id: quizTypeId,
     questions: normalizeQuestionMediaRefs(payload.questions || []),
   };
 
@@ -303,6 +382,11 @@ async function deleteQuiz(quizId) {
 
 module.exports = {
   listQuizzes,
+  listTopicGroups,
+  listTopicGroupsForAdmin,
+  createTopicGroup,
+  updateTopicGroup,
+  deleteTopicGroup,
   listCategories,
   listCategoriesForAdmin,
   listTypes,

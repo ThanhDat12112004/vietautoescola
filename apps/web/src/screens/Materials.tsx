@@ -3,13 +3,6 @@ import Navbar from '@/components/Navbar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { useLanguage } from '@/hooks/useLanguage';
 import {
   getMaterialsBySubject,
@@ -77,6 +70,8 @@ const Materials = () => {
   const { t, lang } = useLanguage();
   const [searchParams, setSearchParams] = useSearchParams();
   const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [activeTopicGroup, setActiveTopicGroup] = useState<string>('');
+  const [expandedTopicGroup, setExpandedTopicGroup] = useState<string>('');
   const [activeSubject, setActiveSubject] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [readFilter, setReadFilter] = useState<'all' | 'read' | 'unread'>('all');
@@ -95,6 +90,10 @@ const Materials = () => {
     const q = searchParams.get('q');
     if (q) setSearchQuery(q);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- initial `q` from URL only
+  }, []);
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
   }, []);
 
   useEffect(() => {
@@ -171,9 +170,10 @@ const Materials = () => {
     (async () => {
       try {
         setLoadingMaterials(true);
+        const searchingAll = normalizeForSearch(searchQuery).length > 0;
 
         const rows =
-          activeSubject === null
+          searchingAll || activeSubject === null
             ? (
                 await Promise.all(subjects.map((subject) => getMaterialsBySubject(subject.id, lang)))
               ).flat()
@@ -199,7 +199,7 @@ const Materials = () => {
     return () => {
       active = false;
     };
-  }, [activeSubject, lang, subjects, t]);
+  }, [activeSubject, lang, searchQuery, subjects, t]);
 
   useEffect(() => {
     if (!subjects.length) {
@@ -238,6 +238,35 @@ const Materials = () => {
     () => subjects.find((subject) => subject.id === activeSubject),
     [subjects, activeSubject]
   );
+  const formatSubjectLabel = (subject: Subject) => {
+    const parent = String(subject.material_topic_group_name || '').trim();
+    if (!parent) return subject.name;
+    return `${parent} • ${subject.name}`;
+  };
+  const materialTopicGroups = useMemo(() => {
+    const names = subjects
+      .map((subject) => String(subject.material_topic_group_name || '').trim())
+      .filter(Boolean);
+    return Array.from(new Set(names));
+  }, [subjects]);
+
+  const subjectsForActiveGroup = useMemo(() => {
+    if (!activeTopicGroup) return subjects;
+    return subjects.filter(
+      (subject) => String(subject.material_topic_group_name || '').trim() === activeTopicGroup
+    );
+  }, [activeTopicGroup, subjects]);
+
+  const subjectsByGroup = useMemo(() => {
+    const result: Record<string, Subject[]> = {};
+    for (const subject of subjects) {
+      const group = String(subject.material_topic_group_name || '').trim();
+      if (!group) continue;
+      if (!result[group]) result[group] = [];
+      result[group].push(subject);
+    }
+    return result;
+  }, [subjects]);
 
   const readMaterialSet = useMemo(() => new Set(readMaterialIds), [readMaterialIds]);
 
@@ -282,16 +311,15 @@ const Materials = () => {
     };
   }, [materials, readMaterialSet]);
 
-  const totalMaterialCount = useMemo(
-    () => Object.values(subjectMaterialCounts).reduce((sum, count) => sum + Number(count || 0), 0),
-    [subjectMaterialCounts]
-  );
-
   const requestedSubjectId = useMemo(() => {
     const raw = Number(searchParams.get('subject'));
     if (!Number.isInteger(raw) || raw <= 0) return null;
     return raw;
   }, [searchParams]);
+  const requestedTopicGroup = useMemo(
+    () => String(searchParams.get('topic_group') || '').trim(),
+    [searchParams]
+  );
 
   const requestedPage = useMemo(() => {
     const raw = Number(searchParams.get('page'));
@@ -308,6 +336,23 @@ const Materials = () => {
       setActiveSubject(requestedSubjectId);
     }
   }, [requestedSubjectId, subjects]);
+
+  useEffect(() => {
+    if (!activeSubjectInfo) return;
+    const parentGroup = String(activeSubjectInfo.material_topic_group_name || '').trim();
+    if (!parentGroup) return;
+    if (activeTopicGroup !== parentGroup) {
+      setActiveTopicGroup(parentGroup);
+    }
+    setExpandedTopicGroup((prev) => prev || parentGroup);
+  }, [activeSubjectInfo, activeTopicGroup]);
+
+  useEffect(() => {
+    if (!requestedTopicGroup) return;
+    if (!Object.keys(subjectsByGroup).includes(requestedTopicGroup)) return;
+    setActiveTopicGroup(requestedTopicGroup);
+    setExpandedTopicGroup(requestedTopicGroup);
+  }, [requestedTopicGroup, subjectsByGroup]);
 
   useEffect(() => {
     if (prevSearchForPage.current === undefined) {
@@ -384,6 +429,18 @@ const Materials = () => {
     setSearchParams(next, { replace: true });
   };
 
+  useEffect(() => {
+    if (!activeTopicGroup) return;
+    setExpandedTopicGroup((prev) => prev || activeTopicGroup);
+  }, [activeTopicGroup]);
+
+  useEffect(() => {
+    if (activeSubject === null) return;
+    if (!subjectsForActiveGroup.some((subject) => subject.id === activeSubject)) {
+      setActiveSubject(null);
+    }
+  }, [activeSubject, subjectsForActiveGroup]);
+
   const pageWindow = useMemo(() => {
     if (totalPages <= 5) {
       return Array.from({ length: totalPages }, (_, i) => i + 1);
@@ -453,12 +510,6 @@ const Materials = () => {
                   'Visualiza directamente o descarga contenido bilingüe del temario para estudiar'
                 )}
               </p>
-              {activeSubjectInfo && (
-                <p className="mt-3 text-[13px] text-foreground/70">
-                  <span className="font-semibold text-foreground">{t('Chủ đề', 'Tema')}:</span>{' '}
-                  {activeSubjectInfo.name}
-                </p>
-              )}
             </div>
           </div>
         </div>
@@ -467,62 +518,43 @@ const Materials = () => {
           <div className="w-full border-b border-primary/20 bg-card px-2 py-3.5 font-sans shadow-[inset_0_1px_0_rgba(255,255,255,0.65)] sm:px-3">
             {!loadingSubjects && subjects.length > 0 && (
               <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:gap-4">
-                <div className="grid min-w-0 flex-1 grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(0,14rem)_minmax(0,1fr)]">
-                  <div className="min-w-0 space-y-1.5">
-                    <label
-                      htmlFor="material-subject-filter"
-                      className="block text-xs font-semibold uppercase tracking-[0.06em] text-primary/90"
-                    >
-                      {t('Chủ đề', 'Tema')}
-                    </label>
-                    <Select
-                      value={activeSubject === null ? 'all' : String(activeSubject)}
-                      onValueChange={(v) => applySubjectFilter(v === 'all' ? null : Number(v))}
-                    >
-                      <SelectTrigger
-                        id="material-subject-filter"
-                        className="h-9 w-full border-primary/25 bg-background text-sm font-medium text-foreground shadow-sm ring-1 ring-primary/10"
+                <div className="min-w-0 flex-1 lg:flex lg:justify-center">
+                  <div className="min-w-0 space-y-1.5 lg:w-full lg:max-w-xl">
+                    <div className="flex items-center gap-3">
+                      <label
+                        htmlFor="material-search"
+                        className="shrink-0 text-xs font-semibold uppercase tracking-[0.06em] text-primary/90"
                       >
-                        <SelectValue placeholder={t('Chọn chủ đề', 'Elige un tema')} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">
-                          {t('Tất cả chủ đề', 'Todos los temas')} ({totalMaterialCount})
-                        </SelectItem>
-                        {subjects.map((subject) => (
-                          <SelectItem key={subject.id} value={String(subject.id)}>
-                            {subject.name} ({subjectMaterialCounts[subject.id] || 0})
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="min-w-0 space-y-1.5 sm:col-span-2 lg:col-span-1">
-                    <label
-                      htmlFor="material-search"
-                      className="block text-xs font-semibold uppercase tracking-[0.06em] text-primary/90"
-                    >
-                      {t('Tìm kiếm', 'Buscar')}
-                    </label>
-                    <Input
-                      id="material-search"
-                      type="search"
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      placeholder={t('Tiêu đề, mô tả…', 'Título, descripción…')}
-                      className="h-9 border-primary/25 bg-background px-3 text-sm font-medium text-foreground placeholder:text-muted-foreground/80 shadow-sm ring-1 ring-primary/10"
-                      autoComplete="off"
-                    />
+                        {t('Tìm kiếm', 'Buscar')}
+                      </label>
+                      <div className="relative flex-1">
+                        <span
+                          aria-hidden
+                          className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-primary/70"
+                        >
+                          🔍
+                        </span>
+                        <Input
+                          id="material-search"
+                          type="search"
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
+                          placeholder={t('Tiêu đề, mô tả…', 'Título, descripción…')}
+                          className="h-12 rounded-lg border border-primary/25 bg-white/95 pl-10 pr-4 text-sm font-semibold text-foreground placeholder:text-muted-foreground/70 shadow-[0_8px_22px_rgba(143,34,61,0.12)] ring-1 ring-white/70 backdrop-blur-sm transition-all focus-visible:ring-2 focus-visible:ring-primary/35"
+                          autoComplete="off"
+                        />
+                      </div>
+                    </div>
                   </div>
                 </div>
+                
 
                 <div className="shrink-0 lg:ml-auto lg:flex lg:flex-col lg:items-end">
                   <span className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.06em] text-primary/90 lg:text-right">
                     {t('Trạng thái đọc', 'Estado')}
                   </span>
                   <div
-                    className="flex w-full flex-nowrap gap-0.5 rounded-full border border-primary/22 bg-primary/[0.1] p-1 shadow-sm lg:w-auto"
+                    className="flex w-full flex-wrap gap-0.5 rounded-full border border-primary/18 bg-primary/[0.06] p-1 shadow-sm lg:w-auto lg:flex-nowrap"
                     role="group"
                     aria-label={t('Lọc theo đã đọc', 'Filtrar por leídos')}
                   >
@@ -533,9 +565,18 @@ const Materials = () => {
                         onClick={() => applyReadFilter(key)}
                         className={cn(
                           'min-h-8 flex-1 whitespace-nowrap rounded-full px-2.5 py-1.5 text-center text-xs font-semibold transition-[color,background-color,box-shadow,border-color] sm:px-3',
-                          readFilter === key
-                            ? 'border border-primary/20 bg-primary text-primary-foreground shadow-sm'
-                            : 'border border-transparent text-primary hover:bg-background/75 hover:shadow-sm'
+                          key === 'all' &&
+                            (readFilter === key
+                              ? 'border border-primary/35 bg-primary/18 text-primary shadow-sm'
+                              : 'border border-transparent bg-transparent text-primary/80 hover:bg-primary/10'),
+                          key === 'read' &&
+                            (readFilter === key
+                              ? 'border border-emerald-300 bg-emerald-100 text-emerald-800 shadow-sm'
+                              : 'border border-transparent bg-transparent text-emerald-700 hover:bg-emerald-50'),
+                          key === 'unread' &&
+                            (readFilter === key
+                              ? 'border border-rose-300 bg-rose-100 text-rose-800 shadow-sm'
+                              : 'border border-transparent bg-transparent text-rose-700 hover:bg-rose-50')
                         )}
                       >
                         {key === 'all' && (
@@ -566,14 +607,135 @@ const Materials = () => {
             )}
           </div>
 
-          <div className="w-full flex-1 px-2 pb-0 pt-4 sm:px-3 sm:pt-5">
+          <div className="w-full flex-1 px-2 pb-0 pt-0 sm:px-3 sm:pt-0 xl:px-0">
+            <div className="mb-2 grid grid-cols-1 gap-3 rounded-xl border border-primary/20 bg-card p-3 xl:hidden sm:grid-cols-2">
+              <label className="text-sm font-semibold text-primary/90">
+                {t('Loại chủ đề', 'Grupo de tema')}
+                <select
+                  className="mt-1 h-11 w-full rounded-md border border-primary/25 bg-background px-3 text-base"
+                  value={activeTopicGroup}
+                  onChange={(e) => {
+                    const group = e.target.value;
+                    setActiveTopicGroup(group);
+                    setExpandedTopicGroup(group);
+                    applySubjectFilter(null);
+                    setCurrentPage(1);
+                  }}
+                >
+                  <option value="">{t('Tất cả loại chủ đề', 'Todos los grupos')}</option>
+                  {materialTopicGroups.map((group) => (
+                    <option key={group} value={group}>
+                      {group}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="text-sm font-semibold text-primary/90">
+                {t('Chủ đề', 'Tema')}
+                <select
+                  className="mt-1 h-11 w-full rounded-md border border-primary/25 bg-background px-3 text-base"
+                  value={activeSubject == null ? '' : String(activeSubject)}
+                  onChange={(e) => {
+                    applySubjectFilter(Number(e.target.value));
+                    setCurrentPage(1);
+                  }}
+                >
+                  <option value="">{t('Tất cả chủ đề', 'Todos los temas')}</option>
+                  {(subjectsByGroup[activeTopicGroup] || []).map((subject) => (
+                    <option key={subject.id} value={String(subject.id)}>
+                      {subject.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+            <div className="grid grid-cols-1 gap-3 xl:grid-cols-[252px_minmax(0,1fr)] xl:gap-0">
+              <aside className="hidden border border-primary/20 bg-white p-2 shadow-md xl:block">
+                <p className="border-b border-[#e7d9dd] px-2 pb-2 text-base font-extrabold uppercase tracking-[0.06em] text-[#6b1b31]">
+                  {t('Loại chủ đề', 'Grupo de tema')}
+                </p>
+                <div className="space-y-0 overflow-hidden border border-[#e7d9dd] bg-white">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveTopicGroup('');
+                      setActiveSubject(null);
+                      setExpandedTopicGroup('');
+                      setCurrentPage(1);
+                    }}
+                    className={cn(
+                      'w-full border-b border-[#ece6e8] bg-white px-3 py-2 text-left text-[15px] font-semibold',
+                      !activeTopicGroup
+                        ? 'bg-[#8f223d] text-white'
+                        : 'text-[#6b1b31] hover:bg-[#fafafa]'
+                    )}
+                  >
+                    {t('Tất cả', 'Todos')}
+                  </button>
+                  {materialTopicGroups.map((group) => {
+                    const isOpen = expandedTopicGroup === group;
+                    const children = subjectsByGroup[group] || [];
+                    return (
+                      <div key={group} className="border-b border-[#ece6e8] bg-white last:border-b-0">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setActiveTopicGroup(group);
+                            if (!isOpen) {
+                              setExpandedTopicGroup(group);
+                              applySubjectFilter(null);
+                            } else {
+                              setExpandedTopicGroup('');
+                            }
+                            setCurrentPage(1);
+                          }}
+                          className={cn(
+                            'flex w-full items-center justify-between bg-white px-3 py-2.5 text-left text-[17px] font-semibold transition-colors',
+                            activeTopicGroup === group
+                              ? 'bg-[#8f223d] text-white'
+                              : 'text-[#6b1b31] hover:bg-[#fafafa]'
+                          )}
+                        >
+                          <span>{group}</span>
+                          <span
+                            className={cn(
+                              'text-xl leading-none',
+                              activeTopicGroup === group ? 'text-white' : 'text-primary/80'
+                            )}
+                          >
+                            {isOpen ? '▾' : '▸'}
+                          </span>
+                        </button>
+                        {isOpen && (
+                          <div className="border-t border-[#ece6e8] bg-white">
+                            {children.map((subject) => (
+                              <button
+                                key={subject.id}
+                                type="button"
+                                onClick={() => {
+                                  setActiveTopicGroup(group);
+                                  applySubjectFilter(subject.id);
+                                }}
+                                className={cn(
+                                  'w-full truncate whitespace-nowrap border-b border-[#f0e3e7] bg-white px-3 py-2 text-left text-sm font-normal last:border-b-0',
+                                  activeTopicGroup === group && activeSubject === subject.id
+                                    ? 'bg-[#f6d4dd] text-[#7a2038]'
+                                    : 'text-foreground hover:bg-[#fafafa]'
+                                )}
+                              >
+                                {subject.name}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </aside>
+              <div>
+                
             {!loadingSubjects && error && <p className="text-sm text-destructive mb-3">{error}</p>}
-
-            {activeSubjectInfo?.description && (
-              <p className="mb-4 max-w-3xl text-[13px] leading-relaxed text-foreground/68">
-                {activeSubjectInfo.description}
-              </p>
-            )}
 
             {loadingMaterials && (
               <p className="text-sm text-muted-foreground">
@@ -593,7 +755,26 @@ const Materials = () => {
             )}
 
             {!loadingMaterials && filteredMaterials.length > 0 && (
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 md:gap-5">
+              <>
+              <div className="mb-3 border border-[#ece6e8] bg-white px-3 py-2 text-xs sm:text-sm text-primary">
+                <span className="font-semibold">
+                  {activeTopicGroup || t('Tất cả loại chủ đề', 'Todos los grupos')}
+                </span>
+                {!activeSubjectInfo && (
+                  <>
+                    {' '}
+                    &gt; <span>{t('Tất cả tài liệu', 'Todos los materiales')}</span>
+                  </>
+                )}
+                {activeSubjectInfo && (
+                  <>
+                    {' '}
+                    &gt;{' '}
+                    <span>{activeSubjectInfo.name}</span>
+                  </>
+                )}
+              </div>
+              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 2xl:grid-cols-3 md:gap-6 xl:pl-3">
                 {pagedMaterials.map((material) => {
                   const pageCount = resolveMaterialPageCount(material, uiLang);
                   const fileLine = materialFileSummary(
@@ -690,10 +871,11 @@ const Materials = () => {
                   );
                 })}
               </div>
+              </>
             )}
 
             {!loadingMaterials && filteredMaterials.length > 0 && (
-              <div className="mt-8 -mx-2 flex flex-col items-center gap-4 border-t-2 border-primary/25 bg-card px-3 py-5 shadow-[0_-2px_12px_rgba(45,38,36,0.06)] sm:-mx-3 sm:gap-5 sm:px-4">
+              <div className="mt-8 flex flex-col items-center gap-4 rounded-b-xl border-t-2 border-primary/25 bg-card px-3 py-5 shadow-[0_-2px_12px_rgba(45,38,36,0.06)] sm:gap-5 sm:px-4">
                 <p className="text-center text-sm font-semibold tabular-nums text-foreground sm:text-[15px]">
                   {t('Trang', 'Página')} {effectivePage}/{totalPages} · {filteredMaterials.length}{' '}
                   {t('tài liệu', 'documentos del temario')}
@@ -736,6 +918,8 @@ const Materials = () => {
                 </div>
               </div>
             )}
+              </div>
+            </div>
           </div>
         </div>
       </div>

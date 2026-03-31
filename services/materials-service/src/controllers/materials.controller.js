@@ -11,6 +11,83 @@ async function listSubjects(req, res, next) {
   }
 }
 
+async function listTopicGroups(req, res, next) {
+  try {
+    const lang = getLang(req.query.lang);
+    const rows = await materialsService.listTopicGroups(lang);
+    return res.json(rows);
+  } catch (error) {
+    return next(error);
+  }
+}
+
+async function listTopicGroupsAdmin(_req, res, next) {
+  try {
+    const rows = await materialsService.listTopicGroupsForAdmin();
+    return res.json(rows);
+  } catch (error) {
+    return next(error);
+  }
+}
+
+async function createTopicGroup(req, res, next) {
+  const { code, name_vi, name_es, description_vi, description_es, is_active } = req.body;
+  if (!name_vi || !name_es) {
+    return res.status(400).json({ message: 'name_vi and name_es are required' });
+  }
+  try {
+    const result = await materialsService.createTopicGroup({
+      code,
+      name_vi,
+      name_es,
+      description_vi,
+      description_es,
+      is_active,
+      created_by: req.user.id,
+    });
+    return res.status(201).json(result);
+  } catch (error) {
+    return next(error);
+  }
+}
+
+async function updateTopicGroup(req, res, next) {
+  const topicGroupId = Number(req.params.id);
+  if (Number.isNaN(topicGroupId)) {
+    return res.status(400).json({ message: 'Invalid topic group id' });
+  }
+  const { code, name_vi, name_es, description_vi, description_es, is_active } = req.body;
+  if (!name_vi || !name_es) {
+    return res.status(400).json({ message: 'name_vi and name_es are required' });
+  }
+  try {
+    const result = await materialsService.updateTopicGroup(topicGroupId, {
+      code,
+      name_vi,
+      name_es,
+      description_vi,
+      description_es,
+      is_active,
+    });
+    return res.json(result);
+  } catch (error) {
+    return next(error);
+  }
+}
+
+async function deleteTopicGroup(req, res, next) {
+  const topicGroupId = Number(req.params.id);
+  if (Number.isNaN(topicGroupId)) {
+    return res.status(400).json({ message: 'Invalid topic group id' });
+  }
+  try {
+    const result = await materialsService.deleteTopicGroup(topicGroupId);
+    return res.json(result);
+  } catch (error) {
+    return next(error);
+  }
+}
+
 async function listSubjectsAdmin(_req, res, next) {
   try {
     const rows = await materialsService.listSubjectsForAdmin();
@@ -21,10 +98,15 @@ async function listSubjectsAdmin(_req, res, next) {
 }
 
 async function createSubject(req, res, next) {
-  const { name_vi, name_es, description_vi, description_es } = req.body;
+  const { name_vi, name_es, description_vi, description_es, material_topic_group_id } = req.body;
 
   if (!name_vi || !name_es) {
     return res.status(400).json({ message: 'name_vi, name_es are required' });
+  }
+
+  const topicGroupId = Number(material_topic_group_id ?? 1);
+  if (!Number.isFinite(topicGroupId) || topicGroupId <= 0) {
+    return res.status(400).json({ message: 'material_topic_group_id must be a positive number' });
   }
 
   try {
@@ -33,6 +115,7 @@ async function createSubject(req, res, next) {
       name_es,
       description_vi,
       description_es,
+      material_topic_group_id: topicGroupId,
       created_by: req.user.id,
     });
 
@@ -48,10 +131,15 @@ async function updateSubject(req, res, next) {
     return res.status(400).json({ message: 'Invalid subject id' });
   }
 
-  const { name_vi, name_es, description_vi, description_es } = req.body;
+  const { name_vi, name_es, description_vi, description_es, material_topic_group_id } = req.body;
 
   if (!name_vi || !name_es) {
     return res.status(400).json({ message: 'name_vi, name_es are required' });
+  }
+
+  const topicGroupId = Number(material_topic_group_id ?? 1);
+  if (!Number.isFinite(topicGroupId) || topicGroupId <= 0) {
+    return res.status(400).json({ message: 'material_topic_group_id must be a positive number' });
   }
 
   try {
@@ -60,6 +148,7 @@ async function updateSubject(req, res, next) {
       name_es,
       description_vi,
       description_es,
+      material_topic_group_id: topicGroupId,
     });
 
     return res.json(result);
@@ -249,6 +338,11 @@ async function deleteReferenceMaterial(req, res, next) {
 }
 
 module.exports = {
+  listTopicGroups,
+  listTopicGroupsAdmin,
+  createTopicGroup,
+  updateTopicGroup,
+  deleteTopicGroup,
   listSubjects,
   listSubjectsAdmin,
   createSubject,

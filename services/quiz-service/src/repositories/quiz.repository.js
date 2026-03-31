@@ -1,15 +1,147 @@
 const pool = require('../config/db');
 
-async function findAllActiveCategories(lang) {
+function normalizeCode(value) {
+  return String(value || '')
+    .trim()
+    .toUpperCase();
+}
+
+async function generateNextQuizTopicGroupCode() {
+  const [rows] = await pool.query('SELECT code FROM quiz_topic_groups');
+  const usedCodes = new Set();
+  let maxIndex = 0;
+
+  for (const row of rows) {
+    const normalized = normalizeCode(row.code);
+    if (!normalized) continue;
+    usedCodes.add(normalized);
+    const match = normalized.match(/^QG(\d+)$/);
+    if (!match) continue;
+    const numeric = Number(match[1]);
+    if (Number.isFinite(numeric) && numeric > maxIndex) {
+      maxIndex = numeric;
+    }
+  }
+
+  let next = maxIndex + 1;
+  // QG001, QG002, ...
+  // Tránh trùng trong trường hợp code đã được nhập tay.
+  while (true) {
+    const candidate = `QG${String(next).padStart(3, '0')}`;
+    if (!usedCodes.has(candidate)) {
+      return candidate;
+    }
+    next += 1;
+  }
+}
+
+async function findAllTopicGroups(lang) {
   const [rows] = await pool.query(
     `SELECT
        id,
-       slug,
+       code,
        ${lang === 'es' ? 'name_es' : 'name_vi'} AS name,
-       ${lang === 'es' ? 'description_es' : 'description_vi'} AS description
+       ${lang === 'es' ? 'description_es' : 'description_vi'} AS description,
+       is_active,
+       created_at,
+       updated_at
+     FROM quiz_topic_groups
+     WHERE qt.is_active = TRUE
+     ORDER BY created_at DESC, id DESC`
+  );
+  return rows;
+}
+
+async function findAllTopicGroupsForAdmin() {
+  const [rows] = await pool.query(
+    `SELECT
+       id,
+       code,
+       name_vi,
+       name_es,
+       description_vi,
+       description_es,
+       is_active,
+       created_at,
+       updated_at
+     FROM quiz_topic_groups
+     ORDER BY created_at DESC, id DESC`
+  );
+  return rows;
+}
+
+async function createTopicGroup(payload) {
+  // Cho phép bỏ trống code, khi đó backend tự generate.
+  const code = normalizeCode(payload.code) || (await generateNextQuizTopicGroupCode());
+  const [result] = await pool.execute(
+    `INSERT INTO quiz_topic_groups
+      (code, name_vi, name_es, description_vi, description_es, is_active)
+     VALUES (?, ?, ?, ?, ?, ?)`,
+    [
+      code,
+      payload.name_vi,
+      payload.name_es,
+      payload.description_vi || null,
+      payload.description_es || null,
+      payload.is_active == null ? true : Boolean(payload.is_active),
+    ]
+  );
+  return result.insertId;
+}
+
+async function updateTopicGroupById(topicGroupId, payload) {
+  const [result] = await pool.execute(
+    `UPDATE quiz_topic_groups
+     SET code = ?,
+         name_vi = ?,
+         name_es = ?,
+         description_vi = ?,
+         description_es = ?,
+         is_active = ?
+     WHERE id = ?`,
+    [
+      payload.code,
+      payload.name_vi,
+      payload.name_es,
+      payload.description_vi || null,
+      payload.description_es || null,
+      payload.is_active == null ? true : Boolean(payload.is_active),
+      topicGroupId,
+    ]
+  );
+  return result.affectedRows;
+}
+
+async function deleteTopicGroupById(topicGroupId) {
+  const [result] = await pool.execute('DELETE FROM quiz_topic_groups WHERE id = ?', [topicGroupId]);
+  return result.affectedRows;
+}
+
+async function countCategoriesByTopicGroupId(topicGroupId) {
+  const [rows] = await pool.execute(
+    `SELECT COUNT(*) AS total
      FROM quiz_categories
-     WHERE is_active = TRUE
-     ORDER BY id DESC`
+     WHERE quiz_topic_group_id = ?`,
+    [topicGroupId]
+  );
+  return Number(rows[0]?.total || 0);
+}
+
+async function findAllActiveCategories(lang) {
+  const [rows] = await pool.query(
+    `SELECT
+       qc.id,
+       qc.slug,
+       qc.quiz_topic_group_id,
+       qtg.code AS quiz_topic_group_code,
+       ${lang === 'es' ? 'qtg.name_es' : 'qtg.name_vi'} AS quiz_topic_group_name,
+       ${lang === 'es' ? 'qtg.description_es' : 'qtg.description_vi'} AS quiz_topic_group_description,
+       ${lang === 'es' ? 'qc.name_es' : 'qc.name_vi'} AS name,
+       ${lang === 'es' ? 'qc.description_es' : 'qc.description_vi'} AS description
+     FROM quiz_categories qc
+     LEFT JOIN quiz_topic_groups qtg ON qtg.id = qc.quiz_topic_group_id
+     WHERE qc.is_active = TRUE
+     ORDER BY qc.id DESC`
   );
 
   return rows;
@@ -18,31 +150,67 @@ async function findAllActiveCategories(lang) {
 async function findAllCategoriesForAdmin() {
   const [rows] = await pool.query(
     `SELECT
-       id,
-       name_vi,
-       name_es,
-       slug,
-       description_vi,
-       description_es,
-       is_active,
-       created_at,
-       updated_at
-     FROM quiz_categories
-     ORDER BY created_at DESC`
+       qc.id,
+       qc.quiz_topic_group_id,
+       qtg.code AS quiz_topic_group_code,
+       qtg.name_vi AS quiz_topic_group_name_vi,
+       qtg.name_es AS quiz_topic_group_name_es,
+       qtg.description_vi AS quiz_topic_group_description_vi,
+       qtg.description_es AS quiz_topic_group_description_es,
+       qc.name_vi,
+       qc.name_es,
+       qc.slug,
+       qc.description_vi,
+       qc.description_es,
+       qc.is_active,
+       qc.created_at,
+       qc.updated_at
+     FROM quiz_categories qc
+     LEFT JOIN quiz_topic_groups qtg ON qtg.id = qc.quiz_topic_group_id
+     ORDER BY qc.created_at DESC`
   );
 
   return rows;
 }
 
+async function generateNextQuizCategorySlug() {
+  const [rows] = await pool.query('SELECT slug FROM quiz_categories');
+  const usedSlugs = new Set();
+  let maxIndex = 0;
+
+  for (const row of rows) {
+    const normalized = normalizeCode(row.slug);
+    if (!normalized) continue;
+    usedSlugs.add(normalized);
+    const match = normalized.match(/^CAT(\d+)$/);
+    if (!match) continue;
+    const numeric = Number(match[1]);
+    if (Number.isFinite(numeric) && numeric > maxIndex) {
+      maxIndex = numeric;
+    }
+  }
+
+  let next = maxIndex + 1;
+  while (true) {
+    const candidate = `CAT${String(next).padStart(3, '0')}`;
+    if (!usedSlugs.has(candidate)) {
+      return candidate;
+    }
+    next += 1;
+  }
+}
+
 async function createCategory(payload) {
+  const slug = normalizeCode(payload.slug) || (await generateNextQuizCategorySlug());
   const [result] = await pool.execute(
     `INSERT INTO quiz_categories
-      (name_vi, name_es, slug, description_vi, description_es, is_active)
-     VALUES (?, ?, ?, ?, ?, ?)`,
+      (quiz_topic_group_id, name_vi, name_es, slug, description_vi, description_es, is_active)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`,
     [
+      Number(payload.quiz_topic_group_id || 1),
       payload.name_vi,
       payload.name_es,
-      payload.slug || null,
+      slug,
       payload.description_vi || null,
       payload.description_es || null,
       payload.is_active == null ? true : Boolean(payload.is_active),
@@ -55,7 +223,8 @@ async function createCategory(payload) {
 async function updateCategoryById(categoryId, payload) {
   const [result] = await pool.execute(
     `UPDATE quiz_categories
-     SET name_vi = ?,
+     SET quiz_topic_group_id = ?,
+         name_vi = ?,
          name_es = ?,
          slug = ?,
          description_vi = ?,
@@ -63,6 +232,7 @@ async function updateCategoryById(categoryId, payload) {
          is_active = ?
      WHERE id = ?`,
     [
+      Number(payload.quiz_topic_group_id || 1),
       payload.name_vi,
       payload.name_es,
       payload.slug || null,
@@ -84,13 +254,21 @@ async function deleteCategoryById(categoryId) {
 async function findAllActiveTypes(lang) {
   const [rows] = await pool.query(
     `SELECT
-       id,
-       CAST(id AS CHAR) AS code,
-       ${lang === 'es' ? 'name_es' : 'name_vi'} AS name,
-       ${lang === 'es' ? 'description_es' : 'description_vi'} AS description
-     FROM quiz_types
-     WHERE is_active = TRUE
-     ORDER BY created_at DESC, id DESC`
+       qc.id,
+       CAST(qc.id AS CHAR) AS code,
+       qc.id AS quiz_category_id,
+       qc.quiz_topic_group_id,
+       qc.id AS quiz_category_id_ref,
+       qc.slug AS quiz_category_slug,
+       ${lang === 'es' ? 'qc.name_es' : 'qc.name_vi'} AS quiz_category_name,
+       qtg.code AS quiz_topic_group_code,
+       ${lang === 'es' ? 'qtg.name_es' : 'qtg.name_vi'} AS quiz_topic_group_name,
+       ${lang === 'es' ? 'qc.name_es' : 'qc.name_vi'} AS name,
+       ${lang === 'es' ? 'qc.description_es' : 'qc.description_vi'} AS description
+     FROM quiz_categories qc
+     LEFT JOIN quiz_topic_groups qtg ON qtg.id = qc.quiz_topic_group_id
+     WHERE qc.is_active = TRUE
+     ORDER BY qc.created_at DESC, qc.id DESC`
   );
 
   return rows;
@@ -99,17 +277,27 @@ async function findAllActiveTypes(lang) {
 async function findAllTypesForAdmin() {
   const [rows] = await pool.query(
     `SELECT
-       id,
-       CAST(id AS CHAR) AS code,
-       name_vi,
-       name_es,
-       description_vi,
-       description_es,
-       is_active,
-       created_at,
-       updated_at
-     FROM quiz_types
-     ORDER BY created_at DESC, id DESC`
+       qc.id,
+       CAST(qc.id AS CHAR) AS code,
+       qc.id AS quiz_category_id,
+       qc.quiz_topic_group_id,
+       qc.id AS quiz_category_id_ref,
+       qc.slug AS quiz_category_slug,
+       qc.name_vi AS quiz_category_name_vi,
+       qc.name_es AS quiz_category_name_es,
+       qtg.code AS quiz_topic_group_code,
+       qtg.name_vi AS quiz_topic_group_name_vi,
+       qtg.name_es AS quiz_topic_group_name_es,
+       qc.name_vi,
+       qc.name_es,
+       qc.description_vi,
+       qc.description_es,
+       qc.is_active,
+       qc.created_at,
+       qc.updated_at
+     FROM quiz_categories qc
+     LEFT JOIN quiz_topic_groups qtg ON qtg.id = qc.quiz_topic_group_id
+     ORDER BY qc.created_at DESC, qc.id DESC`
   );
 
   return rows;
@@ -117,8 +305,8 @@ async function findAllTypesForAdmin() {
 
 async function findTypeById(typeId) {
   const [rows] = await pool.execute(
-    `SELECT id, is_active
-     FROM quiz_types
+    `SELECT id, id AS quiz_category_id, is_active
+     FROM quiz_categories
      WHERE id = ?
      LIMIT 1`,
     [typeId]
@@ -127,59 +315,73 @@ async function findTypeById(typeId) {
   return rows[0] || null;
 }
 
-async function createType(payload) {
-  const [result] = await pool.execute(
-    `INSERT INTO quiz_types
-      (name_vi, name_es, description_vi, description_es, is_active)
-     VALUES (?, ?, ?, ?, ?)`,
-    [
-      payload.name_vi,
-      payload.name_es,
-      payload.description_vi || null,
-      payload.description_es || null,
-      payload.is_active == null ? true : Boolean(payload.is_active),
-    ]
-  );
+async function resolveQuizCategoryId(payload) {
+  const directCategoryId = Number(payload.quiz_category_id);
+  if (Number.isFinite(directCategoryId) && directCategoryId > 0) {
+    return directCategoryId;
+  }
 
-  return result.insertId;
+  const topicGroupId = Number(payload.quiz_topic_group_id);
+  if (Number.isFinite(topicGroupId) && topicGroupId > 0) {
+    const [rows] = await pool.execute(
+      `SELECT id
+       FROM quiz_categories
+       WHERE quiz_topic_group_id = ?
+       ORDER BY id ASC
+       LIMIT 1`,
+      [topicGroupId]
+    );
+    if (rows[0]?.id) {
+      return Number(rows[0].id);
+    }
+  }
+
+  return 1;
+}
+
+async function createType(payload) {
+  const categoryPayload = {
+    quiz_topic_group_id: payload.quiz_topic_group_id,
+    name_vi: payload.name_vi,
+    name_es: payload.name_es,
+    slug: payload.code || payload.slug,
+    description_vi: payload.description_vi,
+    description_es: payload.description_es,
+    is_active: payload.is_active,
+  };
+  return createCategory(categoryPayload);
 }
 
 async function updateTypeById(typeId, payload) {
-  const [result] = await pool.execute(
-    `UPDATE quiz_types
-     SET name_vi = ?,
-         name_es = ?,
-         description_vi = ?,
-         description_es = ?,
-         is_active = ?
-     WHERE id = ?`,
-    [
-      payload.name_vi,
-      payload.name_es,
-      payload.description_vi || null,
-      payload.description_es || null,
-      payload.is_active == null ? true : Boolean(payload.is_active),
-      typeId,
-    ]
-  );
-
-  return result.affectedRows;
+  return updateCategoryById(typeId, {
+    quiz_topic_group_id: payload.quiz_topic_group_id,
+    name_vi: payload.name_vi,
+    name_es: payload.name_es,
+    slug: payload.code || payload.slug,
+    description_vi: payload.description_vi,
+    description_es: payload.description_es,
+    is_active: payload.is_active,
+  });
 }
 
 async function deleteTypeById(typeId) {
-  const [result] = await pool.execute('DELETE FROM quiz_types WHERE id = ?', [typeId]);
-  return result.affectedRows;
+  return deleteCategoryById(typeId);
 }
 
 async function countQuizzesByTypeId(typeId) {
   const [rows] = await pool.execute(
     `SELECT COUNT(*) AS total
      FROM quizzes
-     WHERE quiz_type_id = ?`,
+     WHERE category_id = ?`,
     [typeId]
   );
-
   return Number(rows[0]?.total || 0);
+}
+
+async function findFirstTypeIdByCategoryId(categoryId) {
+  const numeric = Number(categoryId);
+  if (Number.isFinite(numeric) && numeric > 0) return Math.trunc(numeric);
+  return 1;
 }
 
 async function findAllActiveQuizzes(lang, userId = null) {
@@ -187,8 +389,7 @@ async function findAllActiveQuizzes(lang, userId = null) {
     const [rows] = await pool.query(
       `SELECT
          q.id,
-         q.quiz_type_id,
-         ${lang === 'es' ? 'qt.name_es' : 'qt.name_vi'} AS quiz_type,
+         CAST(q.category_id AS CHAR) AS quiz_type,
          q.duration_minutes,
          q.total_questions,
          q.passing_score,
@@ -196,12 +397,14 @@ async function findAllActiveQuizzes(lang, userId = null) {
          q.${lang === 'es' ? 'title_es' : 'title_vi'} AS title,
          q.${lang === 'es' ? 'description_es' : 'description_vi'} AS description,
          c.${lang === 'es' ? 'name_es' : 'name_vi'} AS category_name,
+         qtg.${lang === 'es' ? 'name_es' : 'name_vi'} AS quiz_topic_group_name,
+         qtg.${lang === 'es' ? 'description_es' : 'description_vi'} AS quiz_topic_group_description,
          FALSE AS has_completed,
          NULL AS best_percentage,
          NULL AS best_score
        FROM quizzes q
-       LEFT JOIN quiz_types qt ON qt.id = q.quiz_type_id
        LEFT JOIN quiz_categories c ON c.id = q.category_id
+       LEFT JOIN quiz_topic_groups qtg ON qtg.id = c.quiz_topic_group_id
        WHERE q.is_active = TRUE
        ORDER BY q.created_at DESC`
     );
@@ -212,8 +415,7 @@ async function findAllActiveQuizzes(lang, userId = null) {
   const [rows] = await pool.query(
     `SELECT
        q.id,
-       q.quiz_type_id,
-       ${lang === 'es' ? 'qt.name_es' : 'qt.name_vi'} AS quiz_type,
+       CAST(q.category_id AS CHAR) AS quiz_type,
        q.duration_minutes,
        q.total_questions,
        q.passing_score,
@@ -221,12 +423,14 @@ async function findAllActiveQuizzes(lang, userId = null) {
        q.${lang === 'es' ? 'title_es' : 'title_vi'} AS title,
        q.${lang === 'es' ? 'description_es' : 'description_vi'} AS description,
        c.${lang === 'es' ? 'name_es' : 'name_vi'} AS category_name,
+       qtg.${lang === 'es' ? 'name_es' : 'name_vi'} AS quiz_topic_group_name,
+       qtg.${lang === 'es' ? 'description_es' : 'description_vi'} AS quiz_topic_group_description,
        CASE WHEN ua.quiz_id IS NULL THEN FALSE ELSE TRUE END AS has_completed,
        ua.best_percentage,
        ua.best_score
      FROM quizzes q
-     LEFT JOIN quiz_types qt ON qt.id = q.quiz_type_id
      LEFT JOIN quiz_categories c ON c.id = q.category_id
+     LEFT JOIN quiz_topic_groups qtg ON qtg.id = c.quiz_topic_group_id
      LEFT JOIN (
        SELECT
          quiz_id,
@@ -311,7 +515,6 @@ async function createManualQuiz(payload) {
       `INSERT INTO quizzes
         (
           category_id,
-          quiz_type_id,
           title_vi,
           title_es,
           description_vi,
@@ -324,10 +527,9 @@ async function createManualQuiz(payload) {
           is_active,
           created_by
         )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, TRUE, ?)`,
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, TRUE, ?)`,
       [
         payload.category_id || null,
-        payload.quiz_type_id || 1,
         payload.title_vi,
         payload.title_es,
         payload.description_vi || null,
@@ -410,10 +612,12 @@ async function findAllQuizzesForAdmin() {
   const [rows] = await pool.query(
     `SELECT
       q.id,
-      CAST(q.quiz_type_id AS CHAR) AS quiz_type,
-      qt.name_vi AS quiz_type_name_vi,
-      qt.name_es AS quiz_type_name_es,
+      CAST(q.category_id AS CHAR) AS quiz_type,
+      qc.name_vi AS quiz_type_name_vi,
+      qc.name_es AS quiz_type_name_es,
       q.category_id,
+      qtg.name_vi AS quiz_topic_group_name_vi,
+      qtg.name_es AS quiz_topic_group_name_es,
       q.title_vi,
       q.title_es,
       q.description_vi,
@@ -426,7 +630,8 @@ async function findAllQuizzesForAdmin() {
       q.is_active,
       q.created_at
      FROM quizzes q
-      LEFT JOIN quiz_types qt ON qt.id = q.quiz_type_id
+      LEFT JOIN quiz_categories qc ON qc.id = q.category_id
+      LEFT JOIN quiz_topic_groups qtg ON qtg.id = qc.quiz_topic_group_id
      ORDER BY q.created_at DESC`
   );
 
@@ -437,7 +642,6 @@ async function updateQuizById(quizId, payload) {
   const [result] = await pool.execute(
     `UPDATE quizzes
      SET category_id = ?,
-         quiz_type_id = ?,
          title_vi = ?,
          title_es = ?,
          description_vi = ?,
@@ -449,7 +653,6 @@ async function updateQuizById(quizId, payload) {
      WHERE id = ?`,
     [
       payload.category_id || null,
-      payload.quiz_type_id,
       payload.title_vi,
       payload.title_es,
       payload.description_vi || null,
@@ -470,7 +673,7 @@ async function findQuizDetailForAdmin(quizId) {
     `SELECT
        q.id,
        q.category_id,
-       CAST(q.quiz_type_id AS CHAR) AS quiz_type,
+       CAST(q.category_id AS CHAR) AS quiz_type,
        q.title_vi,
        q.title_es,
        q.description_vi,
@@ -554,7 +757,6 @@ async function updateQuizDetailById(quizId, payload) {
     const [quizUpdateResult] = await connection.execute(
       `UPDATE quizzes
        SET category_id = ?,
-           quiz_type_id = ?,
            title_vi = ?,
            title_es = ?,
            description_vi = ?,
@@ -567,7 +769,6 @@ async function updateQuizDetailById(quizId, payload) {
        WHERE id = ?`,
       [
         payload.category_id || null,
-        payload.quiz_type_id,
         payload.title_vi,
         payload.title_es,
         payload.description_vi || null,
@@ -743,6 +944,12 @@ async function deleteQuizById(quizId) {
 }
 
 module.exports = {
+  findAllTopicGroups,
+  findAllTopicGroupsForAdmin,
+  createTopicGroup,
+  updateTopicGroupById,
+  deleteTopicGroupById,
+  countCategoriesByTopicGroupId,
   findAllActiveCategories,
   findAllCategoriesForAdmin,
   createCategory,
@@ -755,6 +962,7 @@ module.exports = {
   updateTypeById,
   deleteTypeById,
   countQuizzesByTypeId,
+  findFirstTypeIdByCategoryId,
   findAllActiveQuizzes,
   findQuizById,
   findQuestionsByQuizId,

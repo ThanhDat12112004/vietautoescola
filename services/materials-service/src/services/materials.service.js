@@ -26,6 +26,63 @@ async function listSubjects(lang) {
   return materialsRepository.findSubjects(lang);
 }
 
+async function listTopicGroups(lang) {
+  return materialsRepository.findAllTopicGroups(lang);
+}
+
+async function listTopicGroupsForAdmin() {
+  return materialsRepository.findAllTopicGroupsForAdmin();
+}
+
+async function createTopicGroup(payload) {
+  try {
+    const id = await materialsRepository.createTopicGroup(payload);
+    return { id };
+  } catch (error) {
+    if (error.code === 'ER_DUP_ENTRY') {
+      const appError = new Error('Topic group code already exists');
+      appError.status = 409;
+      throw appError;
+    }
+    throw error;
+  }
+}
+
+async function updateTopicGroup(topicGroupId, payload) {
+  try {
+    const affected = await materialsRepository.updateTopicGroupById(topicGroupId, payload);
+    if (!affected) {
+      const appError = new Error('Topic group not found');
+      appError.status = 404;
+      throw appError;
+    }
+    return { id: topicGroupId };
+  } catch (error) {
+    if (error.code === 'ER_DUP_ENTRY') {
+      const appError = new Error('Topic group code already exists');
+      appError.status = 409;
+      throw appError;
+    }
+    throw error;
+  }
+}
+
+async function deleteTopicGroup(topicGroupId) {
+  const usedCount = await materialsRepository.countSubjectsByTopicGroupId(topicGroupId);
+  if (usedCount > 0) {
+    const appError = new Error('Cannot delete topic group because it is being used');
+    appError.status = 409;
+    throw appError;
+  }
+  const affected = await materialsRepository.deleteTopicGroupById(topicGroupId);
+  if (!affected) {
+    const appError = new Error('Topic group not found');
+    appError.status = 404;
+    throw appError;
+  }
+  return { id: topicGroupId };
+}
+
 async function listSubjectsForAdmin() {
   return materialsRepository.findAllSubjectsAdmin();
 }
@@ -136,6 +193,11 @@ async function deleteReferenceMaterial(materialId) {
 }
 
 module.exports = {
+  listTopicGroups,
+  listTopicGroupsForAdmin,
+  createTopicGroup,
+  updateTopicGroup,
+  deleteTopicGroup,
   listSubjects,
   listSubjectsForAdmin,
   createSubject,

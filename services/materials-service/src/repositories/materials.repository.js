@@ -6,6 +6,12 @@ function generateRandomMaterialId() {
   return randomInt(1_000_000_000, 9_999_999_999_999);
 }
 
+function normalizeCode(value) {
+  return String(value || '')
+    .trim()
+    .toUpperCase();
+}
+
 async function findUserSessionById(userId) {
   const [rows] = await pool.execute(
     'SELECT id, role, is_active, current_session_id FROM users WHERE id = ? LIMIT 1',
@@ -15,22 +21,24 @@ async function findUserSessionById(userId) {
   return rows[0] || null;
 }
 
-async function findSubjects(lang) {
+async function findAllTopicGroups(lang) {
   const [rows] = await pool.query(
     `SELECT
        id,
        code,
        ${lang === 'es' ? 'name_es' : 'name_vi'} AS name,
        ${lang === 'es' ? 'description_es' : 'description_vi'} AS description,
-       created_at
-     FROM material_types
-     ORDER BY created_at DESC`
+       is_active,
+       created_at,
+       updated_at
+     FROM material_topic_groups
+     WHERE is_active = TRUE
+     ORDER BY created_at DESC, id DESC`
   );
-
   return rows;
 }
 
-async function findAllSubjectsAdmin() {
+async function findAllTopicGroupsForAdmin() {
   const [rows] = await pool.query(
     `SELECT
        id,
@@ -39,18 +47,141 @@ async function findAllSubjectsAdmin() {
        name_es,
        description_vi,
        description_es,
-       created_at
-          FROM material_types
-     ORDER BY created_at DESC`
+       is_active,
+       created_at,
+       updated_at
+     FROM material_topic_groups
+     ORDER BY created_at DESC, id DESC`
+  );
+  return rows;
+}
+
+async function generateNextMaterialTopicGroupCode() {
+  const [rows] = await pool.query('SELECT code FROM material_topic_groups');
+  const usedCodes = new Set();
+  let maxIndex = 0;
+
+  for (const row of rows) {
+    const normalized = normalizeCode(row.code);
+    if (!normalized) continue;
+    usedCodes.add(normalized);
+    const match = normalized.match(/^MG(\d+)$/);
+    if (!match) continue;
+    const numeric = Number(match[1]);
+    if (Number.isFinite(numeric) && numeric > maxIndex) {
+      maxIndex = numeric;
+    }
+  }
+
+  let next = maxIndex + 1;
+  while (true) {
+    const candidate = `MG${String(next).padStart(3, '0')}`;
+    if (!usedCodes.has(candidate)) {
+      return candidate;
+    }
+    next += 1;
+  }
+}
+
+async function createTopicGroup(payload) {
+  const code = normalizeCode(payload.code) || (await generateNextMaterialTopicGroupCode());
+  const [result] = await pool.execute(
+    `INSERT INTO material_topic_groups
+      (code, name_vi, name_es, description_vi, description_es, is_active, created_by)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    [
+      code,
+      payload.name_vi,
+      payload.name_es,
+      payload.description_vi || null,
+      payload.description_es || null,
+      payload.is_active == null ? true : Boolean(payload.is_active),
+      payload.created_by || null,
+    ]
+  );
+  return result.insertId;
+}
+
+async function updateTopicGroupById(topicGroupId, payload) {
+  const [result] = await pool.execute(
+    `UPDATE material_topic_groups
+     SET code = ?,
+         name_vi = ?,
+         name_es = ?,
+         description_vi = ?,
+         description_es = ?,
+         is_active = ?
+     WHERE id = ?`,
+    [
+      payload.code,
+      payload.name_vi,
+      payload.name_es,
+      payload.description_vi || null,
+      payload.description_es || null,
+      payload.is_active == null ? true : Boolean(payload.is_active),
+      topicGroupId,
+    ]
+  );
+  return result.affectedRows;
+}
+
+async function deleteTopicGroupById(topicGroupId) {
+  const [result] = await pool.execute('DELETE FROM material_topic_groups WHERE id = ?', [topicGroupId]);
+  return result.affectedRows;
+}
+
+async function countSubjectsByTopicGroupId(topicGroupId) {
+  const [rows] = await pool.execute(
+    `SELECT COUNT(*) AS total
+     FROM material_types
+     WHERE material_topic_group_id = ?`,
+    [topicGroupId]
+  );
+  return Number(rows[0]?.total || 0);
+}
+
+async function findSubjects(lang) {
+  const [rows] = await pool.query(
+    `SELECT
+       mt.id,
+       mt.code,
+       mt.material_topic_group_id,
+       mtg.code AS material_topic_group_code,
+       ${lang === 'es' ? 'mtg.name_es' : 'mtg.name_vi'} AS material_topic_group_name,
+       ${lang === 'es' ? 'mtg.description_es' : 'mtg.description_vi'} AS material_topic_group_description,
+       ${lang === 'es' ? 'mt.name_es' : 'mt.name_vi'} AS name,
+       ${lang === 'es' ? 'mt.description_es' : 'mt.description_vi'} AS description,
+       mt.created_at
+     FROM material_types mt
+     LEFT JOIN material_topic_groups mtg ON mtg.id = mt.material_topic_group_id
+     ORDER BY mt.created_at DESC`
   );
 
   return rows;
 }
 
-function normalizeSubjectCode(code) {
-  return String(code || '')
-    .trim()
-    .toUpperCase();
+async function findAllSubjectsAdmin() {
+  const [rows] = await pool.query(
+    `SELECT
+       mt.id,
+       mt.code,
+       mt.material_topic_group_id,
+       mtg.code AS material_topic_group_code,
+       mtg.name_vi AS material_topic_group_name_vi,
+       mtg.name_es AS material_topic_group_name_es,
+       mtg.description_vi AS material_topic_group_description_vi,
+       mtg.description_es AS material_topic_group_description_es,
+       mt.name_vi,
+       mt.name_es,
+       mt.description_vi,
+       mt.description_es,
+       mt.created_at
+     FROM material_types mt
+     LEFT JOIN material_topic_groups mtg ON mtg.id = mt.material_topic_group_id
+     ORDER BY mt.created_at DESC`
+  );
+
+  return rows;
 }
 
 async function generateNextSubjectCode() {
@@ -87,10 +218,19 @@ async function createSubject(payload) {
     try {
       const [result] = await pool.execute(
         `INSERT INTO material_types
-          (code, name_vi, name_es, description_vi, description_es, created_by)
-         VALUES (?, ?, ?, ?, ?, ?)`,
+          (
+            code,
+            material_topic_group_id,
+            name_vi,
+            name_es,
+            description_vi,
+            description_es,
+            created_by
+          )
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
         [
           code,
+          Number(payload.material_topic_group_id || 1),
           payload.name_vi,
           payload.name_es,
           payload.description_vi || null,
@@ -116,12 +256,14 @@ async function createSubject(payload) {
 async function updateSubject(subjectId, payload) {
   const [result] = await pool.execute(
     `UPDATE material_types
-     SET name_vi = ?,
+     SET material_topic_group_id = ?,
+         name_vi = ?,
          name_es = ?,
          description_vi = ?,
          description_es = ?
      WHERE id = ?`,
     [
+      Number(payload.material_topic_group_id || 1),
       payload.name_vi,
       payload.name_es,
       payload.description_vi || null,
@@ -251,6 +393,12 @@ async function deleteReferenceMaterial(materialId) {
 
 module.exports = {
   findUserSessionById,
+  findAllTopicGroups,
+  findAllTopicGroupsForAdmin,
+  createTopicGroup,
+  updateTopicGroupById,
+  deleteTopicGroupById,
+  countSubjectsByTopicGroupId,
   findSubjects,
   findAllSubjectsAdmin,
   createSubject,

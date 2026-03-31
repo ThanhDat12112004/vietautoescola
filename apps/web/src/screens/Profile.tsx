@@ -20,7 +20,6 @@ import {
 import { Camera, Pencil, User as UserIcon } from '@/components/BrandIcons';
 import { getStoredAuth, updateStoredAuthUser } from '@/lib/auth';
 import { motion } from 'framer-motion';
-import { Flame, Lock, Target } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 
@@ -533,11 +532,8 @@ const Profile = () => {
           </div>
 
           <div className="mt-8 space-y-3">
-            <div className="flex flex-col gap-3 rounded-2xl border border-primary/18 bg-white/75 px-4 py-4 shadow-sm backdrop-blur-sm sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+            <div className="flex flex-col gap-3 rounded-2xl border-2 border-primary/25 bg-white/85 px-4 py-4 shadow-sm backdrop-blur-sm sm:flex-row sm:items-center sm:justify-between sm:gap-4">
               <div className="flex min-w-0 gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/[0.08] text-primary">
-                  <Flame className="h-5 w-5" aria-hidden />
-                </div>
                 <p className="text-sm leading-snug text-foreground/90">{rankMotivation}</p>
               </div>
               {!hasLearningActivity && (
@@ -550,27 +546,22 @@ const Profile = () => {
               )}
             </div>
 
-            <div className="flex flex-col gap-3 rounded-2xl border border-dashed border-primary/20 bg-white/55 px-4 py-3.5 sm:flex-row sm:items-center sm:gap-4">
-              <div className="flex min-w-0 gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#E3C565]/15 text-[#6b4a00]">
-                  <Target className="h-5 w-5" aria-hidden />
-                </div>
-                <div>
-                  <p className="text-xs font-bold uppercase tracking-wide text-primary/80">
-                    {t('Gợi ý hôm nay', 'Objetivo de hoy')}
-                  </p>
-                  <p className="mt-0.5 text-sm text-muted-foreground">
-                    {hasLearningActivity
-                      ? t(
-                          'Thử làm thêm 1–2 bài để duy trì tiến độ và cải thiện tỷ lệ đúng.',
-                          'Haz 1–2 exámenes más para mantener el ritmo y mejorar tu porcentaje.'
-                        )
-                      : t(
-                          'Bắt đầu với 1–2 bài thi bất kỳ — thống kê và hạng sẽ cập nhật ngay sau khi nộp bài.',
-                          'Empieza con 1–2 tests: tus estadísticas y ranking se actualizan al enviar.'
-                        )}
-                  </p>
-                </div>
+            <div className="flex flex-col gap-3 rounded-2xl border-2 border-primary/22 bg-white/75 px-4 py-3.5 sm:flex-row sm:items-center sm:gap-4">
+              <div className="min-w-0">
+                <p className="text-xs font-bold uppercase tracking-wide text-primary/80">
+                  {t('Gợi ý hôm nay', 'Objetivo de hoy')}
+                </p>
+                <p className="mt-0.5 text-sm text-muted-foreground">
+                  {hasLearningActivity
+                    ? t(
+                        'Thử làm thêm 1–2 bài để duy trì tiến độ và cải thiện tỷ lệ đúng.',
+                        'Haz 1–2 exámenes más para mantener el ritmo y mejorar tu porcentaje.'
+                      )
+                    : t(
+                        'Bắt đầu với 1–2 bài thi bất kỳ — thống kê và hạng sẽ cập nhật ngay sau khi nộp bài.',
+                        'Empieza con 1–2 tests: tus estadísticas y ranking se actualizan al enviar.'
+                      )}
+                </p>
               </div>
             </div>
           </div>
@@ -612,10 +603,9 @@ const Profile = () => {
 
               <TabsContent value="info" className="mt-0 outline-none">
                 <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-                  <div className="rounded-2xl border-2 border-primary/20 bg-white/95 p-5 shadow-[0_1px_0_rgba(255,255,255,0.8)_inset] md:p-7">
-                    <div className="grid gap-8 lg:grid-cols-2 lg:gap-0">
-                    <div className="space-y-8 lg:border-r-2 lg:border-primary/25 lg:pr-6 xl:pr-9">
-                      <div className="space-y-2 rounded-xl border border-primary/10 bg-primary/[0.03] px-4 py-3 text-sm md:px-5 md:py-4">
+                  <div className="grid gap-10 rounded-2xl border-2 border-primary/18 bg-white/70 p-4 sm:p-5 lg:grid-cols-2 lg:gap-12 lg:p-6">
+                    <div className="space-y-8">
+                      <div className="space-y-2 text-sm">
                         <p>
                           <span className="text-muted-foreground">Username</span>{' '}
                           <span className="font-medium text-foreground">{stats.username}</span>
@@ -626,25 +616,19 @@ const Profile = () => {
                         </p>
                       </div>
 
-                      <section className="border-t border-primary/15 pt-8">
-                        <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
-                          <div className="min-w-0">
-                            <h3 className="font-display text-base font-bold tracking-tight text-foreground md:text-lg">
-                              {t('Mật khẩu đăng nhập', 'Contraseña')}
-                            </h3>
-                            <p className="mt-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-                              {t('Bảo mật tài khoản', 'Seguridad de la cuenta')}
-                            </p>
-                          </div>
+                      <section className="border-t-2 border-primary/12 pt-8">
+                        <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+                          <h3 className="font-display text-sm font-bold text-primary md:text-base">
+                            {t('Mật khẩu đăng nhập', 'Contraseña')}
+                          </h3>
                           {!isEditingPassword ? (
                             <Button
                               type="button"
                               size="sm"
-                              className="brand-cta-primary h-10 w-full shrink-0 gap-2 rounded-xl px-5 font-semibold text-brand-onCta shadow-md transition hover:opacity-[0.96] sm:w-auto [&_svg]:text-brand-onCta"
+                              className="brand-cta-primary h-9 shrink-0 px-4 font-semibold text-white"
                               onClick={startEditPassword}
                               disabled={nameSaving || passwordSaving}
                             >
-                              <Lock className="h-4 w-4 shrink-0" aria-hidden />
                               {t('Đổi mật khẩu', 'Cambiar contraseña')}
                             </Button>
                           ) : (
@@ -727,8 +711,8 @@ const Profile = () => {
                       </section>
                     </div>
 
-                    <section className="border-t-2 border-primary/15 pt-8 lg:border-t-0 lg:pl-6 lg:pt-0 xl:pl-9">
-                      <h3 className="mb-4 font-display text-base font-bold tracking-tight text-foreground md:text-lg">
+                    <section className="border-t border-dashed border-primary/18 pt-8 lg:border-l-2 lg:border-t-0 lg:border-solid lg:border-primary/12 lg:pl-8 lg:pt-0">
+                      <h3 className="mb-4 font-display text-sm font-bold text-primary md:text-base">
                         {t('Thống kê học tập', 'Estadísticas')}
                       </h3>
                       {!hasLearningActivity && (
@@ -804,7 +788,6 @@ const Profile = () => {
                         />
                       </div>
                     </section>
-                    </div>
                   </div>
                 </motion.div>
               </TabsContent>

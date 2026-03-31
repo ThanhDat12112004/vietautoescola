@@ -5,7 +5,8 @@ async function getLeaderboard(req, res, next) {
   try {
     const limitParam = Number(req.query.limit || 10);
     const limit = Number.isNaN(limitParam) ? 10 : Math.min(Math.max(limitParam, 1), 100);
-    const data = await statsService.getLeaderboard(limit);
+    const period = String(req.query.period || 'all');
+    const data = await statsService.getLeaderboard(limit, period);
     return res.json(data);
   } catch (error) {
     return next(error);
@@ -54,7 +55,20 @@ async function getUserDashboard(req, res, next) {
 
 async function getMyLeaderboardRank(req, res, next) {
   try {
-    const data = await statsService.getMyLeaderboardRank(req.user.id);
+    const period = String(req.query.period || 'all');
+    const data = await statsService.getMyLeaderboardRank(req.user.id, period);
+    return res.json(data);
+  } catch (error) {
+    return next(error);
+  }
+}
+
+async function getMyLeaderboardAround(req, res, next) {
+  try {
+    const period = String(req.query.period || 'all');
+    const radiusParam = Number(req.query.radius || 3);
+    const radius = Number.isNaN(radiusParam) ? 3 : Math.min(Math.max(radiusParam, 1), 10);
+    const data = await statsService.getMyLeaderboardAround(req.user.id, period, radius);
     return res.json(data);
   } catch (error) {
     return next(error);
@@ -67,4 +81,5 @@ module.exports = {
   getMyDashboard,
   getUserDashboard,
   getMyLeaderboardRank,
+  getMyLeaderboardAround,
 };

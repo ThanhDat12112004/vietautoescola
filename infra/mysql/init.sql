@@ -25,8 +25,21 @@ CREATE TABLE users (
     INDEX idx_current_session (current_session_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='Nguoi dung';
 
+CREATE TABLE quiz_topic_groups (
+    id              BIGINT PRIMARY KEY AUTO_INCREMENT,
+    code            VARCHAR(30) UNIQUE NOT NULL,
+    name_vi         VARCHAR(150) NOT NULL,
+    name_es         VARCHAR(150) NOT NULL,
+    description_vi  TEXT,
+    description_es  TEXT,
+    is_active       BOOLEAN DEFAULT TRUE,
+    created_at      DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at      DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='Nhom loai chu de bai thi';
+
 CREATE TABLE quiz_categories (
     id              BIGINT PRIMARY KEY AUTO_INCREMENT,
+    quiz_topic_group_id BIGINT NOT NULL DEFAULT 1,
     name_vi         VARCHAR(100) NOT NULL,
     name_es         VARCHAR(100) NOT NULL,
     slug            VARCHAR(60) UNIQUE DEFAULT NULL,
@@ -34,22 +47,28 @@ CREATE TABLE quiz_categories (
     description_es  TEXT,
     is_active       BOOLEAN DEFAULT TRUE,
     created_at      DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at      DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    updated_at      DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (quiz_topic_group_id) REFERENCES quiz_topic_groups(id) ON DELETE RESTRICT,
+    INDEX idx_quiz_category_topic_group (quiz_topic_group_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='Phan loai bai kiem tra';
 
-CREATE TABLE quiz_types (
+CREATE TABLE material_topic_groups (
     id              BIGINT PRIMARY KEY AUTO_INCREMENT,
+    code            VARCHAR(40) UNIQUE NOT NULL,
     name_vi         VARCHAR(150) NOT NULL,
     name_es         VARCHAR(150) NOT NULL,
     description_vi  TEXT,
     description_es  TEXT,
-    is_active       BOOLEAN DEFAULT TRUE,
+    is_active       BOOLEAN NOT NULL DEFAULT TRUE,
+    created_by      BIGINT DEFAULT NULL,
     created_at      DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at      DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='Loai de thi';
+    updated_at      DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='Nhom loai chu de tai lieu';
 
 CREATE TABLE material_types (
     id              BIGINT PRIMARY KEY AUTO_INCREMENT,
+    material_topic_group_id BIGINT NOT NULL DEFAULT 1,
     code            VARCHAR(30) UNIQUE NOT NULL,
     name_vi         VARCHAR(150) NOT NULL,
     name_es         VARCHAR(150) NOT NULL,
@@ -57,6 +76,7 @@ CREATE TABLE material_types (
     description_es  TEXT,
     created_by      BIGINT DEFAULT NULL,
     created_at      DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (material_topic_group_id) REFERENCES material_topic_groups(id) ON DELETE RESTRICT,
     FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='Phan loai tai lieu';
 
@@ -83,7 +103,6 @@ CREATE TABLE reference_materials (
 CREATE TABLE quizzes (
     id                  BIGINT PRIMARY KEY AUTO_INCREMENT,
     category_id         BIGINT DEFAULT NULL,
-    quiz_type_id        BIGINT NOT NULL DEFAULT 1,
     title_vi            VARCHAR(200) NOT NULL,
     title_es            VARCHAR(200) NOT NULL,
     description_vi      TEXT,
@@ -98,10 +117,8 @@ CREATE TABLE quizzes (
     created_at          DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at          DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (category_id)  REFERENCES quiz_categories(id) ON DELETE SET NULL,
-    FOREIGN KEY (quiz_type_id) REFERENCES quiz_types(id) ON DELETE RESTRICT,
     FOREIGN KEY (created_by)   REFERENCES users(id) ON DELETE CASCADE,
     INDEX idx_category (category_id),
-    INDEX idx_quiz_type (quiz_type_id),
     INDEX idx_created_by (created_by)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='Bai kiem tra';
 
@@ -167,30 +184,39 @@ INSERT INTO users (id, username, email, password_hash, role, full_name, is_activ
 VALUES (1, 'seed_admin', 'seed_admin@local.test', '$2a$10$A0xbDZbAp0ytSBgceT3U6uvzxEGfZ2lM1AH3P/nCn4coK9eEyyxA.', 'admin', 'Seed Admin', TRUE)
 ON DUPLICATE KEY UPDATE id = id;
 
-INSERT INTO quiz_categories (id, name_vi, name_es, slug, description_vi, description_es, is_active)
+INSERT INTO quiz_topic_groups (id, code, name_vi, name_es, description_vi, description_es, is_active)
+VALUES
+(1, 'QG_REAL', 'De thi that', 'Examen real', 'Nhom de thi sat voi de thi that.', 'Grupo de examenes similares al examen real.', TRUE),
+(2, 'QG_LEVEL', 'De theo muc do', 'Examen por nivel', 'Nhom de thi theo muc do kho.', 'Grupo de examenes por nivel de dificultad.', TRUE),
+(3, 'QG_TRICK', 'De cau hoi meo', 'Preguntas trampa', 'Nhom de thi voi cac cau hoi meo thuong gap.', 'Grupo de examenes con preguntas trampa frecuentes.', TRUE),
+(4, 'QG_CHAPTER', 'De thi theo chuong', 'Examen por tema', 'Nhom de thi theo tung chuong noi dung.', 'Grupo de examenes por tema/capitulo.', TRUE),
+(5, 'QG_COMMON', 'De thi hay gap', 'Examen frecuente', 'Nhom de thi tong hop hay gap.', 'Grupo de examenes frecuentes.', TRUE)
+ON DUPLICATE KEY UPDATE id = id;
+
+INSERT INTO quiz_categories (id, quiz_topic_group_id, name_vi, name_es, slug, description_vi, description_es, is_active)
+VALUES
+(1, 1, 'Bien bao giao thong', 'Senales de trafico', 'bien-bao-giao-thong', 'Cau hoi bien bao va tinh huong giao thong co ban', 'Preguntas sobre senales y situaciones basicas de trafico', TRUE),
+(2, 5, 'Tinh huong do thi', 'Situaciones urbanas', 'tinh-huong-do-thi', 'Tinh huong giao thong trong do thi.', 'Situaciones de trafico en ciudad.', TRUE),
+(3, 1, 'Nhuong duong', 'Prioridad de paso', 'nhuong-duong', 'Quy tac nhuong duong.', 'Reglas de prioridad de paso.', TRUE),
+(4, 2, 'Duong cao toc nang cao', 'Autopista avanzada', 'duong-cao-toc-nang-cao', 'Tinh huong nang cao tren cao toc.', 'Situaciones avanzadas en autopista.', TRUE),
+(5, 3, 'An toan va phan xa', 'Seguridad y reflejos', 'an-toan-va-phan-xa', 'Ky nang xu ly tinh huong nguy hiem.', 'Habilidades ante situaciones peligrosas.', TRUE),
+(6, 4, 'Ky thuat lai xe', 'Tecnica de conduccion', 'ky-thuat-lai-xe', 'Nguyen tac dieu khien xe an toan.', 'Principios de conduccion segura.', TRUE),
+(7, 5, 'Luat va bien phat', 'Normativa y sanciones', 'luat-va-bien-phat', 'Quy dinh va muc phat thuong gap.', 'Normativa y sanciones comunes.', TRUE),
+(8, 4, 'Moc sa hinh nang cao', 'Pista avanzada', 'moc-sa-hinh-nang-cao', 'Bai tap sa hinh nang cao.', 'Ejercicios avanzados de pista.', TRUE)
+ON DUPLICATE KEY UPDATE id = id;
+
+INSERT INTO material_topic_groups
+    (id, code, name_vi, name_es, description_vi, description_es, is_active, created_by)
+VALUES
+(1, 'MG_THEORY', 'Tai lieu ly thuyet', 'Material teorico', 'Nhom tai lieu ly thuyet tong hop.', 'Grupo de material teorico general.', TRUE, 1),
+(2, 'MG_SIGN', 'Tai lieu bien bao', 'Material de senales', 'Nhom tai lieu bien bao giao thong.', 'Grupo de material de senales de trafico.', TRUE, 1),
+(3, 'MG_PRACTICE', 'Tai lieu thuc hanh', 'Material practico', 'Nhom tai lieu bai tap va tinh huong.', 'Grupo de material practico y situaciones.', TRUE, 1),
+(4, 'MG_TIPS', 'Tai lieu meo thi', 'Material de consejos', 'Nhom tai lieu meo thi va ghi nho.', 'Grupo de material de consejos de examen.', TRUE, 1)
+ON DUPLICATE KEY UPDATE id = id;
+
+INSERT INTO material_types (id, material_topic_group_id, code, name_vi, name_es, description_vi, description_es, created_by)
 VALUES (
     1,
-    'Bien bao giao thong',
-    'Senales de trafico',
-    'bien-bao-giao-thong',
-    'Cau hoi bien bao va tinh huong giao thong co ban',
-    'Preguntas sobre senales y situaciones basicas de trafico',
-    TRUE
-)
-ON DUPLICATE KEY UPDATE id = id;
-
-INSERT INTO quiz_types (id, name_vi, name_es, description_vi, description_es, is_active)
-VALUES
-(1, 'De tong hop', 'Examen general', 'Bo cau hoi tong hop nhieu nhom noi dung.', 'Coleccion de preguntas mixtas de varias areas.', TRUE),
-(2, 'Bien bao giao thong', 'Senales de trafico', 'Tap trung vao nhan biet va xu ly bien bao.', 'Enfocado en reconocimiento y uso de senales.', TRUE),
-(3, 'Duong cao toc', 'Autopista', 'Cau hoi ve nhap lan, toc do va an toan tren cao toc.', 'Preguntas sobre incorporacion, velocidad y seguridad en autopista.', TRUE),
-(4, 'Ly thuyet', 'Teoria', 'Nhom cau hoi ly thuyet co ban de on thi.', 'Preguntas teoricas basicas para practicar.', TRUE),
-(5, 'An toan lai xe', 'Seguridad vial', 'Kien thuc va tinh huong lai xe an toan.', 'Conocimientos y situaciones de conduccion segura.', TRUE),
-(6, 'Sa hinh', 'Pista', 'Bai tap tinh huong sa hinh va thao tac xe.', 'Ejercicios de circuito y maniobras del vehiculo.', TRUE)
-ON DUPLICATE KEY UPDATE id = id;
-
-INSERT INTO material_types (id, code, name_vi, name_es, description_vi, description_es, created_by)
-VALUES (
     1,
     'DGT_BASE',
     'Luyen thi lai xe co ban',
@@ -232,14 +258,14 @@ file_size_mb_es = VALUES(file_size_mb_es),
 page_count_es = VALUES(page_count_es);
 
 INSERT INTO quizzes (
-    id, category_id, quiz_type_id,
+    id, category_id,
     title_vi, title_es,
     description_vi, description_es,
     instructions_vi, instructions_es,
     duration_minutes, total_questions, passing_score, is_active, created_by
 )
 VALUES (
-    1, 1, 1,
+    1, 1,
     'De thi mo phong DGT 30 cau',
     'Simulador DGT 30 preguntas',
     'De mo phong cho nguoi hoc thi bang lai tai Tay Ban Nha',
@@ -302,17 +328,6 @@ ON DUPLICATE KEY UPDATE question_id = question_id;
 -- Bulk synthetic seed data (large dataset)
 -- ---------------------------------------------------------------------------
 
-INSERT INTO quiz_categories (id, name_vi, name_es, slug, description_vi, description_es, is_active)
-VALUES
-(2, 'Tinh huong do thi', 'Situaciones urbanas', 'tinh-huong-do-thi', 'Tinh huong giao thong trong do thi.', 'Situaciones de trafico en ciudad.', TRUE),
-(3, 'Nhuong duong', 'Prioridad de paso', 'nhuong-duong', 'Quy tac nhuong duong.', 'Reglas de prioridad de paso.', TRUE),
-(4, 'Duong cao toc nang cao', 'Autopista avanzada', 'duong-cao-toc-nang-cao', 'Tinh huong nang cao tren cao toc.', 'Situaciones avanzadas en autopista.', TRUE),
-(5, 'An toan va phan xa', 'Seguridad y reflejos', 'an-toan-va-phan-xa', 'Ky nang xu ly tinh huong nguy hiem.', 'Habilidades ante situaciones peligrosas.', TRUE),
-(6, 'Ky thuat lai xe', 'Tecnica de conduccion', 'ky-thuat-lai-xe', 'Nguyen tac dieu khien xe an toan.', 'Principios de conduccion segura.', TRUE),
-(7, 'Luật va bien phat', 'Normativa y sanciones', 'luat-va-bien-phat', 'Quy dinh va muc phat thuong gap.', 'Normativa y sanciones comunes.', TRUE),
-(8, 'Moc sa hinh nang cao', 'Pista avanzada', 'moc-sa-hinh-nang-cao', 'Bai tap sa hinh nang cao.', 'Ejercicios avanzados de pista.', TRUE)
-ON DUPLICATE KEY UPDATE id = id;
-
 INSERT INTO users (username, email, password_hash, role, full_name, is_active)
 SELECT
     gen_users.username,
@@ -354,8 +369,9 @@ FROM (
 LEFT JOIN users u ON u.username = gen_users.username
 WHERE u.id IS NULL;
 
-INSERT INTO material_types (code, name_vi, name_es, description_vi, description_es, created_by)
+INSERT INTO material_types (material_topic_group_id, code, name_vi, name_es, description_vi, description_es, created_by)
 SELECT
+    ((gen_mat.n - 1) % 4) + 1 AS material_topic_group_id,
     gen_mat.code,
     gen_mat.name_vi,
     gen_mat.name_es,
@@ -364,6 +380,7 @@ SELECT
     1
 FROM (
     SELECT
+        n,
         CONCAT('DGT_BULK_', LPAD(n, 4, '0')) AS code,
         CONCAT('Chu de tai lieu ', LPAD(n, 4, '0')) AS name_vi,
         CONCAT('Tema material ', LPAD(n, 4, '0')) AS name_es,
@@ -424,7 +441,6 @@ WHERE rm.id IS NULL
 
 INSERT INTO quizzes (
     category_id,
-    quiz_type_id,
     title_vi,
     title_es,
     description_vi,
@@ -439,14 +455,6 @@ INSERT INTO quizzes (
 )
 SELECT
     ((n - 1) % 8) + 1 AS category_id,
-    CASE ((n - 1) % 6)
-        WHEN 0 THEN 1
-        WHEN 1 THEN 2
-        WHEN 2 THEN 3
-        WHEN 3 THEN 4
-        WHEN 4 THEN 5
-        ELSE 6
-    END AS quiz_type_id,
     CONCAT('De thi tong hop so ', LPAD(n, 6, '0')) AS title_vi,
     CONCAT('Examen de practica ', LPAD(n, 6, '0')) AS title_es,
     CONCAT('Mo ta de thi so ', LPAD(n, 6, '0')) AS description_vi,

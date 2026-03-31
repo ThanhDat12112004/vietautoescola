@@ -26,6 +26,82 @@ async function listCategories(req, res, next) {
   }
 }
 
+async function listTopicGroups(req, res, next) {
+  try {
+    const lang = getLang(req.query.lang);
+    const rows = await quizService.listTopicGroups(lang);
+    return res.json(rows);
+  } catch (error) {
+    return next(error);
+  }
+}
+
+async function listAdminTopicGroups(_req, res, next) {
+  try {
+    const rows = await quizService.listTopicGroupsForAdmin();
+    return res.json(rows);
+  } catch (error) {
+    return next(error);
+  }
+}
+
+async function createTopicGroup(req, res, next) {
+  const { code, name_vi, name_es, description_vi, description_es, is_active } = req.body;
+  if (!name_vi || !name_es) {
+    return res.status(400).json({ message: 'name_vi and name_es are required' });
+  }
+  try {
+    const result = await quizService.createTopicGroup({
+      code,
+      name_vi,
+      name_es,
+      description_vi,
+      description_es,
+      is_active,
+    });
+    return res.status(201).json(result);
+  } catch (error) {
+    return next(error);
+  }
+}
+
+async function updateTopicGroup(req, res, next) {
+  const topicGroupId = Number(req.params.id);
+  if (Number.isNaN(topicGroupId)) {
+    return res.status(400).json({ message: 'Invalid topic group id' });
+  }
+  const { code, name_vi, name_es, description_vi, description_es, is_active } = req.body;
+  if (!name_vi || !name_es) {
+    return res.status(400).json({ message: 'name_vi and name_es are required' });
+  }
+  try {
+    const result = await quizService.updateTopicGroup(topicGroupId, {
+      code,
+      name_vi,
+      name_es,
+      description_vi,
+      description_es,
+      is_active,
+    });
+    return res.json(result);
+  } catch (error) {
+    return next(error);
+  }
+}
+
+async function deleteTopicGroup(req, res, next) {
+  const topicGroupId = Number(req.params.id);
+  if (Number.isNaN(topicGroupId)) {
+    return res.status(400).json({ message: 'Invalid topic group id' });
+  }
+  try {
+    const result = await quizService.deleteTopicGroup(topicGroupId);
+    return res.json(result);
+  } catch (error) {
+    return next(error);
+  }
+}
+
 async function listTypes(req, res, next) {
   try {
     const lang = getLang(req.query.lang);
@@ -92,15 +168,36 @@ async function listAdminTypes(_req, res, next) {
 }
 
 async function createType(req, res, next) {
-  const { code, name_vi, name_es, description_vi, description_es, is_active } = req.body;
+  const {
+    code,
+    name_vi,
+    name_es,
+    description_vi,
+    description_es,
+    is_active,
+    quiz_topic_group_id,
+    quiz_category_id,
+  } = req.body;
 
   if (!name_vi || !name_es) {
     return res.status(400).json({ message: 'name_vi and name_es are required' });
+  }
+  const topicGroupId = Number(quiz_topic_group_id);
+  const categoryId = Number(quiz_category_id);
+  if (
+    (quiz_topic_group_id != null && (!Number.isFinite(topicGroupId) || topicGroupId <= 0)) ||
+    (quiz_category_id != null && (!Number.isFinite(categoryId) || categoryId <= 0))
+  ) {
+    return res
+      .status(400)
+      .json({ message: 'quiz_topic_group_id/quiz_category_id must be positive number' });
   }
 
   try {
     const result = await quizService.createType({
       code,
+      quiz_topic_group_id: Number.isFinite(topicGroupId) ? topicGroupId : undefined,
+      quiz_category_id: Number.isFinite(categoryId) ? categoryId : undefined,
       name_vi,
       name_es,
       description_vi,
@@ -119,14 +216,35 @@ async function updateType(req, res, next) {
     return res.status(400).json({ message: 'Invalid type id' });
   }
 
-  const { code, name_vi, name_es, description_vi, description_es, is_active } = req.body;
+  const {
+    code,
+    name_vi,
+    name_es,
+    description_vi,
+    description_es,
+    is_active,
+    quiz_topic_group_id,
+    quiz_category_id,
+  } = req.body;
   if (!name_vi || !name_es) {
     return res.status(400).json({ message: 'name_vi and name_es are required' });
+  }
+  const topicGroupId = Number(quiz_topic_group_id);
+  const categoryId = Number(quiz_category_id);
+  if (
+    (quiz_topic_group_id != null && (!Number.isFinite(topicGroupId) || topicGroupId <= 0)) ||
+    (quiz_category_id != null && (!Number.isFinite(categoryId) || categoryId <= 0))
+  ) {
+    return res
+      .status(400)
+      .json({ message: 'quiz_topic_group_id/quiz_category_id must be positive number' });
   }
 
   try {
     const result = await quizService.updateType(typeId, {
       code,
+      quiz_topic_group_id: Number.isFinite(topicGroupId) ? topicGroupId : undefined,
+      quiz_category_id: Number.isFinite(categoryId) ? categoryId : undefined,
       name_vi,
       name_es,
       description_vi,
@@ -154,14 +272,28 @@ async function deleteType(req, res, next) {
 }
 
 async function createCategory(req, res, next) {
-  const { name_vi, name_es, slug, description_vi, description_es, is_active } = req.body;
+  const {
+    name_vi,
+    name_es,
+    slug,
+    description_vi,
+    description_es,
+    is_active,
+    quiz_topic_group_id,
+  } = req.body;
 
   if (!name_vi || !name_es) {
     return res.status(400).json({ message: 'name_vi and name_es are required' });
   }
 
+  const topicGroupId = Number(quiz_topic_group_id ?? 1);
+  if (!Number.isFinite(topicGroupId) || topicGroupId <= 0) {
+    return res.status(400).json({ message: 'quiz_topic_group_id must be a positive number' });
+  }
+
   try {
     const result = await quizService.createCategory({
+      quiz_topic_group_id: topicGroupId,
       name_vi,
       name_es,
       slug,
@@ -181,14 +313,28 @@ async function updateCategory(req, res, next) {
     return res.status(400).json({ message: 'Invalid category id' });
   }
 
-  const { name_vi, name_es, slug, description_vi, description_es, is_active } = req.body;
+  const {
+    name_vi,
+    name_es,
+    slug,
+    description_vi,
+    description_es,
+    is_active,
+    quiz_topic_group_id,
+  } = req.body;
 
   if (!name_vi || !name_es) {
     return res.status(400).json({ message: 'name_vi and name_es are required' });
   }
 
+  const topicGroupId = Number(quiz_topic_group_id ?? 1);
+  if (!Number.isFinite(topicGroupId) || topicGroupId <= 0) {
+    return res.status(400).json({ message: 'quiz_topic_group_id must be a positive number' });
+  }
+
   try {
     const result = await quizService.updateCategory(categoryId, {
+      quiz_topic_group_id: topicGroupId,
       name_vi,
       name_es,
       slug,
@@ -224,7 +370,6 @@ async function updateQuiz(req, res, next) {
 
   const {
     category_id,
-    quiz_type,
     title_vi,
     title_es,
     description_vi,
@@ -235,16 +380,15 @@ async function updateQuiz(req, res, next) {
     is_active,
   } = req.body;
 
-  if (!quiz_type || !title_vi || !title_es || !passing_score) {
+  if (!title_vi || !title_es || !passing_score) {
     return res
       .status(400)
-      .json({ message: 'quiz_type, title_vi, title_es, passing_score are required' });
+      .json({ message: 'title_vi, title_es, passing_score are required' });
   }
 
   try {
     const result = await quizService.updateQuiz(quizId, {
       category_id,
-      quiz_type,
       title_vi,
       title_es,
       description_vi,
@@ -305,6 +449,11 @@ async function deleteQuiz(req, res, next) {
 
 module.exports = {
   listQuizzes,
+  listTopicGroups,
+  listAdminTopicGroups,
+  createTopicGroup,
+  updateTopicGroup,
+  deleteTopicGroup,
   listCategories,
   listTypes,
   getQuizDetail,

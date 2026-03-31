@@ -115,6 +115,8 @@ export type QuizListItem = {
   id: number;
   code: string;
   quiz_type?: string | null;
+  quiz_topic_group_name?: string | null;
+  quiz_topic_group_description?: string | null;
   duration_minutes: number;
   total_questions: number;
   passing_score: number;
@@ -175,6 +177,7 @@ export type SubmitAttemptResult = {
 
 export type LeaderboardUser = {
   id: number;
+  rank?: number;
   username: string;
   full_name: string;
   avatar_url: string | null;
@@ -184,6 +187,8 @@ export type LeaderboardUser = {
   total_questions: number;
   average_percentage: number;
 };
+
+export type LeaderboardPeriod = 'all' | 'week' | 'month';
 
 export type MyLeaderboardRank = {
   rank: number;
@@ -227,6 +232,10 @@ export type DashboardResponse = {
 export type Subject = {
   id: number;
   code: string;
+  material_topic_group_id?: number;
+  material_topic_group_code?: string | null;
+  material_topic_group_name?: string | null;
+  material_topic_group_description?: string | null;
   name: string;
   description: string | null;
   created_at: string;
@@ -235,6 +244,12 @@ export type Subject = {
 export type AdminSubject = {
   id: number;
   code: string;
+  material_topic_group_id?: number;
+  material_topic_group_code?: string | null;
+  material_topic_group_name_vi?: string | null;
+  material_topic_group_name_es?: string | null;
+  material_topic_group_description_vi?: string | null;
+  material_topic_group_description_es?: string | null;
   name_vi: string;
   name_es: string;
   description_vi: string | null;
@@ -244,9 +259,25 @@ export type AdminSubject = {
 
 export type AdminQuizCategory = {
   id: number;
+  quiz_topic_group_id?: number;
+  quiz_topic_group_code?: string | null;
+  quiz_topic_group_name_vi?: string | null;
+  quiz_topic_group_name_es?: string | null;
   name_vi: string;
   name_es: string;
   slug: string | null;
+  description_vi: string | null;
+  description_es: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type AdminTopicGroup = {
+  id: number;
+  code: string;
+  name_vi: string;
+  name_es: string;
   description_vi: string | null;
   description_es: string | null;
   is_active: boolean;
@@ -264,6 +295,10 @@ export type QuizType = {
 export type AdminQuizType = {
   id: number;
   code: string;
+  quiz_topic_group_id?: number;
+  quiz_topic_group_code?: string | null;
+  quiz_topic_group_name_vi?: string | null;
+  quiz_topic_group_name_es?: string | null;
   name_vi: string;
   name_es: string;
   description_vi: string | null;
@@ -406,12 +441,19 @@ export async function submitAttempt(attemptId: number, answers: Record<string, n
   });
 }
 
-export async function getLeaderboard(limit = 10) {
-  return apiRequest<LeaderboardUser[]>(`/stats/leaderboard?limit=${limit}`);
+export async function getLeaderboard(limit = 10, period: LeaderboardPeriod = 'all') {
+  return apiRequest<LeaderboardUser[]>(`/stats/leaderboard?limit=${limit}&period=${period}`);
 }
 
-export async function getMyLeaderboardRank() {
-  return apiRequest<MyLeaderboardRank>('/stats/leaderboard/me', { auth: true });
+export async function getMyLeaderboardRank(period: LeaderboardPeriod = 'all') {
+  return apiRequest<MyLeaderboardRank>(`/stats/leaderboard/me?period=${period}`, { auth: true });
+}
+
+export async function getMyLeaderboardAround(period: LeaderboardPeriod = 'all', radius = 3) {
+  return apiRequest<LeaderboardUser[]>(
+    `/stats/leaderboard/me/around?period=${period}&radius=${radius}`,
+    { auth: true }
+  );
 }
 
 export async function getHomeSummary() {
@@ -438,7 +480,52 @@ export async function getAdminSubjects() {
   return apiRequest<AdminSubject[]>('/materials-api/admin/subjects', { auth: true });
 }
 
+export async function getAdminMaterialTopicGroups() {
+  return apiRequest<AdminTopicGroup[]>('/materials-api/admin/topic-groups', { auth: true });
+}
+
+export async function createAdminMaterialTopicGroup(payload: {
+  code?: string;
+  name_vi: string;
+  name_es: string;
+  description_vi?: string;
+  description_es?: string;
+  is_active?: boolean;
+}) {
+  return apiRequest<{ id: number }>('/materials-api/admin/topic-groups', {
+    method: 'POST',
+    body: payload,
+    auth: true,
+  });
+}
+
+export async function updateAdminMaterialTopicGroup(
+  id: number,
+  payload: {
+    code: string;
+    name_vi: string;
+    name_es: string;
+    description_vi?: string;
+    description_es?: string;
+    is_active?: boolean;
+  }
+) {
+  return apiRequest<{ id: number }>(`/materials-api/admin/topic-groups/${id}`, {
+    method: 'PATCH',
+    body: payload,
+    auth: true,
+  });
+}
+
+export async function deleteAdminMaterialTopicGroup(id: number) {
+  return apiRequest<{ id: number }>(`/materials-api/admin/topic-groups/${id}`, {
+    method: 'DELETE',
+    auth: true,
+  });
+}
+
 export async function createAdminSubject(payload: {
+  material_topic_group_id?: number;
   name_vi: string;
   name_es: string;
   description_vi?: string;
@@ -454,6 +541,7 @@ export async function createAdminSubject(payload: {
 export async function updateAdminSubject(
   id: number,
   payload: {
+    material_topic_group_id?: number;
     name_vi: string;
     name_es: string;
     description_vi?: string;
@@ -600,8 +688,53 @@ export async function getAdminQuizTypes() {
   return apiRequest<AdminQuizType[]>('/api/admin/types', { auth: true });
 }
 
+export async function getAdminQuizTopicGroups() {
+  return apiRequest<AdminTopicGroup[]>('/api/admin/topic-groups', { auth: true });
+}
+
+export async function createAdminQuizTopicGroup(payload: {
+  code?: string;
+  name_vi: string;
+  name_es: string;
+  description_vi?: string;
+  description_es?: string;
+  is_active?: boolean;
+}) {
+  return apiRequest<{ id: number }>('/api/admin/topic-groups', {
+    method: 'POST',
+    body: payload,
+    auth: true,
+  });
+}
+
+export async function updateAdminQuizTopicGroup(
+  id: number,
+  payload: {
+    code: string;
+    name_vi: string;
+    name_es: string;
+    description_vi?: string;
+    description_es?: string;
+    is_active?: boolean;
+  }
+) {
+  return apiRequest<{ id: number }>(`/api/admin/topic-groups/${id}`, {
+    method: 'PATCH',
+    body: payload,
+    auth: true,
+  });
+}
+
+export async function deleteAdminQuizTopicGroup(id: number) {
+  return apiRequest<{ id: number }>(`/api/admin/topic-groups/${id}`, {
+    method: 'DELETE',
+    auth: true,
+  });
+}
+
 export async function createAdminQuizType(payload: {
   code?: string;
+  quiz_topic_group_id?: number;
   name_vi: string;
   name_es: string;
   description_vi?: string;
@@ -619,6 +752,7 @@ export async function updateAdminQuizType(
   id: number,
   payload: {
     code?: string;
+    quiz_topic_group_id?: number;
     name_vi: string;
     name_es: string;
     description_vi?: string;
@@ -641,6 +775,7 @@ export async function deleteAdminQuizType(id: number) {
 }
 
 export async function createAdminQuizCategory(payload: {
+  quiz_topic_group_id?: number;
   name_vi: string;
   name_es: string;
   slug?: string;
@@ -658,6 +793,7 @@ export async function createAdminQuizCategory(payload: {
 export async function updateAdminQuizCategory(
   id: number,
   payload: {
+    quiz_topic_group_id?: number;
     name_vi: string;
     name_es: string;
     slug?: string;

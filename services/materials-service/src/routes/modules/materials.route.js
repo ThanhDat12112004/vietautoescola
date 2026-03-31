@@ -5,6 +5,31 @@ const { authRequired, requireRoles } = require('../../middleware/auth.middleware
 const router = express.Router();
 
 router.get('/subjects', materialsController.listSubjects);
+router.get('/topic-groups', materialsController.listTopicGroups);
+router.get(
+  '/admin/topic-groups',
+  authRequired,
+  requireRoles('admin'),
+  materialsController.listTopicGroupsAdmin
+);
+router.post(
+  '/admin/topic-groups',
+  authRequired,
+  requireRoles('admin'),
+  materialsController.createTopicGroup
+);
+router.patch(
+  '/admin/topic-groups/:id',
+  authRequired,
+  requireRoles('admin'),
+  materialsController.updateTopicGroup
+);
+router.delete(
+  '/admin/topic-groups/:id',
+  authRequired,
+  requireRoles('admin'),
+  materialsController.deleteTopicGroup
+);
 router.get(
   '/admin/subjects',
   authRequired,

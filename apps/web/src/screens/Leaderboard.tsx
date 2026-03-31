@@ -4,14 +4,15 @@ import { Card, CardContent } from '@/components/ui/card';
 import { useLanguage } from '@/hooks/useLanguage';
 import {
   getLeaderboard,
+  getMyLeaderboardAround,
   getMyLeaderboardRank,
   resolveMediaUrl,
+  type LeaderboardPeriod,
   type LeaderboardUser,
   type MyLeaderboardRank,
 } from '@/lib/api';
 import { getStoredAuth } from '@/lib/auth';
 import { cn } from '@/lib/utils';
-import { Crown, Flame, Medal, Sparkles, TrendingUp, Trophy, Users } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 
@@ -79,6 +80,13 @@ const Leaderboard = () => {
   const [failedAvatarIds, setFailedAvatarIds] = useState<Record<number, true>>({});
   const [myRank, setMyRank] = useState<MyLeaderboardRank | null>(null);
   const [myRankLoading, setMyRankLoading] = useState(false);
+  const [period, setPeriod] = useState<LeaderboardPeriod>('all');
+  const [aroundRows, setAroundRows] = useState<LeaderboardUser[]>([]);
+  const [periodAvailability, setPeriodAvailability] = useState<Record<LeaderboardPeriod, boolean>>({
+    all: true,
+    week: true,
+    month: true,
+  });
   const selfRowRef = useRef<HTMLLIElement | null>(null);
 
   const myUserId = getStoredAuth()?.user?.id ?? null;
@@ -105,7 +113,7 @@ const Leaderboard = () => {
     (async () => {
       try {
         setLoading(true);
-        const data = await getLeaderboard(10);
+        const data = await getLeaderboard(10, period);
         if (!active) return;
         setRows(data);
         setError('');
@@ -126,7 +134,37 @@ const Leaderboard = () => {
     return () => {
       active = false;
     };
-  }, [t]);
+  }, [period, t]);
+
+  useEffect(() => {
+    let active = true;
+    void (async () => {
+      try {
+        const [weekRows, monthRows] = await Promise.all([
+          getLeaderboard(1, 'week').catch(() => [] as LeaderboardUser[]),
+          getLeaderboard(1, 'month').catch(() => [] as LeaderboardUser[]),
+        ]);
+        if (!active) return;
+        setPeriodAvailability({
+          all: true,
+          week: weekRows.length > 0,
+          month: monthRows.length > 0,
+        });
+      } catch {
+        if (!active) return;
+        setPeriodAvailability({ all: true, week: false, month: false });
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (period !== 'all' && !periodAvailability[period]) {
+      setPeriod('all');
+    }
+  }, [period, periodAvailability]);
 
   const ranked = useMemo(() => rows.map((item, index) => ({ ...item, rank: index + 1 })), [rows]);
 
@@ -140,16 +178,24 @@ const Leaderboard = () => {
     if (!myUserId) {
       setMyRank(null);
       setMyRankLoading(false);
+      setAroundRows([]);
       return;
     }
     let active = true;
     setMyRankLoading(true);
     void (async () => {
       try {
-        const data = await getMyLeaderboardRank();
-        if (active) setMyRank(data);
+        const [rankData, aroundData] = await Promise.all([
+          getMyLeaderboardRank(period),
+          getMyLeaderboardAround(period, 3),
+        ]);
+        if (active) setMyRank(rankData);
+        if (active) setAroundRows(aroundData);
       } catch {
-        if (active) setMyRank(null);
+        if (active) {
+          setMyRank(null);
+          setAroundRows([]);
+        }
       } finally {
         if (active) setMyRankLoading(false);
       }
@@ -157,7 +203,16 @@ const Leaderboard = () => {
     return () => {
       active = false;
     };
-  }, [myUserId]);
+  }, [myUserId, period]);
+
+  const periodTabs = useMemo(
+    () => [
+      { key: 'all' as const, label: t('Tổng', 'Global') },
+      { key: 'week' as const, label: t('Tuần', 'Semanal') },
+      { key: 'month' as const, label: t('Tháng', 'Mensual') },
+    ],
+    [t]
+  );
 
   useEffect(() => {
     if (loading || !myUserId || ranked.length === 0) return;
@@ -200,16 +255,46 @@ const Leaderboard = () => {
             <div className="w-full px-4 py-5 sm:px-6 md:py-6">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between sm:gap-6">
                 <div className="min-w-0 max-w-3xl border-l-[3px] border-primary/60 pl-3 sm:pl-4">
-                  <p className="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-primary/80">
-                    <Sparkles className="h-3 w-3 shrink-0 opacity-90" aria-hidden />
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-primary/80">
                     {t('Cộng đồng', 'Comunidad')}
                   </p>
                   <h1 className="mt-1.5 font-display text-[1.65rem] font-bold leading-tight tracking-tight text-foreground md:text-[2rem]">
                     {t('Bảng xếp hạng', 'Clasificación')}
                   </h1>
                   <p className="mt-2 max-w-2xl text-[15px] leading-relaxed text-foreground/72 md:text-[0.97rem]">
-                    {t('10 hàng xếp hạng theo điểm.', '10 filas de ranking por puntuación.')}
+                    {t(
+                      'Top 10 theo điểm tích lũy và độ chính xác. Chọn chu kỳ để xem tổng/tuần/tháng.',
+                      'Top 10 por puntos y precisión. Cambia el periodo para ver global/semanal/mensual.'
+                    )}
                   </p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {periodTabs.map((tab) => (
+                      <button
+                        key={tab.key}
+                        type="button"
+                        onClick={() => setPeriod(tab.key)}
+                        disabled={!periodAvailability[tab.key]}
+                        className={cn(
+                          'rounded-full border px-3 py-1.5 text-xs font-bold uppercase tracking-wide transition-colors',
+                          !periodAvailability[tab.key] && 'cursor-not-allowed opacity-45',
+                          period === tab.key
+                            ? 'border-primary bg-primary/15 text-primary'
+                            : 'border-border bg-background text-foreground/70 hover:bg-muted'
+                        )}
+                      >
+                        {tab.label}
+                        {!periodAvailability[tab.key] ? ` (${t('Khóa', 'Bloq')})` : ''}
+                      </button>
+                    ))}
+                  </div>
+                  {!periodAvailability.week || !periodAvailability.month ? (
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      {t(
+                        'Dữ liệu Tuần/Tháng đang được cập nhật, tab sẽ mở khi có lượt làm bài.',
+                        'Los datos semanal/mensual se están actualizando; se abrirán cuando haya intentos.'
+                      )}
+                    </p>
+                  ) : null}
 
                   {/* Luôn thấy “tôi ở đâu” — tách biệt bảng, không lẫn với hàng user */}
                   {myUserId && (
@@ -228,17 +313,11 @@ const Leaderboard = () => {
                         <div className="space-y-2">
                           <div className="flex flex-wrap items-center gap-x-3 gap-y-2 font-display text-base font-bold text-foreground sm:text-lg">
                             <span className="inline-flex items-center gap-1.5 tabular-nums" title="Rank">
-                              <span className="text-lg sm:text-xl" aria-hidden>
-                                🔥
-                              </span>
                               {t('Hạng', 'Puesto')}{' '}
                               <span className="text-primary">#{myRank.rank}</span>
                             </span>
                             <span className="hidden h-4 w-px bg-border sm:block" aria-hidden />
                             <span className="inline-flex items-center gap-1.5 tabular-nums" title="Score">
-                              <span className="text-lg sm:text-xl" aria-hidden>
-                                📊
-                              </span>
                               {t('Điểm:', 'Pts:')}{' '}
                               <span className="text-foreground">{Number(myRank.total_score).toFixed(1)}</span>
                             </span>
@@ -246,7 +325,6 @@ const Leaderboard = () => {
                               <>
                                 <span className="hidden h-4 w-px bg-border sm:block" aria-hidden />
                                 <span className="inline-flex items-center gap-1.5 text-[15px] font-semibold text-amber-800 dark:text-amber-400">
-                                  <span aria-hidden>🎯</span>
                                   {t(
                                     `Còn ~${rankMotivation.gapToFirst} để vượt #1`,
                                     `~${rankMotivation.gapToFirst} pts para el #1`
@@ -278,15 +356,14 @@ const Leaderboard = () => {
                 </div>
                 <div className="flex shrink-0 flex-wrap gap-3 sm:justify-end sm:gap-4">
                   {[
-                    { icon: Users, v: ranked.length, l: t('BXH', 'Lista') },
-                    { icon: Trophy, v: topScore.toFixed(1), l: t('Max', 'Máx') },
-                    { icon: Medal, v: totalCompleted, l: t('Bài', 'Ex.') },
+                    { v: ranked.length, l: t('BXH', 'Lista') },
+                    { v: topScore.toFixed(1), l: t('Max', 'Máx') },
+                    { v: totalCompleted, l: t('Bài', 'Ex.') },
                   ].map((s, i) => (
                     <div
                       key={i}
                       className="flex items-center gap-2 rounded-full border border-primary/20 bg-background px-3.5 py-2 text-xs shadow-sm sm:px-4"
                     >
-                      <s.icon className="h-3.5 w-3.5 shrink-0 text-primary" aria-hidden />
                       <span className="font-display font-bold tabular-nums text-foreground">{s.v}</span>
                       <span className="text-muted-foreground">{s.l}</span>
                     </div>
@@ -362,8 +439,7 @@ const Leaderboard = () => {
                             </span>
                           </p>
                           {myRank.rank === 1 && (
-                            <p className="mt-2 flex items-center gap-1.5 text-sm font-semibold text-amber-700 dark:text-amber-400">
-                              <Crown className="h-4 w-4 shrink-0" aria-hidden />
+                            <p className="mt-2 text-sm font-semibold text-amber-700 dark:text-amber-400">
                               {t('Bạn đang dẫn đầu bảng xếp hạng!', '¡Líder del ranking!')}
                             </p>
                           )}
@@ -385,8 +461,7 @@ const Leaderboard = () => {
                           {rankMotivation?.gapToFirst != null &&
                             rankMotivation.gapToFirst > 0 &&
                             myRank.rank > 1 && (
-                              <p className="mt-1.5 flex items-start gap-2 text-sm font-medium text-foreground/85">
-                                <TrendingUp className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />
+                              <p className="mt-1.5 text-sm font-medium text-foreground/85">
                                 {t(
                                   `Bạn gần vượt hạng #1 — còn khoảng ${rankMotivation.gapToFirst} điểm (theo điểm hiện có trên bảng).`,
                                   `Cerca del #1: faltan unos ${rankMotivation.gapToFirst} pts (según esta tabla).`
@@ -506,24 +581,6 @@ const Leaderboard = () => {
                                   title={getPrimaryName(user)}
                                 >
                                   <span className="inline-flex items-center gap-1.5 align-middle">
-                                    {user.rank === 1 && (
-                                      <Crown
-                                        className="h-4 w-4 shrink-0 text-amber-500 drop-shadow-sm sm:h-5 sm:w-5"
-                                        aria-hidden
-                                      />
-                                    )}
-                                    {user.rank === 2 && (
-                                      <Medal
-                                        className="h-4 w-4 shrink-0 text-slate-500 sm:h-5 sm:w-5"
-                                        aria-hidden
-                                      />
-                                    )}
-                                    {user.rank === 3 && (
-                                      <Medal
-                                        className="h-4 w-4 shrink-0 text-amber-800 sm:h-5 sm:w-5"
-                                        aria-hidden
-                                      />
-                                    )}
                                     <span>{getPrimaryName(user)}</span>
                                     {isMe && (
                                       <span className="rounded-md bg-primary/15 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-primary sm:text-[11px]">
@@ -543,9 +600,8 @@ const Leaderboard = () => {
                                 {isMe && (
                                   <Link
                                     to="/quizzes"
-                                    className="mt-2 inline-flex items-center gap-1.5 text-sm font-bold text-primary underline-offset-2 hover:underline"
+                                    className="mt-2 inline-flex items-center text-sm font-bold text-primary underline-offset-2 hover:underline"
                                   >
-                                    <TrendingUp className="h-4 w-4 shrink-0" aria-hidden />
                                     {t('Luyện thi ngay', 'Practicar ya')}
                                   </Link>
                                 )}
@@ -573,14 +629,10 @@ const Leaderboard = () => {
                                   'dark:from-primary/28 dark:to-primary/16'
                                 )}
                               >
-                                <span className="flex items-center gap-1 text-[11px] font-bold uppercase leading-tight tracking-wide text-primary sm:text-[13px]">
-                                  <Flame className="h-3 w-3 shrink-0 opacity-95 sm:h-3.5 sm:w-3.5" aria-hidden />
+                                <span className="text-[11px] font-bold uppercase leading-tight tracking-wide text-primary sm:text-[13px]">
                                   {t('Điểm', 'Pts')}
                                 </span>
                                 <span className="mt-1.5 inline-flex items-baseline gap-0.5 font-display text-3xl font-extrabold tabular-nums leading-none text-primary sm:text-4xl">
-                                  <span className="hidden text-lg font-black text-amber-500 sm:inline" aria-hidden>
-                                    🔥
-                                  </span>
                                   {Number(user.total_score || 0).toFixed(1)}
                                 </span>
                               </div>

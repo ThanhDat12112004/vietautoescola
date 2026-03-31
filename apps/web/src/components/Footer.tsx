@@ -121,7 +121,7 @@ const Footer = ({ className }: FooterProps) => {
                   to="/materials"
                   className="group inline-flex items-center gap-1 text-sm text-white/75 transition-colors hover:text-[#E3C565]"
                 >
-                  {t('Tài liệu', 'Materiales')}
+                  {t('Tài liệu', 'Temario')}
                   <ArrowUpRight className="h-3.5 w-3.5 opacity-0 transition-opacity group-hover:opacity-100" />
                 </Link>
               </li>

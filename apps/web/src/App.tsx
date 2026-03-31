@@ -2,7 +2,7 @@ import { Toaster as Sonner, toast } from '@/components/ui/sonner';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { LanguageProvider, useLanguage } from '@/hooks/useLanguage';
-import { heartbeat, logoutBeacon } from '@/lib/api';
+import { pingSession } from '@/lib/api';
 import { getStoredAuth } from '@/lib/auth';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useEffect } from 'react';
@@ -21,38 +21,54 @@ import Register from './screens/Register';
 
 const queryClient = new QueryClient();
 
+/** Khi tab đang mở: ~2 req/phút/user (đủ phát hiện đăng nhập chỗ khác trong ~30s). Tab ẩn: không poll để giảm tải server. */
+const SESSION_POLL_VISIBLE_MS = 30_000;
+
 const AuthSessionManager = () => {
   const { t } = useLanguage();
 
   useEffect(() => {
-    const HEARTBEAT_MS = 15 * 1000;
+    let intervalId: ReturnType<typeof setInterval> | null = null;
 
-    const sendHeartbeat = async () => {
+    const tick = async () => {
       const stored = getStoredAuth();
       if (!stored?.token) return;
-
       try {
-        await heartbeat();
+        await pingSession();
       } catch {
-        // apiRequest handles 401 cleanup and auth-updated event.
+        // 401: apiRequest clears auth and dispatches auth-session-ended.
       }
     };
 
-    const onBeforeUnload = () => {
-      const stored = getStoredAuth();
-      if (!stored?.token) return;
-      logoutBeacon(stored.token);
+    const arm = () => {
+      if (intervalId !== null) {
+        clearInterval(intervalId);
+        intervalId = null;
+      }
+      if (typeof document !== 'undefined' && document.hidden) {
+        return;
+      }
+      intervalId = setInterval(() => {
+        void tick();
+      }, SESSION_POLL_VISIBLE_MS);
     };
 
-    const interval = window.setInterval(() => {
-      void sendHeartbeat();
-    }, HEARTBEAT_MS);
+    const onVisibility = () => {
+      if (!document.hidden) {
+        void tick();
+      }
+      arm();
+    };
 
-    window.addEventListener('beforeunload', onBeforeUnload);
+    void tick();
+    arm();
+    document.addEventListener('visibilitychange', onVisibility);
 
     return () => {
-      window.clearInterval(interval);
-      window.removeEventListener('beforeunload', onBeforeUnload);
+      document.removeEventListener('visibilitychange', onVisibility);
+      if (intervalId !== null) {
+        clearInterval(intervalId);
+      }
     };
   }, []);
 

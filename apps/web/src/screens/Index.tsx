@@ -1,11 +1,4 @@
-import {
-  ArrowRight,
-  BookOpen,
-  CheckCircle2,
-  FileText,
-  Target,
-  Users,
-} from '@/components/BrandIcons';
+import { ArrowRight, BookOpen, FileText, Target, Users } from '@/components/BrandIcons';
 import Footer from '@/components/Footer';
 import Navbar from '@/components/Navbar';
 import { Button } from '@/components/ui/button';
@@ -26,6 +19,7 @@ import { getStoredAuth } from '@/lib/auth';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { Play } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const fadeUp = {
@@ -45,6 +39,12 @@ const indexViewAllButtonClass =
 const indexCardOpenChipClass =
   'inline-flex items-center gap-1.5 rounded-full border border-primary/40 bg-primary/[0.09] px-3 py-1.5 text-[13px] font-semibold text-primary shadow-sm ring-1 ring-primary/10 transition-all group-hover:border-primary/55 group-hover:bg-primary/[0.16] group-hover:shadow group-hover:ring-primary/20 [&_svg]:size-4 [&_svg]:shrink-0 [&_svg]:transition-transform group-hover:[&_svg]:translate-x-1';
 
+const ctaPrimaryGlowButtonClass =
+  'h-12 w-full rounded-xl border border-[#ffd6de]/55 bg-[linear-gradient(135deg,#a50f38_0%,#c81f55_45%,#e23567_100%)] text-base font-bold text-[#fff4f7] shadow-[0_14px_34px_rgba(167,17,57,0.34)] transition-all duration-200 hover:brightness-110 hover:shadow-[0_18px_42px_rgba(167,17,57,0.42)] [&_svg]:h-5 [&_svg]:w-5';
+
+const ctaSecondaryGlowButtonClass =
+  'h-12 w-full rounded-xl border-2 border-[#d77a93]/55 bg-[linear-gradient(180deg,rgba(255,244,248,0.96)_0%,rgba(255,236,242,0.88)_100%)] text-base font-semibold text-[#851738] shadow-[0_8px_22px_rgba(142,28,58,0.14)] transition-all duration-200 hover:border-[#c95877]/70 hover:bg-[linear-gradient(180deg,rgba(255,246,249,1)_0%,rgba(255,229,237,0.96)_100%)] hover:text-[#73112d] hover:shadow-[0_12px_26px_rgba(142,28,58,0.22)] [&_svg]:h-5 [&_svg]:w-5';
+
 const Index = () => {
   const { t, lang } = useLanguage();
   const [quizzes, setQuizzes] = useState<QuizListItem[]>([]);
@@ -59,6 +59,7 @@ const Index = () => {
   const benefitsScrollRef = useRef<HTMLDivElement | null>(null);
   const benefitsTabletScrollRef = useRef<HTMLDivElement | null>(null);
   const statsScrollRef = useRef<HTMLDivElement | null>(null);
+  const heroSectionRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -113,6 +114,24 @@ const Index = () => {
       active = false;
     };
   }, [lang]);
+
+  useEffect(() => {
+    const scrollToHeroCenter = () => {
+      const hero = heroSectionRef.current;
+      if (!hero) return;
+      const rect = hero.getBoundingClientRect();
+      const heroTop = window.scrollY + rect.top;
+      const targetY = Math.max(0, heroTop + rect.height / 2 - window.innerHeight / 2);
+      window.scrollTo({ top: targetY, left: 0, behavior: 'auto' });
+    };
+
+    const raf = window.requestAnimationFrame(scrollToHeroCenter);
+    const timer = window.setTimeout(scrollToHeroCenter, 120);
+    return () => {
+      window.cancelAnimationFrame(raf);
+      window.clearTimeout(timer);
+    };
+  }, []);
 
   useEffect(() => {
     const container = statsScrollRef.current;
@@ -293,10 +312,17 @@ const Index = () => {
     return Array.from(new Set(values)).slice(0, 6);
   }, [quizzes]);
 
-  const formatQuizType = (value: string) =>
-    value.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
-
   const normalizeText = (value: string) => value.toLowerCase().trim();
+
+  const formatQuizType = (value: string) => {
+    const formatted = value.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
+    const matchedType = quizTypeCatalog.find(
+      (quizType) =>
+        normalizeText(quizType.code) === normalizeText(value) ||
+        normalizeText(quizType.name) === normalizeText(formatted)
+    );
+    return matchedType?.name?.trim() ? matchedType.name.trim() : formatted;
+  };
 
   const getTopicDescriptionByType = (type: string) => {
     const formattedType = formatQuizType(type);
@@ -318,12 +344,6 @@ const Index = () => {
 
   const formatCount = (value: number) => Number(value || 0).toLocaleString(numberLocale);
 
-  const formatPercent = (value: number) =>
-    `${Number(value || 0).toLocaleString(numberLocale, {
-      minimumFractionDigits: 1,
-      maximumFractionDigits: 1,
-    })}%`;
-
   const primaryTypeQuizzes = useMemo(
     () =>
       primaryQuizType
@@ -342,6 +362,12 @@ const Index = () => {
     [primaryTypeQuizzes]
   );
 
+  const totalMaterialsForStats = useMemo(
+    () =>
+      Object.values(materialsCountBySubject).reduce((sum, count) => sum + Number(count || 0), 0),
+    [materialsCountBySubject]
+  );
+
   const quickStats = useMemo(
     () => [
       {
@@ -351,8 +377,8 @@ const Index = () => {
         icon: BookOpen,
       },
       {
-        label: t('Số tài liệu học', 'Total de materiales'),
-        value: isLoadingHome ? '...' : formatCount(subjects.length),
+        label: t('Số tài liệu học', 'Total del temario'),
+        value: isLoadingHome ? '...' : formatCount(totalMaterialsForStats),
         hint: t('Chủ đề, biển báo, mẹo làm đề', 'Temas, senales y guias de estudio'),
         icon: FileText,
       },
@@ -363,18 +389,18 @@ const Index = () => {
         icon: Users,
       },
       {
-        label: t('Tỷ lệ đậu trung bình', 'Tasa media de aprobacion'),
-        value: isLoadingHome ? '...' : formatPercent(Number(homeSummary?.pass_rate || 0)),
-        hint: t('Theo thống kê kết quả gần đây', 'Segun resultados recientes'),
-        icon: CheckCircle2,
+        label: t('Tổng lượt làm bài', 'Total de examenes realizados'),
+        value: isLoadingHome ? '...' : formatCount(Number(homeSummary?.total_attempts || 0)),
+        hint: t('Số bài đã hoàn thành trên hệ thống', 'Intentos completados en la plataforma'),
+        icon: Target,
       },
     ],
     [
       formatCount,
-      formatPercent,
-      homeSummary?.pass_rate,
+      homeSummary?.total_attempts,
       homeSummary?.total_students,
       isLoadingHome,
+      totalMaterialsForStats,
       quizzes.length,
       subjects.length,
       t,
@@ -383,7 +409,6 @@ const Index = () => {
 
   const featuredSubjects = useMemo(() => {
     if (!subjects.length) return [];
-
     return [...subjects]
       .sort((a, b) => {
         const countA = Number(materialsCountBySubject[a.id] || 0);
@@ -440,6 +465,7 @@ const Index = () => {
 
       {/* Hero Section - Professional & Trustworthy */}
       <section
+        ref={heroSectionRef}
         className="relative overflow-visible pt-12 sm:pt-16 md:pt-20 lg:min-h-[700px] lg:pt-32 pb-20 sm:pb-24 md:pb-24 lg:pb-28 xl:min-h-[760px] xl:pb-32"
         style={{
           backgroundImage: "url('/brand/hero.png')",
@@ -463,12 +489,18 @@ const Index = () => {
               transition={{ duration: 0.6 }}
               className="text-center"
             >
-              <p className="mb-4 inline-flex items-center justify-center rounded-full border border-white/45 bg-black/35 px-4 py-2 text-[11px] font-bold uppercase tracking-[0.14em] text-white shadow-[0_4px_20px_rgba(0,0,0,0.35)] backdrop-blur-sm sm:mb-5 sm:px-5 sm:text-xs sm:tracking-[0.16em]">
-                {t('Hệ thống luyện thi DGT #1', 'Sistema de prácticas DGT n.º 1')}
+              <p className="mb-4 inline-flex items-center justify-center rounded-full border border-amber-400/45 bg-black/35 px-4 py-2 text-[11px] font-bold uppercase tracking-[0.14em] text-amber-200 [text-shadow:0_1px_3px_rgba(0,0,0,0.55)] shadow-[0_4px_20px_rgba(0,0,0,0.35)] backdrop-blur-sm sm:mb-5 sm:px-5 sm:text-xs sm:tracking-[0.16em]">
+                {t(
+                  'Hệ thống luyện thi DGT dành cho người Việt',
+                  'Sistema de preparación DGT para la comunidad vietnamita'
+                )}
               </p>
-              {/* Main heading */}
-              <h1 className="mx-auto mb-5 max-w-[21ch] font-display text-[1.32rem] font-black leading-tight tracking-tight sm:mb-6 sm:max-w-[18ch] sm:text-3xl md:text-4xl lg:text-6xl xl:text-7xl">
-                <span className="hero-title-premium inline-block">
+              {/* Main heading — gradient trắng→vàng + nhấn vàng Tây Ban Nha */}
+              <h1 className="mx-auto mb-5 max-w-[21ch] py-1 font-display text-[1.32rem] font-black leading-[1.18] tracking-tight sm:mb-6 sm:max-w-[18ch] sm:py-1.5 sm:text-3xl md:text-4xl lg:text-6xl xl:text-7xl">
+                <span
+                  className="inline bg-gradient-to-r from-white via-[#fffef8] to-[#ffe082] bg-clip-text text-transparent [filter:drop-shadow(0_3px_18px_rgba(0,0,0,0.42))]"
+                  style={{ WebkitBackgroundClip: 'text' }}
+                >
                   {t(
                     'Hệ thống học và luyện thi bằng lái xe Tây Ban Nha',
                     'Sistema de aprendizaje y preparación para el permiso de conducir en España'
@@ -484,29 +516,43 @@ const Index = () => {
                 )}
               </p>
 
-              {/* CTA — theme-aligned, sober on hero */}
+              {/* CTA — primary gradient + glass secondary (hero đỏ đậm) */}
               <div className="mx-auto flex max-w-xl flex-col items-stretch gap-3 sm:max-w-none sm:flex-row sm:flex-wrap sm:items-center sm:justify-center sm:gap-3">
                 <Link to="/quizzes" className="inline-flex sm:min-w-0">
                   <Button
+                    variant="ghost"
                     size="lg"
-                    className="h-12 w-full rounded-lg px-6 shadow-md sm:h-11 sm:w-auto sm:text-base"
+                    className={cn(
+                      'h-12 w-full rounded-[12px] border-0 px-6 py-3 text-base font-semibold !text-white sm:h-11 sm:w-auto',
+                      '!bg-[linear-gradient(135deg,#ff4d4f_0%,#ff7a18_100%)]',
+                      'shadow-[0_8px_22px_rgba(255,77,79,0.38)]',
+                      'transition-all duration-200 hover:-translate-y-0.5 hover:!bg-[linear-gradient(135deg,#ff5a5c_0%,#ff851e_100%)] hover:shadow-[0_12px_28px_rgba(255,77,79,0.45)]',
+                      'focus-visible:ring-2 focus-visible:ring-white/45 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent',
+                      'active:translate-y-0 [&_svg]:h-5 [&_svg]:w-5'
+                    )}
                   >
+                    <Play className="shrink-0" strokeWidth={2.25} aria-hidden />
                     {t('Bắt đầu luyện thi', 'Empezar a practicar')}
-                    <ArrowRight className="h-5 w-5 shrink-0" />
                   </Button>
                 </Link>
                 <Link to="/materials" className="inline-flex sm:min-w-0">
                   <Button
                     size="lg"
                     variant="secondary"
-                    className="h-12 w-full rounded-lg border-primary-foreground/25 bg-secondary px-6 shadow-md ring-1 ring-primary-foreground/15 sm:h-11 sm:w-auto sm:text-base [&_svg]:h-5 [&_svg]:w-5"
+                    className={cn(
+                      'h-12 w-full rounded-[12px] border border-white/30 bg-white/10 px-6 py-3 text-base font-semibold !text-white backdrop-blur-[10px]',
+                      'shadow-none ring-0 ring-offset-0',
+                      'transition-all duration-200 hover:!bg-white/20 hover:!text-white hover:shadow-[0_8px_24px_rgba(0,0,0,0.15)]',
+                      'focus-visible:ring-2 focus-visible:ring-white/35 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent',
+                      'sm:h-11 sm:w-auto [&_svg]:h-5 [&_svg]:w-5'
+                    )}
                   >
-                    <BookOpen className="shrink-0" />
-                    {t('Xem tài liệu học', 'Ver materiales')}
+                    <BookOpen className="shrink-0 opacity-95" aria-hidden />
+                    {t('Xem tài liệu học', 'Ver temario')}
                   </Button>
                 </Link>
               </div>
-              <p className="mx-auto mt-5 max-w-2xl rounded-2xl border border-white/30 bg-black/45 px-4 py-3 text-center text-[12px] font-semibold leading-snug text-white shadow-[0_8px_28px_rgba(0,0,0,0.45)] backdrop-blur-md sm:mt-6 sm:px-5 sm:text-sm sm:leading-relaxed">
+              <p className="mx-auto mt-5 max-w-2xl px-4 py-2 text-center text-[12px] font-semibold leading-snug text-white [text-shadow:0_1px_3px_rgba(0,0,0,0.65),0_0_12px_rgba(0,0,0,0.35)] sm:mt-6 sm:px-5 sm:text-sm sm:leading-relaxed">
                 {t('Miễn phí bắt đầu · Chuẩn DGT · Song ngữ Việt – Tây Ban Nha', 'Gratis para empezar · Tipo DGT · Bilingüe vietnamita–español')}
               </p>
             </motion.div>
@@ -697,8 +743,8 @@ const Index = () => {
               </Link>
               <p className="inline-flex max-w-full flex-wrap items-center gap-x-1 rounded-lg border border-primary/25 bg-primary/10 px-3 py-1.5 text-center text-[13px] font-bold leading-snug text-primary shadow-sm sm:text-sm lg:text-right">
                 {lang === 'vi'
-                  ? `${quizTypes.length} chủ đề trọng tâm • ${quizzes.length} đề thi thực hành`
-                  : `${quizTypes.length} temas clave • ${quizzes.length} exámenes prácticos`}
+                  ? `${quizTypes.length} chủ đề trọng tâm • ${primaryTypeQuizzes.length} đề thi thực hành`
+                  : `${quizTypes.length} temas clave • ${primaryTypeQuizzes.length} exámenes prácticos`}
               </p>
             </div>
           </motion.div>
@@ -714,14 +760,14 @@ const Index = () => {
                 variants={fadeUp}
                 className="h-full"
               >
-                <Link to={`/quizzes?type=${encodeURIComponent(quizTypes[0])}`}>
+                <Link to={`/quizzes?type=${encodeURIComponent(primaryQuizType || '')}`}>
                   <Card className="group h-full overflow-hidden border border-brand-cta-end/25 bg-[linear-gradient(180deg,rgba(255,252,253,0.99)_0%,rgba(255,242,246,0.95)_100%)] shadow-[0_14px_34px_rgba(29,8,15,0.24)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_20px_44px_rgba(29,8,15,0.3)]">
                     <div className="grid h-full min-h-[340px] grid-rows-[1fr_1fr_auto] sm:min-h-[370px] lg:min-h-[400px]">
                       <div className="relative row-span-2 overflow-hidden">
                         <div className="absolute inset-0 flex items-center justify-center bg-[radial-gradient(circle_at_50%_24%,rgba(255,255,255,0.38)_0%,rgba(255,255,255,0)_62%),linear-gradient(180deg,rgba(255,245,248,0.88)_0%,rgba(255,228,236,0.62)_100%)] p-4 sm:p-5">
                           <img
                             src="/brand/quiz-illustration.png"
-                            alt={formatQuizType(quizTypes[0])}
+                            alt={formatQuizType(primaryQuizType || '')}
                             className="h-full w-full object-contain object-center drop-shadow-[0_22px_24px_rgba(65,10,24,0.34)] saturate-[1.08] transition-transform duration-500 group-hover:scale-[1.04]"
                             loading="lazy"
                           />
@@ -736,7 +782,7 @@ const Index = () => {
                         <div className="grid gap-3">
                           <div className="flex flex-wrap items-start justify-between gap-3">
                             <h3 className="font-display text-2xl font-bold text-white sm:text-[1.65rem]">
-                              {formatQuizType(quizTypes[0])}
+                              {formatQuizType(primaryQuizType || '')}
                             </h3>
                             <span className="inline-flex h-10 shrink-0 items-center gap-2 rounded-full border-2 border-white/90 bg-white px-4 text-sm font-semibold text-brand-cta-end shadow-md transition-all group-hover:-translate-y-0.5 group-hover:bg-white group-hover:shadow-lg [&_svg]:size-4 [&_svg]:transition-transform group-hover:[&_svg]:translate-x-1">
                               {t('Xem tiếp', 'Ver más')}
@@ -913,7 +959,7 @@ const Index = () => {
                 {t('Hệ thống ôn thi DGT', 'Sistema de preparación DGT')}
               </span>
               <h2 className="mt-2 font-display text-3xl font-bold text-foreground sm:text-4xl">
-                {t('Tài liệu học trọng tâm', 'Materiales de estudio clave')}
+                {t('Tài liệu học trọng tâm', 'Temario de estudio clave')}
               </h2>
               <p className="mt-3 max-w-xl text-base font-medium leading-relaxed text-[#4a3038] sm:text-lg">
                 {t(
@@ -939,7 +985,7 @@ const Index = () => {
                         {featuredSubjects.length} destacados · desliza para más
                       </span>
                       <span className="hidden sm:inline">
-                        {`${subjects.length} temas de materiales • Total ${formatCount(totalMaterialsCount)} materiales. Mostrando ${featuredSubjects.length} temas destacados; desliza horizontalmente para ver más.`}
+                        {`${subjects.length} temas del temario • Total ${formatCount(totalMaterialsCount)} documentos. Mostrando ${featuredSubjects.length} temas destacados; desliza horizontalmente para ver más.`}
                       </span>
                     </>
                   )}
@@ -947,7 +993,7 @@ const Index = () => {
               )}
               {isLoadingHome && (
                 <p className="text-sm text-muted-foreground lg:text-right">
-                  {t('Đang cập nhật danh sách tài liệu...', 'Actualizando lista de materiales...')}
+                  {t('Đang cập nhật danh sách tài liệu...', 'Actualizando el temario...')}
                 </p>
               )}
             </div>
@@ -992,14 +1038,14 @@ const Index = () => {
                               {subject.description ||
                                 t(
                                   'Xem tài liệu chi tiết cho chủ đề này',
-                                  'Ver materiales de este tema'
+                                  'Ver el temario de este tema'
                                 )}
                             </p>
                             <div className="mt-auto flex shrink-0 items-center justify-between gap-2 border-t border-border/50 pt-3 sm:gap-3 sm:pt-4">
                               <span className="min-w-0 truncate rounded-full border border-primary/20 bg-primary/5 px-2 py-0.5 text-[11px] font-semibold text-primary sm:px-2.5 sm:py-1 sm:text-xs">
                                 {lang === 'vi'
                                   ? `${materialsCountBySubject[subject.id] || 0} tài liệu`
-                                  : `${materialsCountBySubject[subject.id] || 0} materiales`}
+                                  : `${materialsCountBySubject[subject.id] || 0} documentos`}
                               </span>
                               <span
                                 className={cn(
@@ -1033,19 +1079,19 @@ const Index = () => {
                 <p className="text-lg font-semibold text-foreground">
                   {t(
                     'Tài liệu sẽ hiển thị tại đây khi hệ thống có dữ liệu.',
-                    'Los materiales aparecerán aquí cuando el sistema tenga datos.'
+                    'El temario aparecerá aquí cuando el sistema tenga datos.'
                   )}
                 </p>
                 <p className="mt-2 text-muted-foreground">
                   {t(
                     'Bạn vẫn có thể vào trang tài liệu để xem cấu trúc học tập.',
-                    'Aun puedes ir a la sección de materiales para ver la estructura de estudio.'
+                    'Aun puedes ir al temario para ver la estructura de estudio.'
                   )}
                 </p>
                 <div className="mt-6 flex justify-center">
                   <Link to="/materials" className="inline-flex">
                     <Button className="gap-2 bg-primary px-6 text-primary-foreground hover:bg-secondary">
-                      {t('Mở trang tài liệu', 'Abrir materiales')}{' '}
+                      {t('Mở trang tài liệu', 'Abrir temario')}{' '}
                       <ArrowRight className="h-4 w-4" />
                     </Button>
                   </Link>
@@ -1059,7 +1105,14 @@ const Index = () => {
       {/* CTA — nền đơn giản; scroll-mt tránh chồng lên thanh nav khi cuộn */}
       <section
         id="cta-dang-ky"
-        className="relative w-full scroll-mt-24 overflow-x-hidden border-t border-primary/10 bg-muted"
+        className="relative w-full scroll-mt-24 overflow-x-hidden border-t border-primary/10 bg-[#2a0a12]"
+        style={{
+          backgroundImage:
+            "linear-gradient(180deg, rgba(52,10,20,0.76) 0%, rgba(82,12,29,0.62) 40%, rgba(18,4,9,0.74) 100%), url('/brand/bg_cta.png')",
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat',
+        }}
       >
         <motion.div
           initial="hidden"
@@ -1070,7 +1123,7 @@ const Index = () => {
           className="relative z-[1] mx-auto flex w-full max-w-none flex-col items-center overflow-visible px-3 py-12 text-center sm:px-4 sm:py-14 md:px-5 lg:px-6 lg:py-16"
         >
           <div className="flex w-full max-w-4xl flex-col items-center gap-4 sm:gap-5">
-            <span className="inline-flex rounded-full border border-primary/35 bg-primary/[0.08] px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-primary shadow-sm sm:text-[11px]">
+            <span className="inline-flex rounded-full border border-[#e8c88a]/55 bg-[rgba(12,4,8,0.45)] px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-[#fff4e6] shadow-sm backdrop-blur-[2px] sm:text-[11px]">
               {t('Hệ thống ôn thi DGT', 'Sistema de preparación DGT')}
             </span>
             <h2 className="cta-headline-luxe max-w-3xl px-1 pb-0.5 text-[1.35rem] sm:text-3xl md:text-4xl lg:text-[2.65rem]">
@@ -1103,13 +1156,13 @@ const Index = () => {
                     key={lang}
                     src={lang === 'vi' ? '/brand/dangky.png' : '/brand/dangky_es.png'}
                     alt={t('Bắt đầu học miễn phí', 'Empezar a estudiar gratis')}
-                    className="h-auto w-full bg-transparent object-contain object-center transition-transform duration-300 group-hover:scale-[1.03]"
+                    className="h-auto w-full bg-transparent object-contain object-center brightness-[1.07] saturate-[1.08] transition-transform duration-300 group-hover:scale-[1.03]"
                     loading="lazy"
                     width={640}
                     height={200}
                   />
                 </Link>
-                <p className="max-w-sm text-center text-xs italic leading-relaxed text-primary/75 sm:text-sm">
+                <p className="max-w-sm text-center text-xs italic leading-relaxed text-[#f0e8dc] drop-shadow-[0_1px_2px_rgba(0,0,0,0.35)] sm:text-sm">
                   {t(
                     'Không cần đăng ký trước • Trải nghiệm ngay',
                     'Sin registro previo • Pruébalo ya'
@@ -1119,7 +1172,7 @@ const Index = () => {
             ) : (
               <>
                 <Link to="/quizzes" className="block w-full">
-                  <Button size="lg" className="h-12 w-full rounded-xl text-base shadow-md">
+                  <Button size="lg" className={ctaPrimaryGlowButtonClass}>
                     {t('Vào luyện thi', 'Ir a practicar')}
                     <ArrowRight className="h-5 w-5" />
                   </Button>
@@ -1128,10 +1181,10 @@ const Index = () => {
                   <Button
                     size="lg"
                     variant="outline"
-                    className="h-12 w-full rounded-xl border-2 border-primary/40 bg-transparent text-base font-semibold shadow-none [&_svg]:h-5 [&_svg]:w-5"
+                    className={ctaSecondaryGlowButtonClass}
                   >
                     <BookOpen />
-                    {t('Tài liệu học', 'Materiales')}
+                    {t('Tài liệu học', 'Temario')}
                   </Button>
                 </Link>
               </>

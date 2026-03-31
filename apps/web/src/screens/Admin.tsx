@@ -4,6 +4,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -13,15 +19,24 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { useLanguage } from '@/hooks/useLanguage';
 import {
+  createAdminMaterialTopicGroup,
+  createAdminQuizCategory,
+  createAdminQuizTopicGroup,
   createAdminQuizType,
   createAdminSubject,
   createBilingualMaterial,
   createManualQuiz,
+  deleteAdminMaterialTopicGroup,
   deleteAdminMaterial,
   deleteAdminQuiz,
+  deleteAdminQuizCategory,
+  deleteAdminQuizTopicGroup,
   deleteAdminQuizType,
   deleteAdminSubject,
   deleteAdminUser,
+  getAdminMaterialTopicGroups,
+  getAdminQuizCategories,
+  getAdminQuizTopicGroups,
   getAdminQuizTypes,
   getAdminQuizzes,
   getAdminQuizDetail,
@@ -33,16 +48,21 @@ import {
   getSubjects,
   lockAdminUser,
   unlockAdminUser,
+  updateAdminMaterialTopicGroup,
   updateAdminMaterial,
   updateAdminQuiz,
+  updateAdminQuizCategory,
+  updateAdminQuizTopicGroup,
   updateAdminQuizDetail,
   updateAdminQuizType,
   updateAdminSubject,
   updateAdminUser,
   uploadMaterialFile,
   uploadQuestionImage,
+  type AdminQuizCategory,
   type AdminQuizType,
   type AdminSubject,
+  type AdminTopicGroup,
   type DashboardResponse,
   type MaterialItem,
   type Subject,
@@ -63,7 +83,7 @@ import {
   Users,
   XCircle,
 } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { type ReactNode, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 function createEmptyQuestionDraft() {
@@ -161,6 +181,33 @@ function formatUserRole(role: string, lang: 'vi' | 'es'): string {
 /** Số dòng tối đa mỗi trang trong các danh sách admin (tài khoản, tài liệu, đề thi). */
 const ADMIN_LIST_PAGE_SIZE = 50;
 
+function AdminActionIconButton({
+  onClick,
+  title,
+  kind,
+  icon,
+  className = 'h-8 w-8 px-0',
+}: {
+  onClick: () => void;
+  title: string;
+  kind: 'edit' | 'delete';
+  icon: ReactNode;
+  className?: string;
+}) {
+  return (
+    <Button
+      type="button"
+      variant="outline"
+      size="sm"
+      onClick={onClick}
+      title={title}
+      className={`${kind === 'edit' ? 'admin-btn-edit' : 'admin-btn-delete'} ${className}`}
+    >
+      {icon}
+    </Button>
+  );
+}
+
 function AdminListPaginationControls({
   lang,
   page,
@@ -181,31 +228,31 @@ function AdminListPaginationControls({
   const to = Math.min(safePage * pageSize, total);
 
   return (
-    <div className="flex flex-col gap-2 pt-3 mt-2 border-t border-[#e8dfe3] sm:flex-row sm:items-center sm:justify-between">
-      <p className="text-xs text-[#5b5b5b]">
+    <div className="mt-0 border-t border-[#e8dfe3] bg-white px-3 py-2">
+      <p className="text-center text-xs text-[#5b5b5b]">
         {lang === 'vi'
           ? `Hiển thị ${from}–${to} trong ${total} mục`
           : `Mostrando ${from}–${to} de ${total}`}
       </p>
-      <div className="flex items-center gap-2">
+        <div className="mt-0 flex items-center justify-center gap-2">
         <Button
           type="button"
           variant="outline"
           size="sm"
-          className="h-8 border-[#d2d2d2] bg-white hover:bg-[#fdf5f8]"
+          className="h-8 border-[#d8ccd1] bg-white hover:bg-[#f7f7f8]"
           disabled={safePage <= 1}
           onClick={() => onPageChange(safePage - 1)}
         >
           {lang === 'vi' ? 'Trước' : 'Anterior'}
         </Button>
-        <span className="text-xs font-semibold tabular-nums text-[#5a1428]">
+        <span className="rounded-sm border border-[#d8ccd1] bg-white px-2 py-1 text-xs font-semibold tabular-nums text-[#5a1428]">
           {safePage} / {totalPages}
         </span>
         <Button
           type="button"
           variant="outline"
           size="sm"
-          className="h-8 border-[#d2d2d2] bg-white hover:bg-[#fdf5f8]"
+          className="h-8 border-[#d8ccd1] bg-white hover:bg-[#f7f7f8]"
           disabled={safePage >= totalPages}
           onClick={() => onPageChange(safePage + 1)}
         >
@@ -223,10 +270,13 @@ export default function Admin() {
   const { lang, t } = useLanguage();
   const [notice, setNotice] = useState({ text: '', type: 'error' });
   const [activeTab, setActiveTab] = useState<'users' | 'materials' | 'quizzes'>('users');
-  const [materialsSubTab, setMaterialsSubTab] = useState<'subjects' | 'create' | 'list'>(
-    'subjects'
+  const [materialsSubTab, setMaterialsSubTab] = useState<
+    'topic_groups' | 'subjects' | 'manage'
+  >('topic_groups');
+  const [quizzesSubTab, setQuizzesSubTab] = useState<'types' | 'manage'>('types');
+  const [quizzesHierarchyTab, setQuizzesHierarchyTab] = useState<'topic_groups' | 'types'>(
+    'topic_groups'
   );
-  const [quizzesSubTab, setQuizzesSubTab] = useState<'types' | 'create' | 'list'>('types');
   const [auth, setAuth] = useState(() => getStoredAuth());
 
   const [users, setUsers] = useState<any[]>([]);
@@ -259,14 +309,32 @@ export default function Admin() {
 
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [adminSubjects, setAdminSubjects] = useState<AdminSubject[]>([]);
+  const [materialTopicGroupsAdmin, setMaterialTopicGroupsAdmin] = useState<AdminTopicGroup[]>([]);
+  const [newMaterialTopicGroup, setNewMaterialTopicGroup] = useState({
+    name_vi: '',
+    name_es: '',
+    description_vi: '',
+    description_es: '',
+  });
+  const [editingMaterialTopicGroupId, setEditingMaterialTopicGroupId] = useState<number | null>(null);
+  const [editMaterialTopicGroupForm, setEditMaterialTopicGroupForm] = useState({
+    code: '',
+    name_vi: '',
+    name_es: '',
+    description_vi: '',
+    description_es: '',
+    is_active: true,
+  });
   const [editingSubjectId, setEditingSubjectId] = useState<number | null>(null);
   const [subjectForm, setSubjectForm] = useState({
+    material_topic_group_id: 1,
     name_vi: '',
     name_es: '',
     description_vi: '',
     description_es: '',
   });
   const [editSubjectForm, setEditSubjectForm] = useState({
+    material_topic_group_id: 1,
     name_vi: '',
     name_es: '',
     description_vi: '',
@@ -276,6 +344,7 @@ export default function Admin() {
   const [materials, setMaterials] = useState<MaterialItem[]>([]);
   const [editingMaterialId, setEditingMaterialId] = useState<number | null>(null);
   const [editMaterialForm, setEditMaterialForm] = useState({
+    subject_id: '',
     title_vi: '',
     title_es: '',
     description_vi: '',
@@ -303,6 +372,13 @@ export default function Admin() {
   }>({ vi: null, es: null });
   const [materialCreateUploading, setMaterialCreateUploading] = useState({ vi: false, es: false });
   const [materialCreateFileKey, setMaterialCreateFileKey] = useState(0);
+  const [materialCreateDialogOpen, setMaterialCreateDialogOpen] = useState(false);
+  const [quizCreateDialogOpen, setQuizCreateDialogOpen] = useState(false);
+  const [quizCreateModalStep, setQuizCreateModalStep] = useState<'meta' | 'questions'>('meta');
+  const [materialTopicGroupCreateDialogOpen, setMaterialTopicGroupCreateDialogOpen] = useState(false);
+  const [materialSubjectCreateDialogOpen, setMaterialSubjectCreateDialogOpen] = useState(false);
+  const [quizTopicGroupCreateDialogOpen, setQuizTopicGroupCreateDialogOpen] = useState(false);
+  const [quizCategoryCreateDialogOpen, setQuizCategoryCreateDialogOpen] = useState(false);
   const [editMaterialUploading, setEditMaterialUploading] = useState({ vi: false, es: false });
   const [editMaterialPickedFileName, setEditMaterialPickedFileName] = useState({
     vi: '',
@@ -322,6 +398,8 @@ export default function Admin() {
   const [currentQuestionImagePreview, setCurrentQuestionImagePreview] = useState('');
   const [creatingQuiz, setCreatingQuiz] = useState(false);
   const [quizForm, setQuizForm] = useState({
+    quiz_topic_group_id: '',
+    category_id: '',
     quiz_type: 'general',
     title_vi: '',
     title_es: '',
@@ -331,7 +409,25 @@ export default function Admin() {
     instructions_es: '',
   });
   const [quizTypes, setQuizTypes] = useState<AdminQuizType[]>([]);
+  const [quizCategoriesAdmin, setQuizCategoriesAdmin] = useState<AdminQuizCategory[]>([]);
+  const [quizTopicGroupsAdmin, setQuizTopicGroupsAdmin] = useState<AdminTopicGroup[]>([]);
+  const [newQuizTopicGroup, setNewQuizTopicGroup] = useState({
+    name_vi: '',
+    name_es: '',
+    description_vi: '',
+    description_es: '',
+  });
+  const [editingQuizTopicGroupId, setEditingQuizTopicGroupId] = useState<number | null>(null);
+  const [editQuizTopicGroupForm, setEditQuizTopicGroupForm] = useState({
+    code: '',
+    name_vi: '',
+    name_es: '',
+    description_vi: '',
+    description_es: '',
+    is_active: true,
+  });
   const [newQuizType, setNewQuizType] = useState({
+    quiz_topic_group_id: '',
     name_vi: '',
     name_es: '',
     description_vi: '',
@@ -339,16 +435,46 @@ export default function Admin() {
   });
   const [editingQuizTypeId, setEditingQuizTypeId] = useState<number | null>(null);
   const [editQuizTypeValue, setEditQuizTypeValue] = useState({
+    quiz_topic_group_id: '',
     name_vi: '',
     name_es: '',
     description_vi: '',
     description_es: '',
     is_active: true,
   });
+  const [newQuizCategory, setNewQuizCategory] = useState({
+    quiz_topic_group_id: '',
+    name_vi: '',
+    name_es: '',
+    description_vi: '',
+    description_es: '',
+  });
+  const [editingQuizCategoryId, setEditingQuizCategoryId] = useState<number | null>(null);
+  const [editQuizCategoryForm, setEditQuizCategoryForm] = useState({
+    quiz_topic_group_id: '',
+    name_vi: '',
+    name_es: '',
+    slug: '',
+    description_vi: '',
+    description_es: '',
+    is_active: true,
+  });
+  const [materialSubjectFilterGroupId, setMaterialSubjectFilterGroupId] = useState<string>('all');
+  const [materialCreateFilterGroupId, setMaterialCreateFilterGroupId] = useState<string>('all');
+  const [materialListFilterGroupId, setMaterialListFilterGroupId] = useState<string>('all');
+  const [materialTopicGroupSearch, setMaterialTopicGroupSearch] = useState('');
+  const [materialSubjectSearch, setMaterialSubjectSearch] = useState('');
+  const [quizCategoryFilterGroupId, setQuizCategoryFilterGroupId] = useState<string>('all');
+  const [quizListFilterGroupId, setQuizListFilterGroupId] = useState<string>('all');
+  const [quizListFilterCategoryId, setQuizListFilterCategoryId] = useState<string>('all');
+  const [quizTopicGroupSearch, setQuizTopicGroupSearch] = useState('');
+  const [quizCategorySearch, setQuizCategorySearch] = useState('');
   const [adminQuizzes, setAdminQuizzes] = useState<any[]>([]);
   const [selectedQuizTypeFilter, setSelectedQuizTypeFilter] = useState<string>('all');
   const [editingQuizId, setEditingQuizId] = useState<number | null>(null);
   const [editQuizForm, setEditQuizForm] = useState({
+    quiz_topic_group_id: '',
+    category_id: '',
     quiz_type: 'general',
     title_vi: '',
     title_es: '',
@@ -360,6 +486,7 @@ export default function Admin() {
   });
   const [editQuizQuestions, setEditQuizQuestions] = useState<any[]>([]);
   const [editQuizQuestionImageFiles, setEditQuizQuestionImageFiles] = useState<(File | null)[]>([]);
+  const [editQuizModalStep, setEditQuizModalStep] = useState<'meta' | 'questions'>('meta');
   const [currentEditQuestionIndex, setCurrentEditQuestionIndex] = useState(0);
   const [currentEditQuestionImagePreview, setCurrentEditQuestionImagePreview] = useState('');
   const [loadingEditQuizDetail, setLoadingEditQuizDetail] = useState(false);
@@ -403,6 +530,10 @@ export default function Admin() {
 
   function getQuizTypeLabel(typeItem: AdminQuizType) {
     return lang === 'es' ? typeItem.name_es : typeItem.name_vi;
+  }
+
+  function getQuizTopicGroupLabel(group: AdminTopicGroup) {
+    return lang === 'es' ? group.name_es : group.name_vi;
   }
 
   function getQuizTypeFilterKey(item: any) {
@@ -470,6 +601,119 @@ export default function Admin() {
     () => subjects.find((item) => item.id === selectedSubjectId) || null,
     [subjects, selectedSubjectId]
   );
+  const materialTopicGroups = useMemo(() => {
+    return materialTopicGroupsAdmin
+      .map((g) => ({
+        id: g.id,
+        name: (lang === 'vi' ? g.name_vi : g.name_es) || `Group #${g.id}`,
+      }))
+      .sort((a, b) => a.id - b.id);
+  }, [materialTopicGroupsAdmin, lang]);
+  const filteredAdminSubjectsByGroup = useMemo(() => {
+    if (materialSubjectFilterGroupId === 'all') return adminSubjects;
+    const gid = Number(materialSubjectFilterGroupId);
+    if (!Number.isFinite(gid) || gid <= 0) return adminSubjects;
+    return adminSubjects.filter((item) => Number(item.material_topic_group_id) === gid);
+  }, [adminSubjects, materialSubjectFilterGroupId]);
+  const filteredMaterialTopicGroups = useMemo(() => {
+    const keyword = materialTopicGroupSearch.trim().toLowerCase();
+    if (!keyword) return materialTopicGroupsAdmin;
+    return materialTopicGroupsAdmin.filter((item) =>
+      [
+        String(item.code || ''),
+        String(item.name_vi || ''),
+        String(item.name_es || ''),
+        String(item.description_vi || ''),
+        String(item.description_es || ''),
+      ]
+        .join(' ')
+        .toLowerCase()
+        .includes(keyword)
+    );
+  }, [materialTopicGroupsAdmin, materialTopicGroupSearch]);
+  const filteredAdminSubjects = useMemo(() => {
+    const keyword = materialSubjectSearch.trim().toLowerCase();
+    if (!keyword) return filteredAdminSubjectsByGroup;
+    return filteredAdminSubjectsByGroup.filter((item) =>
+      [
+        String(item.code || ''),
+        String(item.name_vi || ''),
+        String(item.name_es || ''),
+        String(item.description_vi || ''),
+        String(item.description_es || ''),
+        String(item.material_topic_group_name_vi || ''),
+        String(item.material_topic_group_name_es || ''),
+      ]
+        .join(' ')
+        .toLowerCase()
+        .includes(keyword)
+    );
+  }, [filteredAdminSubjectsByGroup, materialSubjectSearch]);
+  const createSubjectsByGroup = useMemo(() => {
+    if (materialCreateFilterGroupId === 'all') return subjects;
+    const gid = Number(materialCreateFilterGroupId);
+    if (!Number.isFinite(gid) || gid <= 0) return subjects;
+    return subjects.filter((item: any) => Number(item.material_topic_group_id) === gid);
+  }, [subjects, materialCreateFilterGroupId]);
+  const listSubjectsByGroup = useMemo(() => {
+    if (materialListFilterGroupId === 'all') return subjects;
+    const gid = Number(materialListFilterGroupId);
+    if (!Number.isFinite(gid) || gid <= 0) return subjects;
+    return subjects.filter((item: any) => Number(item.material_topic_group_id) === gid);
+  }, [subjects, materialListFilterGroupId]);
+  const filteredQuizCategoriesByGroup = useMemo(() => {
+    if (quizCategoryFilterGroupId === 'all') return quizCategoriesAdmin;
+    const gid = Number(quizCategoryFilterGroupId);
+    if (!Number.isFinite(gid) || gid <= 0) return quizCategoriesAdmin;
+    return quizCategoriesAdmin.filter((item) => Number(item.quiz_topic_group_id) === gid);
+  }, [quizCategoriesAdmin, quizCategoryFilterGroupId]);
+  const filteredQuizTopicGroups = useMemo(() => {
+    const keyword = quizTopicGroupSearch.trim().toLowerCase();
+    if (!keyword) return quizTopicGroupsAdmin;
+    return quizTopicGroupsAdmin.filter((item) =>
+      [
+        String(item.code || ''),
+        String(item.name_vi || ''),
+        String(item.name_es || ''),
+        String(item.description_vi || ''),
+        String(item.description_es || ''),
+      ]
+        .join(' ')
+        .toLowerCase()
+        .includes(keyword)
+    );
+  }, [quizTopicGroupsAdmin, quizTopicGroupSearch]);
+  const filteredQuizCategories = useMemo(() => {
+    const keyword = quizCategorySearch.trim().toLowerCase();
+    if (!keyword) return filteredQuizCategoriesByGroup;
+    return filteredQuizCategoriesByGroup.filter((item) =>
+      [
+        String(item.name_vi || ''),
+        String(item.name_es || ''),
+        String(item.description_vi || ''),
+        String(item.description_es || ''),
+      ]
+        .join(' ')
+        .toLowerCase()
+        .includes(keyword)
+    );
+  }, [filteredQuizCategoriesByGroup, quizCategorySearch]);
+  const listQuizCategoriesByGroup = useMemo(() => {
+    if (quizListFilterGroupId === 'all') return quizCategoriesAdmin;
+    const gid = Number(quizListFilterGroupId);
+    if (!Number.isFinite(gid) || gid <= 0) return quizCategoriesAdmin;
+    return quizCategoriesAdmin.filter((item) => Number(item.quiz_topic_group_id) === gid);
+  }, [quizCategoriesAdmin, quizListFilterGroupId]);
+  const createQuizCategories = useMemo(() => {
+    const gid = Number(quizForm.quiz_topic_group_id);
+    if (!Number.isFinite(gid) || gid <= 0) return quizCategoriesAdmin;
+    return quizCategoriesAdmin.filter((item) => Number(item.quiz_topic_group_id) === gid);
+  }, [quizCategoriesAdmin, quizForm.quiz_topic_group_id]);
+  const editQuizCategories = useMemo(() => {
+    const gid = Number(editQuizForm.quiz_topic_group_id);
+    if (!Number.isFinite(gid) || gid <= 0) return quizCategoriesAdmin;
+    return quizCategoriesAdmin.filter((item) => Number(item.quiz_topic_group_id) === gid);
+  }, [quizCategoriesAdmin, editQuizForm.quiz_topic_group_id]);
   const filteredAdminQuizzes = useMemo(
     () => {
       const byType =
@@ -478,11 +722,21 @@ export default function Admin() {
           : adminQuizzes.filter(
               (quizItem) => getQuizTypeFilterKey(quizItem) === selectedQuizTypeFilter
             );
+      const byGroup =
+        quizListFilterGroupId === 'all'
+          ? byType
+          : byType.filter(
+              (item) => Number(item.quiz_topic_group_id) === Number(quizListFilterGroupId)
+            );
+      const byCategory =
+        quizListFilterCategoryId === 'all'
+          ? byGroup
+          : byGroup.filter((item) => Number(item.category_id) === Number(quizListFilterCategoryId));
 
       const keyword = quizSearch.trim().toLowerCase();
-      if (!keyword) return byType;
+      if (!keyword) return byCategory;
 
-      return byType.filter((item) =>
+      return byCategory.filter((item) =>
         [
           String(item.id || ''),
           String(item.title_vi || ''),
@@ -494,7 +748,15 @@ export default function Admin() {
           .includes(keyword)
       );
     },
-    [adminQuizzes, selectedQuizTypeFilter, quizTypes, lang, quizSearch]
+    [
+      adminQuizzes,
+      selectedQuizTypeFilter,
+      quizTypes,
+      lang,
+      quizSearch,
+      quizListFilterGroupId,
+      quizListFilterCategoryId,
+    ]
   );
 
   const adminUserQuickStats = useMemo(() => {
@@ -695,19 +957,48 @@ export default function Admin() {
 
   async function loadAll() {
     try {
-      const [subjectRows, userRows, quizRows, adminSubjectRows, adminQuizTypesRows] =
+      const [
+        subjectRows,
+        userRows,
+        quizRows,
+        adminSubjectRows,
+        adminQuizTypesRows,
+        adminQuizCategoriesRows,
+        materialTopicGroupRows,
+        quizTopicGroupRows,
+      ] =
         await Promise.all([
           getSubjects(lang),
           getAdminUsers(),
           getAdminQuizzes(),
           getAdminSubjects(),
           getAdminQuizTypes(),
+          getAdminQuizCategories(),
+          getAdminMaterialTopicGroups(),
+          getAdminQuizTopicGroups(),
         ]);
       setSubjects(subjectRows);
       setUsers(userRows);
       setAdminQuizzes(quizRows);
       setAdminSubjects(adminSubjectRows);
       setQuizTypes(adminQuizTypesRows);
+      setQuizCategoriesAdmin(adminQuizCategoriesRows);
+      setMaterialTopicGroupsAdmin(materialTopicGroupRows);
+      setQuizTopicGroupsAdmin(quizTopicGroupRows);
+      if (materialTopicGroupRows.length > 0) {
+        const firstGroupId = Number(materialTopicGroupRows[0].id);
+        setSubjectForm((prev) => ({
+          ...prev,
+          material_topic_group_id: prev.material_topic_group_id || firstGroupId,
+        }));
+      }
+      if (quizTopicGroupRows.length > 0) {
+        const firstQuizGroupId = Number(quizTopicGroupRows[0].id);
+        setNewQuizCategory((prev) => ({
+          ...prev,
+          quiz_topic_group_id: prev.quiz_topic_group_id || String(firstQuizGroupId),
+        }));
+      }
       if (!selectedSubjectId && subjectRows.length) {
         setSelectedSubjectId(subjectRows[0].id);
       }
@@ -813,11 +1104,76 @@ export default function Admin() {
     }
   }
 
+  async function onCreateMaterialTopicGroup(event: React.FormEvent) {
+    event.preventDefault();
+    if (!newMaterialTopicGroup.name_vi.trim() || !newMaterialTopicGroup.name_es.trim()) {
+      showError(lang === 'vi' ? 'Nhập tên VI/ES' : 'Ingresa nombre VI/ES');
+      return;
+    }
+    try {
+      await createAdminMaterialTopicGroup({ ...newMaterialTopicGroup, is_active: true });
+      setNewMaterialTopicGroup({
+        name_vi: '',
+        name_es: '',
+        description_vi: '',
+        description_es: '',
+      });
+      setMaterialTopicGroupCreateDialogOpen(false);
+      await loadAll();
+      showSuccess('Đã thêm lớp cha tài liệu', 'Grupo padre de material creado');
+    } catch (error) {
+      showError(error instanceof Error ? error.message : 'Error');
+    }
+  }
+
+  function onStartEditMaterialTopicGroup(item: AdminTopicGroup) {
+    setEditingMaterialTopicGroupId(item.id);
+    setEditMaterialTopicGroupForm({
+      code: item.code || '',
+      name_vi: item.name_vi || '',
+      name_es: item.name_es || '',
+      description_vi: item.description_vi || '',
+      description_es: item.description_es || '',
+      is_active: Boolean(item.is_active),
+    });
+  }
+
+  async function onSaveEditMaterialTopicGroup(item: AdminTopicGroup) {
+    try {
+      await updateAdminMaterialTopicGroup(item.id, editMaterialTopicGroupForm);
+      setEditingMaterialTopicGroupId(null);
+      await loadAll();
+      showSuccess('Đã cập nhật lớp cha tài liệu', 'Grupo padre de material actualizado');
+    } catch (error) {
+      showError(error instanceof Error ? error.message : 'Error');
+    }
+  }
+
+  async function onDeleteMaterialTopicGroup(item: AdminTopicGroup) {
+    if (!window.confirm(`${lang === 'vi' ? 'Xóa lớp cha' : 'Eliminar grupo padre'} ${item.code}?`)) {
+      return;
+    }
+    try {
+      await deleteAdminMaterialTopicGroup(item.id);
+      await loadAll();
+      showSuccess('Đã xóa lớp cha tài liệu', 'Grupo padre de material eliminado');
+    } catch (error) {
+      showError(error instanceof Error ? error.message : 'Error');
+    }
+  }
+
   async function onCreateSubject(event: React.FormEvent) {
     event.preventDefault();
     try {
       await createAdminSubject(subjectForm);
-      setSubjectForm({ name_vi: '', name_es: '', description_vi: '', description_es: '' });
+      setSubjectForm({
+        material_topic_group_id: subjectForm.material_topic_group_id || 1,
+        name_vi: '',
+        name_es: '',
+        description_vi: '',
+        description_es: '',
+      });
+      setMaterialSubjectCreateDialogOpen(false);
       await loadAll();
       showSuccess('Đã thêm chủ đề tài liệu', 'Tema de material creado');
     } catch (error) {
@@ -828,6 +1184,7 @@ export default function Admin() {
   function onStartEditSubject(item: AdminSubject) {
     setEditingSubjectId(item.id);
     setEditSubjectForm({
+      material_topic_group_id: Number(item.material_topic_group_id || 1),
       name_vi: item.name_vi || '',
       name_es: item.name_es || '',
       description_vi: item.description_vi || '',
@@ -837,7 +1194,13 @@ export default function Admin() {
 
   function onCancelEditSubject() {
     setEditingSubjectId(null);
-    setEditSubjectForm({ name_vi: '', name_es: '', description_vi: '', description_es: '' });
+    setEditSubjectForm({
+      material_topic_group_id: 1,
+      name_vi: '',
+      name_es: '',
+      description_vi: '',
+      description_es: '',
+    });
   }
 
   async function onSaveEditSubject(item: AdminSubject) {
@@ -906,6 +1269,7 @@ export default function Admin() {
       es: fileNameFromStoredPath(String(item.file_path_es || '')),
     });
     setEditMaterialForm({
+      subject_id: String(item.subject_id || selectedSubjectId || ''),
       title_vi: item.title_vi || '',
       title_es: item.title_es || '',
       description_vi: item.description_vi || '',
@@ -924,6 +1288,7 @@ export default function Admin() {
     setEditMaterialUploading({ vi: false, es: false });
     setEditMaterialPickedFileName({ vi: '', es: '' });
     setEditMaterialForm({
+      subject_id: '',
       title_vi: '',
       title_es: '',
       description_vi: '',
@@ -939,6 +1304,11 @@ export default function Admin() {
 
   async function onSaveEditMaterial(item: any) {
     try {
+      const subjectId = Number(editMaterialForm.subject_id);
+      if (!Number.isFinite(subjectId) || subjectId <= 0) {
+        showError(lang === 'vi' ? 'Vui lòng chọn chủ đề tài liệu' : 'Debes seleccionar tema');
+        return;
+      }
       const fileSizeVi = editMaterialForm.file_size_mb_vi
         ? Number(editMaterialForm.file_size_mb_vi)
         : null;
@@ -947,6 +1317,7 @@ export default function Admin() {
         : null;
 
       await updateAdminMaterial(item.id, {
+        subject_id: subjectId,
         title_vi: editMaterialForm.title_vi,
         title_es: editMaterialForm.title_es,
         description_vi: editMaterialForm.description_vi,
@@ -958,7 +1329,11 @@ export default function Admin() {
         page_count_vi: parseMaterialPageCountFromForm(editMaterialForm.page_count_vi),
         page_count_es: parseMaterialPageCountFromForm(editMaterialForm.page_count_es),
       });
-      await loadMaterials(selectedSubjectId!);
+      if (selectedSubjectId !== subjectId) {
+        setSelectedSubjectId(subjectId);
+      } else {
+        await loadMaterials(subjectId);
+      }
       onCancelEditMaterial();
       showSuccess('Đã cập nhật tài liệu', 'Material actualizado');
     } catch (error) {
@@ -1074,6 +1449,7 @@ export default function Admin() {
       await createManualQuiz(
         {
           ...quizForm,
+          category_id: quizForm.category_id ? Number(quizForm.category_id) : null,
           duration_minutes: 0,
           passing_score: 10,
           questions,
@@ -1081,6 +1457,8 @@ export default function Admin() {
         lang
       );
       setQuizForm({
+        quiz_topic_group_id: '',
+        category_id: '',
         quiz_type: 'general',
         title_vi: '',
         title_es: '',
@@ -1093,6 +1471,8 @@ export default function Admin() {
       setCurrentQuestionIndex(0);
       setQuestionDrafts([createEmptyQuestionDraft()]);
       setQuestionImageFiles([null]);
+      setQuizCreateModalStep('meta');
+      setQuizCreateDialogOpen(false);
       await loadAll();
       showSuccess('Đã tạo đề thi', 'Examen creado correctamente');
     } catch (error) {
@@ -1176,8 +1556,15 @@ export default function Admin() {
   }
 
   async function onStartEditQuiz(item: any) {
+    const initialCategoryId = item.category_id ? String(item.category_id) : '';
+    const initialCategory = quizCategoriesAdmin.find((c) => String(c.id) === initialCategoryId);
     setEditingQuizId(item.id);
+    setEditQuizModalStep('meta');
     setEditQuizForm({
+      quiz_topic_group_id: initialCategory?.quiz_topic_group_id
+        ? String(initialCategory.quiz_topic_group_id)
+        : '',
+      category_id: initialCategoryId,
       quiz_type: item.quiz_type || 'general',
       title_vi: item.title_vi || '',
       title_es: item.title_es || '',
@@ -1195,6 +1582,13 @@ export default function Admin() {
     try {
       const detail = await getAdminQuizDetail(item.id);
       setEditQuizForm({
+        quiz_topic_group_id: detail.category_id
+          ? String(
+              quizCategoriesAdmin.find((c) => Number(c.id) === Number(detail.category_id))
+                ?.quiz_topic_group_id || ''
+            )
+          : '',
+        category_id: detail.category_id ? String(detail.category_id) : '',
         quiz_type: String(detail.quiz_type || item.quiz_type || 'general'),
         title_vi: detail.title_vi || '',
         title_es: detail.title_es || '',
@@ -1217,7 +1611,10 @@ export default function Admin() {
 
   function onCancelEditQuiz() {
     setEditingQuizId(null);
+    setEditQuizModalStep('meta');
     setEditQuizForm({
+      quiz_topic_group_id: '',
+      category_id: '',
       quiz_type: 'general',
       title_vi: '',
       title_es: '',
@@ -1274,7 +1671,7 @@ export default function Admin() {
         if (answers.length !== 3) {
           showError(
             lang === 'vi'
-              ? `Câu ${questionIndex + 1} phải có đúng 3 đáp án`
+              ? `Câu ${questionIndex + 1} phải có đúng 3 trả lời`
               : `La pregunta ${questionIndex + 1} debe tener 3 respuestas`
           );
           return;
@@ -1287,7 +1684,7 @@ export default function Admin() {
         if (hasMissingAnswer) {
           showError(
             lang === 'vi'
-              ? `Câu ${questionIndex + 1} thiếu đáp án`
+              ? `Câu ${questionIndex + 1} thiếu trả lời`
               : `Faltan respuestas en la pregunta ${questionIndex + 1}`
           );
           return;
@@ -1297,7 +1694,7 @@ export default function Admin() {
         if (correctCount !== 1) {
           showError(
             lang === 'vi'
-              ? `Câu ${questionIndex + 1} phải có đúng 1 đáp án đúng`
+              ? `Câu ${questionIndex + 1} phải có đúng 1 trả lời đúng`
               : `La pregunta ${questionIndex + 1} debe tener 1 respuesta correcta`
           );
           return;
@@ -1344,7 +1741,7 @@ export default function Admin() {
       }
 
       await updateAdminQuizDetail(item.id, {
-        category_id: item.category_id || null,
+        category_id: editQuizForm.category_id ? Number(editQuizForm.category_id) : null,
         quiz_type: editQuizForm.quiz_type,
         title_vi: editQuizForm.title_vi,
         title_es: editQuizForm.title_es,
@@ -1389,8 +1786,69 @@ export default function Admin() {
     }
   }
 
+  async function onCreateQuizTopicGroup(event: React.FormEvent) {
+    event.preventDefault();
+    if (!newQuizTopicGroup.name_vi.trim() || !newQuizTopicGroup.name_es.trim()) {
+      showError(lang === 'vi' ? 'Nhập tên VI/ES' : 'Ingresa nombre VI/ES');
+      return;
+    }
+    try {
+      await createAdminQuizTopicGroup({ ...newQuizTopicGroup, is_active: true });
+      setNewQuizTopicGroup({
+        name_vi: '',
+        name_es: '',
+        description_vi: '',
+        description_es: '',
+      });
+      setQuizTopicGroupCreateDialogOpen(false);
+      await loadAll();
+      showSuccess('Đã thêm lớp cha bài thi', 'Grupo padre de examen creado');
+    } catch (error) {
+      showError(error instanceof Error ? error.message : 'Error');
+    }
+  }
+
+  function onStartEditQuizTopicGroup(item: AdminTopicGroup) {
+    setEditingQuizTopicGroupId(item.id);
+    setEditQuizTopicGroupForm({
+      code: item.code || '',
+      name_vi: item.name_vi || '',
+      name_es: item.name_es || '',
+      description_vi: item.description_vi || '',
+      description_es: item.description_es || '',
+      is_active: Boolean(item.is_active),
+    });
+  }
+
+  async function onSaveEditQuizTopicGroup(item: AdminTopicGroup) {
+    try {
+      await updateAdminQuizTopicGroup(item.id, editQuizTopicGroupForm);
+      setEditingQuizTopicGroupId(null);
+      await loadAll();
+      showSuccess('Đã cập nhật lớp cha bài thi', 'Grupo padre de examen actualizado');
+    } catch (error) {
+      showError(error instanceof Error ? error.message : 'Error');
+    }
+  }
+
+  async function onDeleteQuizTopicGroup(item: AdminTopicGroup) {
+    if (!window.confirm(`${lang === 'vi' ? 'Xóa lớp cha' : 'Eliminar grupo padre'} ${item.code}?`)) return;
+    try {
+      await deleteAdminQuizTopicGroup(item.id);
+      await loadAll();
+      showSuccess('Đã xóa lớp cha bài thi', 'Grupo padre de examen eliminado');
+    } catch (error) {
+      showError(error instanceof Error ? error.message : 'Error');
+    }
+  }
+
   async function onCreateQuizType(event: React.FormEvent) {
     event.preventDefault();
+    const topicGroupId = Number(newQuizType.quiz_topic_group_id);
+    if (!Number.isFinite(topicGroupId) || topicGroupId <= 0) {
+      showError(lang === 'vi' ? 'Can chon loai chu de' : 'Debes seleccionar grupo de tema');
+      return;
+    }
     if (!newQuizType.name_vi.trim() || !newQuizType.name_es.trim()) {
       showError(lang === 'vi' ? 'Can nhap ten VI va ES' : 'Debes ingresar nombre VI y ES');
       return;
@@ -1398,13 +1856,20 @@ export default function Admin() {
 
     try {
       await createAdminQuizType({
+        quiz_topic_group_id: topicGroupId,
         name_vi: newQuizType.name_vi,
         name_es: newQuizType.name_es,
         description_vi: newQuizType.description_vi,
         description_es: newQuizType.description_es,
         is_active: true,
       });
-      setNewQuizType({ name_vi: '', name_es: '', description_vi: '', description_es: '' });
+      setNewQuizType({
+        quiz_topic_group_id: '',
+        name_vi: '',
+        name_es: '',
+        description_vi: '',
+        description_es: '',
+      });
       await loadAll();
       showSuccess('Da them loai de', 'Tipo creado');
     } catch (error) {
@@ -1415,6 +1880,7 @@ export default function Admin() {
   function onStartEditQuizType(item: AdminQuizType) {
     setEditingQuizTypeId(item.id);
     setEditQuizTypeValue({
+      quiz_topic_group_id: item.quiz_topic_group_id ? String(item.quiz_topic_group_id) : '',
       name_vi: item.name_vi || '',
       name_es: item.name_es || '',
       description_vi: item.description_vi || '',
@@ -1424,6 +1890,11 @@ export default function Admin() {
   }
 
   async function onSaveEditQuizType(typeId: number) {
+    const topicGroupId = Number(editQuizTypeValue.quiz_topic_group_id);
+    if (!Number.isFinite(topicGroupId) || topicGroupId <= 0) {
+      showError(lang === 'vi' ? 'Can chon loai chu de' : 'Debes seleccionar grupo de tema');
+      return;
+    }
     if (!editQuizTypeValue.name_vi.trim() || !editQuizTypeValue.name_es.trim()) {
       showError(lang === 'vi' ? 'Can nhap ten VI va ES' : 'Debes ingresar nombre VI y ES');
       return;
@@ -1431,6 +1902,7 @@ export default function Admin() {
 
     try {
       await updateAdminQuizType(typeId, {
+        quiz_topic_group_id: topicGroupId,
         name_vi: editQuizTypeValue.name_vi,
         name_es: editQuizTypeValue.name_es,
         description_vi: editQuizTypeValue.description_vi,
@@ -1439,6 +1911,7 @@ export default function Admin() {
       });
       setEditingQuizTypeId(null);
       setEditQuizTypeValue({
+        quiz_topic_group_id: '',
         name_vi: '',
         name_es: '',
         description_vi: '',
@@ -1469,6 +1942,93 @@ export default function Admin() {
     }
   }
 
+  async function onCreateQuizCategory(event: React.FormEvent) {
+    event.preventDefault();
+    const topicGroupId = Number(newQuizCategory.quiz_topic_group_id);
+    if (!Number.isFinite(topicGroupId) || topicGroupId <= 0) {
+      showError(lang === 'vi' ? 'Can chon loai chu de' : 'Debes seleccionar grupo de tema');
+      return;
+    }
+    if (!newQuizCategory.name_vi.trim() || !newQuizCategory.name_es.trim()) {
+      showError(lang === 'vi' ? 'Can nhap ten VI va ES' : 'Debes ingresar nombre VI y ES');
+      return;
+    }
+    try {
+      await createAdminQuizCategory({
+        quiz_topic_group_id: topicGroupId,
+        name_vi: newQuizCategory.name_vi,
+        name_es: newQuizCategory.name_es,
+        description_vi: newQuizCategory.description_vi,
+        description_es: newQuizCategory.description_es,
+        is_active: true,
+      });
+      setNewQuizCategory((prev) => ({
+        ...prev,
+        name_vi: '',
+        name_es: '',
+        description_vi: '',
+        description_es: '',
+      }));
+      setQuizCategoryCreateDialogOpen(false);
+      await loadAll();
+      showSuccess('Da them chu de bai thi', 'Tema de examen creado');
+    } catch (error) {
+      showError(error instanceof Error ? error.message : 'Error');
+    }
+  }
+
+  function onStartEditQuizCategory(item: AdminQuizCategory) {
+    setEditingQuizCategoryId(item.id);
+    setEditQuizCategoryForm({
+      quiz_topic_group_id: item.quiz_topic_group_id ? String(item.quiz_topic_group_id) : '',
+      name_vi: item.name_vi || '',
+      name_es: item.name_es || '',
+      slug: item.slug || '',
+      description_vi: item.description_vi || '',
+      description_es: item.description_es || '',
+      is_active: Boolean(item.is_active),
+    });
+  }
+
+  async function onSaveEditQuizCategory(item: AdminQuizCategory) {
+    const topicGroupId = Number(editQuizCategoryForm.quiz_topic_group_id);
+    if (!Number.isFinite(topicGroupId) || topicGroupId <= 0) {
+      showError(lang === 'vi' ? 'Can chon loai chu de' : 'Debes seleccionar grupo de tema');
+      return;
+    }
+    if (!editQuizCategoryForm.name_vi.trim() || !editQuizCategoryForm.name_es.trim()) {
+      showError(lang === 'vi' ? 'Can nhap ten VI va ES' : 'Debes ingresar nombre VI y ES');
+      return;
+    }
+    try {
+      await updateAdminQuizCategory(item.id, {
+        quiz_topic_group_id: topicGroupId,
+        name_vi: editQuizCategoryForm.name_vi,
+        name_es: editQuizCategoryForm.name_es,
+        slug: editQuizCategoryForm.slug || undefined,
+        description_vi: editQuizCategoryForm.description_vi,
+        description_es: editQuizCategoryForm.description_es,
+        is_active: editQuizCategoryForm.is_active,
+      });
+      setEditingQuizCategoryId(null);
+      await loadAll();
+      showSuccess('Da cap nhat chu de bai thi', 'Tema de examen actualizado');
+    } catch (error) {
+      showError(error instanceof Error ? error.message : 'Error');
+    }
+  }
+
+  async function onDeleteQuizCategory(item: AdminQuizCategory) {
+    if (!window.confirm(`${lang === 'vi' ? 'Xoa chu de' : 'Eliminar tema'} ${item.name_vi}?`)) return;
+    try {
+      await deleteAdminQuizCategory(item.id);
+      await loadAll();
+      showSuccess('Da xoa chu de bai thi', 'Tema de examen eliminado');
+    } catch (error) {
+      showError(error instanceof Error ? error.message : 'Error');
+    }
+  }
+
   if (!isAdmin) return null;
 
   const tabButtons: {
@@ -1488,7 +2048,7 @@ export default function Admin() {
     },
     {
       id: 'materials',
-      label: lang === 'vi' ? 'Tài liệu (PDF)' : 'Temario (PDF)',
+      label: lang === 'vi' ? 'Tài Liệu' : 'Temario',
       desc:
         lang === 'vi'
           ? 'Chủ đề, tải lên và quản lý file cho học viên'
@@ -1497,7 +2057,7 @@ export default function Admin() {
     },
     {
       id: 'quizzes',
-      label: lang === 'vi' ? 'Bài thi & câu hỏi' : 'Exámenes y preguntas',
+      label: lang === 'vi' ? 'Bài thi' : 'Exámenes',
       desc:
         lang === 'vi'
           ? 'Loại đề, tạo bài và chỉnh câu hỏi trắc nghiệm'
@@ -1507,65 +2067,104 @@ export default function Admin() {
   ];
 
   return (
-    <div className="app-page admin-polish min-h-screen flex flex-col bg-[radial-gradient(circle_at_18%_12%,rgba(224,231,255,0.35),transparent_38%),radial-gradient(circle_at_84%_6%,rgba(226,232,240,0.45),transparent_34%),linear-gradient(180deg,#f8fafc_0%,#eef2f7_55%,#f5f7fb_100%)]">
+    <div className="app-page admin-redesign min-h-screen flex flex-col bg-[radial-gradient(circle_at_12%_10%,rgba(122,32,56,0.10),transparent_36%),radial-gradient(circle_at_88%_0%,rgba(244,114,182,0.08),transparent_34%),linear-gradient(180deg,#fdf9fa_0%,#f8f1f4_46%,#f4edf1_100%)]">
       <style>{`
-        .admin-polish {
+        .admin-redesign {
           font-family: 'Be Vietnam Pro', ui-sans-serif, system-ui, sans-serif;
           -webkit-font-smoothing: antialiased;
           -moz-osx-font-smoothing: grayscale;
         }
 
-        .admin-polish input,
-        .admin-polish textarea {
-          border-radius: 0.75rem;
+        .admin-redesign input,
+        .admin-redesign textarea,
+        .admin-redesign select {
+          border-radius: 0.6rem;
+          border-color: rgba(122, 32, 56, 0.24);
+          background: #ffffff;
         }
 
-        .admin-polish button {
-          letter-spacing: 0.01em;
+        .admin-redesign button {
+          letter-spacing: 0.005em;
           transition: all 0.18s ease;
         }
 
-        .admin-polish .rounded-sm {
-          border-radius: 0.7rem;
+        .admin-redesign button[type='submit'] {
+          min-height: 2.5rem;
+          padding-inline: 1rem;
+          border-radius: 0.65rem;
+          font-weight: 700;
+          box-shadow: 0 8px 18px rgba(122, 32, 56, 0.16);
         }
 
-        .admin-polish .bg-white {
-          background: rgba(255, 255, 255, 0.92);
+        .admin-redesign .admin-row-actions button {
+          opacity: 0.82;
+        }
+        .admin-redesign .group:hover .admin-row-actions button {
+          opacity: 1;
         }
 
-        .admin-polish .shadow-sm {
-          box-shadow: 0 10px 22px rgba(95, 20, 40, 0.08);
+        .admin-redesign .admin-btn-edit {
+          border: 1px solid #cfa6b1;
+          background: #fff6f8;
+          color: #5a1428;
+        }
+        .admin-redesign .admin-btn-edit:hover {
+          background: #fdecef;
+          border-color: #c392a0;
         }
 
-        .admin-polish .border {
+        .admin-redesign .admin-btn-delete {
+          border: 1px solid #ef9aa8;
+          background: #fff6f7;
+          color: #b42318;
+        }
+        .admin-redesign .admin-btn-delete:hover {
+          background: #ffecee;
+          border-color: #e47b8d;
+          color: #9d1c12;
+        }
+
+        .admin-redesign .rounded-sm {
+          border-radius: 0.5rem;
+        }
+
+        .admin-redesign .bg-white {
+          background: rgba(255, 255, 255, 0.96);
+        }
+
+        .admin-redesign .shadow-sm {
+          box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+        }
+
+        .admin-redesign .border {
           transition: border-color 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease;
         }
 
-        .admin-polish .border:hover {
-          border-color: rgba(122, 32, 56, 0.34);
+        .admin-redesign .border:hover {
+          border-color: rgba(122, 32, 56, 0.38);
         }
 
-        .admin-polish input:focus,
-        .admin-polish textarea:focus,
-        .admin-polish button:focus-visible {
+        .admin-redesign input:focus,
+        .admin-redesign textarea:focus,
+        .admin-redesign button:focus-visible {
           outline: none;
-          box-shadow: 0 0 0 3px rgba(122, 32, 56, 0.12);
+          box-shadow: 0 0 0 3px rgba(122, 32, 56, 0.16);
         }
 
         .admin-surface-view {
-          border: 1px solid rgba(14, 165, 233, 0.35);
-          background: linear-gradient(135deg, rgba(240, 249, 255, 0.95) 0%, rgba(255, 255, 255, 0.98) 100%);
-          box-shadow: inset 3px 0 0 0 #0ea5e9;
+          border: 1px solid rgba(122, 32, 56, 0.28);
+          background: linear-gradient(135deg, rgba(255, 247, 250, 0.96) 0%, rgba(255, 255, 255, 0.98) 100%);
+          box-shadow: inset 3px 0 0 0 #7a2038;
         }
         .admin-surface-edit {
-          border: 1px solid rgba(122, 32, 56, 0.35);
-          background: linear-gradient(135deg, rgba(255, 248, 249, 0.98) 0%, rgba(255, 255, 255, 0.97) 100%);
-          box-shadow: inset 3px 0 0 0 #7a2038;
+          border: 1px solid rgba(244, 114, 182, 0.4);
+          background: linear-gradient(135deg, rgba(253, 242, 248, 0.95) 0%, rgba(255, 255, 255, 0.98) 100%);
+          box-shadow: inset 3px 0 0 0 #ec4899;
         }
       `}</style>
       <Navbar />
-      <main className="flex-1 px-2 md:px-4 py-3 md:py-4">
-        <div className="w-full min-h-full rounded-3xl border border-[#7a2038]/12 bg-[linear-gradient(160deg,rgba(255,255,255,0.92)_0%,rgba(255,247,250,0.84)_45%,rgba(255,249,235,0.74)_100%)] p-3 shadow-[0_16px_38px_rgba(95,20,40,0.12)] md:p-4">
+      <main className="flex-1 px-0 py-0">
+        <div className="w-full min-h-full p-0">
           {/* Notice */}
           {notice.text && (
             <div
@@ -1582,58 +2181,30 @@ export default function Admin() {
             </div>
           )}
 
-          <header className="mb-4 rounded-2xl border border-[#7a2038]/14 bg-[linear-gradient(135deg,rgba(255,255,255,0.97)_0%,rgba(255,246,248,0.92)_100%)] px-4 py-4 shadow-sm md:px-5 md:py-5">
-            <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[#7a2038]/75">
-              {lang === 'vi' ? 'Dành cho người quản lý nội dung' : 'Para gestores de contenidos'}
-            </p>
-            <h1 className="mt-1 font-display text-xl font-bold tracking-tight text-[#5a1428] md:text-2xl">
-              {lang === 'vi' ? 'Trang quản trị' : 'Panel de administración'}
-            </h1>
-            <p className="mt-2 max-w-3xl text-sm leading-relaxed text-[#4a383e] md:text-[15px]">
-              {lang === 'vi'
-                ? 'Tại đây bạn quản lý toàn bộ nội dung hiển thị cho học viên trên website: tài khoản, tài liệu PDF và bài thi. Giao diện chia theo từng bước — không cần biết lập trình; chỉ cần chọn mục bên trái rồi thao tác theo form.'
-                : 'Aquí se gestiona lo que ven los alumnos en la web: cuentas, temario en PDF y exámenes. La pantalla está organizada por pasos; no hace falta saber de informática: elija una sección a la izquierda y siga los formularios.'}
-            </p>
-            <ul className="mt-4 grid gap-3 sm:grid-cols-3">
-              <li className="rounded-xl border border-[#dbe3ee] bg-white/90 px-3 py-3 text-left shadow-sm">
-                <span className="text-xs font-bold text-[#7a2038]">
-                  {lang === 'vi' ? '1. Tài khoản' : '1. Cuentas'}
-                </span>
-                <p className="mt-1 text-[13px] leading-snug text-[#5c4a50]">
-                  {lang === 'vi'
-                    ? 'Theo dõi người đăng ký, hỗ trợ đổi email/mật khẩu, khóa tài khoản nếu cần.'
-                    : 'Ver quién se ha registrado, ayudar con email/contraseña y bloquear cuentas.'}
+          <header className="mb-2 border border-[#e3d7dc] bg-white/95 shadow-sm">
+            <div className="w-full px-3 py-4 sm:px-4 md:py-5">
+              <div className="max-w-3xl border-l-4 border-[#7a2038]/75 pl-3 sm:pl-4">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-primary/80">
+                  {lang === 'vi' ? 'Quản trị' : 'Administración'}
                 </p>
-              </li>
-              <li className="rounded-xl border border-[#dbe3ee] bg-white/90 px-3 py-3 text-left shadow-sm">
-                <span className="text-xs font-bold text-[#7a2038]">
-                  {lang === 'vi' ? '2. Tài liệu' : '2. Temario'}
-                </span>
-                <p className="mt-1 text-[13px] leading-snug text-[#5c4a50]">
+                <h1 className="mt-1.5 font-display text-[1.65rem] font-bold leading-tight tracking-tight text-foreground md:text-[2rem]">
+                  {lang === 'vi' ? 'Trang quản trị' : 'Panel de administración'}
+                </h1>
+                <p className="mt-2 max-w-2xl text-[15px] leading-relaxed text-foreground/72 md:text-[0.97rem]">
                   {lang === 'vi'
-                    ? 'Tạo chủ đề, đăng file PDF cho tiếng Việt và tiếng Tây Ban Nha.'
-                    : 'Crear temas y subir PDF en vietnamita y español.'}
+                    ? 'Quản lý tài khoản, tài liệu và bài thi cho học viên.'
+                    : 'Gestiona cuentas, temario y exámenes para alumnos.'}
                 </p>
-              </li>
-              <li className="rounded-xl border border-[#dbe3ee] bg-white/90 px-3 py-3 text-left shadow-sm">
-                <span className="text-xs font-bold text-[#7a2038]">
-                  {lang === 'vi' ? '3. Bài thi' : '3. Exámenes'}
-                </span>
-                <p className="mt-1 text-[13px] leading-snug text-[#5c4a50]">
-                  {lang === 'vi'
-                    ? 'Đặt loại đề, thêm bài thi và nhập câu hỏi trắc nghiệm.'
-                    : 'Definir tipos, crear exámenes y preguntas tipo test.'}
-                </p>
-              </li>
-            </ul>
+              </div>
+            </div>
           </header>
 
-          <div className="flex flex-col sm:flex-row gap-2">
-            <aside className="rounded-2xl border border-[#7a2038]/18 bg-white/90 p-3 shadow-sm backdrop-blur-sm sm:w-64 sm:shrink-0">
+          <div className="flex flex-col gap-0 sm:flex-row">
+            <aside className="rounded-none border border-[#e3d7dc] bg-white p-3 shadow-sm sm:w-64 sm:shrink-0">
               <p className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-wide text-[#7a2038]/70">
                 {lang === 'vi' ? 'Chọn nội dung cần làm' : 'Elija qué gestionar'}
               </p>
-              <div className="space-y-2">
+              <div className="space-y-0 overflow-hidden rounded-md border border-[#e3d7dc] divide-y divide-[#f0e8eb]">
                 {tabButtons.map((tab) => {
                   const Icon = tab.icon;
                   return (
@@ -1641,17 +2212,17 @@ export default function Admin() {
                       key={tab.id}
                       type="button"
                       onClick={() => setActiveTab(tab.id)}
-                      className={`w-full rounded-xl border px-3 py-2.5 text-left transition-colors ${
+                      className={`w-full rounded-none border-0 px-3 py-2.5 text-left transition-colors ${
                         activeTab === tab.id
-                          ? 'border-[#7a2038]/60 bg-[linear-gradient(135deg,#f6d7e0_0%,#fbe8d4_100%)] text-[#6b1b31] shadow-[0_8px_18px_rgba(95,20,40,0.10)]'
-                          : 'border-[#bcbcbc] bg-white text-[#5f5f5f] hover:bg-[#f9f3f6]'
+                          ? 'bg-[#f6dce4] text-[#6b1b31]'
+                          : 'bg-white text-[#5f5f5f] hover:bg-[#f9f3f6]'
                       }`}
                     >
                       <span className="flex items-center gap-2">
                         <Icon className="h-4 w-4 shrink-0" />
                         <span className="text-sm font-bold leading-tight">{tab.label}</span>
                       </span>
-                      <span className="mt-1 block pl-6 text-[11px] font-normal leading-snug text-[#666]">
+                      <span className="mt-1 block pl-6 text-[11px] font-normal leading-snug text-[#7b6d73]">
                         {tab.desc}
                       </span>
                     </button>
@@ -1661,24 +2232,27 @@ export default function Admin() {
             </aside>
 
             {/* Content */}
-            <div className="flex-1 overflow-auto rounded-2xl border border-[#7a2038]/18 bg-white/90 p-3 shadow-sm backdrop-blur-sm md:p-4 lg:p-5">
+            <div
+              className={
+                activeTab === 'users'
+                  ? 'flex-1 overflow-auto rounded-none border border-[#e3d7dc] bg-white shadow-sm'
+                  : 'flex-1 overflow-auto rounded-none border border-[#e3d7dc] bg-white shadow-sm'
+              }
+            >
               {activeTab === 'users' && (
-                <div className="space-y-4">
+                <div className="space-y-2 p-3">
                   {/* Users List */}
-                  <div className="border border-[#dbe3ee] bg-white rounded-2xl shadow-sm p-4 md:p-5">
-                    <h3 className="font-bold text-[#5a1428] mb-2 text-base md:text-lg">
-                      {lang === 'vi' ? 'Danh sách tài khoản' : 'Listado de cuentas'} (
-                      {filteredUsers.length}
-                      {filteredUsers.length !== users.length ? ` / ${users.length}` : ''})
-                    </h3>
-                    <p className="mb-3 text-sm text-[#5c4a50]">
-                      {lang === 'vi'
-                        ? 'Bấm vào dòng để mở tóm tắt điểm và lịch sử. Dùng ô tìm kiếm, vai trò, trạng thái và khoảng ngày đăng ký để thu hẹp danh sách.'
-                        : 'Pulse una fila para ver puntos e historial. Filtre por búsqueda, rol, estado y fechas de registro.'}
-                    </p>
+                  <div className="space-y-2">
+                    <div className="border border-[#dbe3ee] bg-white px-3 py-2">
+                      <h3 className="font-bold text-[#5a1428] text-base md:text-lg">
+                        {lang === 'vi' ? 'Danh sách tài khoản' : 'Listado de cuentas'} (
+                        {filteredUsers.length}
+                        {filteredUsers.length !== users.length ? ` / ${users.length}` : ''})
+                      </h3>
+                    </div>
 
-                    <div className="mb-4 grid grid-cols-1 gap-2 sm:grid-cols-3">
-                      <div className="rounded-xl border border-[#e5dde0] bg-[linear-gradient(180deg,#fff_0%,#fdf8fa_100%)] px-3 py-3 shadow-sm">
+                    <div className="grid grid-cols-1 gap-0 overflow-hidden rounded-md border border-[#e5d9de] sm:grid-cols-3">
+                      <div className="border border-[#e5dde0] bg-[linear-gradient(180deg,#fff_0%,#fdf8fa_100%)] px-3 py-3 shadow-sm">
                         <div className="flex items-center gap-2 text-[#7a2038]">
                           <Users className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
                           <span className="text-[11px] font-bold uppercase tracking-wide">
@@ -1689,7 +2263,7 @@ export default function Admin() {
                           {adminUserQuickStats.total}
                         </p>
                       </div>
-                      <div className="rounded-xl border border-[#dbe3ee] bg-white px-3 py-3 shadow-sm">
+                      <div className="border border-[#dbe3ee] bg-white px-3 py-3 shadow-sm">
                         <div className="flex items-center gap-2 text-[#5b5b73]">
                           <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600/90" aria-hidden />
                           <span className="text-[11px] font-bold uppercase tracking-wide">
@@ -1705,7 +2279,7 @@ export default function Admin() {
                           </span>
                         </p>
                       </div>
-                      <div className="rounded-xl border border-[#dbe3ee] bg-white px-3 py-3 shadow-sm">
+                      <div className="border border-[#dbe3ee] bg-white px-3 py-3 shadow-sm">
                         <div className="flex items-center gap-2 text-[#5b5b73]">
                           <CalendarDays className="h-4 w-4 shrink-0 text-[#7a2038]/80" aria-hidden />
                           <span className="text-[11px] font-bold uppercase tracking-wide">
@@ -1718,7 +2292,7 @@ export default function Admin() {
                       </div>
                     </div>
 
-                    <div className="sticky top-0 z-10 -mx-4 mb-3 space-y-3 border-b border-[#ebd8df] bg-white/95 px-4 py-3 backdrop-blur-sm md:-mx-5 md:px-5">
+                    <div className="sticky top-0 z-10 space-y-2 rounded-md border border-[#e5d9de] bg-white p-3">
                       <div>
                         <Label className="text-[11px] font-semibold uppercase tracking-wide text-[#7a2038]/90">
                           {lang === 'vi' ? 'Vai trò' : 'Rol'}
@@ -1843,7 +2417,7 @@ export default function Admin() {
                       </div>
                     </div>
 
-                    <div className="space-y-2">
+                    <div className="space-y-0 overflow-hidden rounded-md border border-[#d8cfd3] divide-y divide-[#e7dde1]">
                       {paginatedUsers.map((item: any, rowIdx: number) => {
                         const zebra = rowIdx % 2 === 1;
                         return (
@@ -1858,11 +2432,11 @@ export default function Admin() {
                             }
                           }}
                           onClick={() => void onViewUserDashboard(item)}
-                          className={`cursor-pointer rounded-md border border-[#e3dbde] p-3 transition-colors ${
+                          className={`cursor-pointer rounded-none p-2 transition-colors ${
                             zebra ? 'bg-[#f9fafb]' : 'bg-white'
                           } hover:bg-[#f1f5f9]/95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#7a2038]`}
                         >
-                          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                          <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
                           <div className="min-w-0 flex-1">
                             <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
                               <span className="text-base font-semibold tracking-tight text-[#5a1428]">
@@ -1885,11 +2459,11 @@ export default function Admin() {
                                     : '· Bloqueada'}
                               </span>
                             </div>
-                            <div className="mt-0.5 truncate text-xs text-[#6b6570]">
+                            <div className="mt-0 truncate text-xs text-[#6b6570]">
                               {item.email}
                               {item.full_name ? ` · ${item.full_name}` : ''}
                             </div>
-                            <div className="mt-0.5 text-[11px] text-[#9a9096]">
+                            <div className="mt-0 text-[11px] text-[#9a9096]">
                               {lang === 'vi' ? 'Đăng ký:' : 'Alta:'}{' '}
                               {formatDateTime(item.created_at)}
                             </div>
@@ -1904,25 +2478,17 @@ export default function Admin() {
                               size="sm"
                               onClick={() => void onViewUserDashboard(item)}
                               title={lang === 'vi' ? 'Xem điểm & lịch sử (không sửa)' : 'Ver puntos e historial'}
-                              className="h-9 min-h-9 gap-1.5 border-[#b8d4e8] bg-sky-50/90 px-3 text-sky-950 hover:bg-sky-100"
+                              className="h-9 min-h-9 w-9 border-[#d7bcc6] bg-[#fff6f8] px-0 text-[#5a1428] hover:bg-[#fdecef]"
                             >
                               <Eye className="h-4 w-4 shrink-0" />
-                              <span className="text-xs font-semibold">
-                                {lang === 'vi' ? 'Xem' : 'Ver'}
-                              </span>
                             </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
+                            <AdminActionIconButton
                               onClick={() => onStartEditUser(item)}
                               title={lang === 'vi' ? 'Sửa thông tin tài khoản' : 'Editar cuenta'}
-                              className="h-9 min-h-9 gap-1.5 border-[#c49aa4] bg-[#fff5f6] px-3 text-[#5a1428] hover:bg-[#fce8ec]"
-                            >
-                              <Edit className="h-4 w-4 shrink-0" />
-                              <span className="text-xs font-semibold">
-                                {lang === 'vi' ? 'Sửa' : 'Editar'}
-                              </span>
-                            </Button>
+                              kind="edit"
+                              className="h-9 min-h-9 w-9 px-0"
+                              icon={<Edit className="h-4 w-4 shrink-0" />}
+                            />
                             <Button
                               variant="outline"
                               size="sm"
@@ -1936,15 +2502,13 @@ export default function Admin() {
                                 <Unlock className="h-4 w-4" />
                               )}
                             </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
+                            <AdminActionIconButton
                               onClick={() => onDeleteUser(item)}
                               title={lang === 'vi' ? 'Xóa tài khoản' : 'Eliminar cuenta'}
-                              className="h-9 min-h-9 border-destructive px-3 text-destructive hover:bg-destructive/10"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
+                              kind="delete"
+                              className="h-9 min-h-9 w-9 px-0"
+                              icon={<Trash2 className="h-4 w-4" />}
+                            />
                           </div>
                           </div>
                           {viewingUserId === item.id && (
@@ -1953,14 +2517,14 @@ export default function Admin() {
                               onClick={(e) => e.stopPropagation()}
                               onKeyDown={(e) => e.stopPropagation()}
                             >
-                              <div className="mb-3 flex flex-wrap items-center gap-2 border-b border-sky-200/90 pb-2">
-                                <Eye className="h-4 w-4 shrink-0 text-sky-700" aria-hidden />
-                                <span className="text-xs font-bold uppercase tracking-wide text-sky-900">
+                              <div className="mb-3 flex flex-wrap items-center gap-2 border-b border-[#e8c4c8] pb-2">
+                                <Eye className="h-4 w-4 shrink-0 text-[#7a2038]" aria-hidden />
+                                <span className="text-xs font-bold uppercase tracking-wide text-[#6b1b31]">
                                   {lang === 'vi'
                                     ? 'Chế độ xem — chỉ đọc, không thay đổi dữ liệu'
                                     : 'Solo lectura — no modifica datos'}
                                 </span>
-                                <span className="text-[11px] font-medium text-sky-800/90">
+                                <span className="text-[11px] font-medium text-[#7a2038]/90">
                                   {lang === 'vi'
                                     ? 'Tóm tắt điểm và các lần làm bài gần đây.'
                                     : 'Resumen de puntos e intentos recientes.'}
@@ -2002,7 +2566,7 @@ export default function Admin() {
                                     <div className="mb-1.5 text-xs font-semibold text-[#5a1428]">
                                       {lang === 'vi' ? 'Lịch sử làm bài gần nhất' : 'Historial reciente'}
                                     </div>
-                                    <div className="mb-1 hidden grid-cols-[1fr_auto_auto_auto] gap-2 rounded bg-sky-100/60 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-sky-900 md:grid">
+                                    <div className="mb-1 hidden grid-cols-[1fr_auto_auto_auto] gap-2 rounded bg-[#f6dde4] px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-[#6b1b31] md:grid">
                                       <span>{lang === 'vi' ? 'Tên bài' : 'Examen'}</span>
                                       <span>{lang === 'vi' ? '% đúng' : '%'}</span>
                                       <span>{lang === 'vi' ? 'Điểm' : 'Nota'}</span>
@@ -2012,13 +2576,13 @@ export default function Admin() {
                                       {viewingUserDashboard.history.slice(0, 10).map((h) => (
                                         <div
                                           key={h.id}
-                                          className="grid grid-cols-1 gap-1 rounded border border-sky-100 bg-white/95 p-2 text-xs sm:grid-cols-[1fr_auto_auto_auto] sm:items-center sm:gap-2"
+                                          className="grid grid-cols-1 gap-1 rounded border border-[#ecd7dd] bg-white/95 p-2 text-xs sm:grid-cols-[1fr_auto_auto_auto] sm:items-center sm:gap-2"
                                         >
                                           <span className="min-w-0 font-semibold text-[#5a1428]">
                                             {h.quiz_title}
                                           </span>
                                           <span className="text-[#5b5b5b]">
-                                            <span className="font-medium text-sky-800">
+                                            <span className="font-medium text-[#7a2038]">
                                               {Number(h.percentage || 0).toFixed(1)}%
                                             </span>
                                             <span className="md:hidden"> · </span>
@@ -2041,11 +2605,14 @@ export default function Admin() {
                             </div>
                           )}
                           {editingUserId === item.id && (
-                            <div
-                              className="admin-surface-edit mt-3 w-full rounded-xl p-3 md:p-4"
-                              onClick={(e) => e.stopPropagation()}
-                              onKeyDown={(e) => e.stopPropagation()}
-                            >
+                            <Dialog open={editingUserId === item.id} onOpenChange={(open) => !open && onCancelEditUser()}>
+                              <DialogContent className="max-w-4xl">
+                                <DialogHeader>
+                                  <DialogTitle className="text-[#6b1b31]">
+                                    {lang === 'vi' ? 'Chỉnh sửa tài khoản' : 'Editar cuenta'}
+                                  </DialogTitle>
+                                </DialogHeader>
+                                <div className="admin-surface-edit w-full rounded-xl p-3 md:p-4">
                               <div className="mb-3 flex flex-wrap items-center gap-2 border-b border-[#e8c4c8] pb-2">
                                 <Edit className="h-4 w-4 shrink-0 text-[#7a2038]" aria-hidden />
                                 <span className="text-xs font-bold uppercase tracking-wide text-[#6b1b31]">
@@ -2175,7 +2742,9 @@ export default function Admin() {
                                 </Button>
                               </div>
                             </div>
-                            </div>
+                                </div>
+                              </DialogContent>
+                            </Dialog>
                           )}
                         </div>
                       );
@@ -2193,29 +2762,33 @@ export default function Admin() {
               )}
 
               {activeTab === 'materials' && (
-                <div className="space-y-4">
-                  <div className="flex flex-wrap gap-2">
+                <div className="space-y-0">
+                  <div className="sticky top-0 z-10 mb-2 flex flex-wrap gap-2 border-b border-[#e3d7dc] bg-white px-2 py-2">
                     {[
                       {
+                        id: 'topic_groups',
+                        label: lang === 'vi' ? 'Loại chủ đề' : 'Grupo de tema',
+                      },
+                      {
                         id: 'subjects',
-                        label: lang === 'vi' ? 'Nhóm chủ đề' : 'Temas y categorías',
+                        label: lang === 'vi' ? 'Chủ đề' : 'Tema',
                       },
                       {
-                        id: 'create',
-                        label: lang === 'vi' ? 'Thêm tài liệu mới' : 'Subir material nuevo',
-                      },
-                      {
-                        id: 'list',
-                        label: lang === 'vi' ? 'Xem & chỉnh sửa' : 'Ver y editar',
+                        id: 'manage',
+                        label: lang === 'vi' ? 'Tài liệu' : 'Materiales',
                       },
                     ].map((tab) => (
                       <button
                         key={tab.id}
-                        onClick={() => setMaterialsSubTab(tab.id as 'subjects' | 'create' | 'list')}
-                        className={`px-3 py-2 rounded-sm border font-semibold text-sm transition-colors ${
+                        onClick={() =>
+                          setMaterialsSubTab(
+                            tab.id as 'topic_groups' | 'subjects' | 'manage'
+                          )
+                        }
+                        className={`px-3 py-2 rounded-md border font-semibold text-sm transition-colors ${
                           materialsSubTab === tab.id
-                            ? 'border-[#7a2038] bg-[#f5d6df] text-[#6b1b31]'
-                            : 'border-[#bcbcbc] bg-white text-[#5f5f5f] hover:bg-[#f0f0f0]'
+                            ? 'border-[#7a2038] bg-[#f6dce4] text-[#6b1b31]'
+                            : 'border-[#e3d7dc] bg-white text-[#5f5f5f] hover:bg-[#f9f3f6]'
                         }`}
                       >
                         {tab.label}
@@ -2224,109 +2797,349 @@ export default function Admin() {
                   </div>
 
                   {/* Subject Management */}
-                  {materialsSubTab === 'subjects' && (
-                    <div className="border border-[#dbe3ee] bg-white rounded-2xl shadow-sm p-4 md:p-5">
-                      <h3 className="font-bold text-[#5a1428] mb-3 text-base md:text-lg">
-                        {lang === 'vi'
-                          ? 'Nhóm chủ đề (để phân loại tài liệu)'
-                          : 'Temas (para organizar el temario)'}
-                      </h3>
-                      <p className="mb-3 text-sm text-[#5c4a50]">
-                        {lang === 'vi'
-                          ? 'Mỗi chủ đề là một “ngăn” tên riêng bằng tiếng Việt và tiếng Tây Ban Nha. Sau khi tạo chủ đề, bạn chuyển sang tab “Thêm tài liệu” để đăng file PDF.'
-                          : 'Cada tema tiene nombre en vietnamita y español. Luego vaya a “Subir material” para asociar PDFs.'}
-                      </p>
+                  {(materialsSubTab === 'topic_groups' || materialsSubTab === 'subjects') && (
+                    <div className="rounded-none border border-[#dbe3ee] bg-white p-3">
+                      <div className="mb-1">
+                        <h3 className="font-bold text-[#5a1428] text-base md:text-lg">
+                          {lang === 'vi'
+                            ? materialsSubTab === 'topic_groups'
+                              ? 'Loại chủ đề (để phân loại tài liệu)'
+                              : 'Chủ đề (để phân loại tài liệu)'
+                            : 'Temas (para organizar el temario)'}
+                        </h3>
+                      </div>
+                      {materialsSubTab === 'topic_groups' && (
+                      <div className="mb-0 space-y-2">
+                        <p className="text-sm font-semibold text-[#7a2038]">
+                          {lang === 'vi'
+                            ? 'Loại chủ đề tài liệu - tạo mới ở đây'
+                            : 'Grupo de tema de material - crear nuevo aquí'}
+                        </p>
+                        <Button
+                          type="button"
+                          onClick={() => setMaterialTopicGroupCreateDialogOpen(true)}
+                          className="h-9 w-full justify-center bg-[#7a2038] hover:bg-[#5a1428] text-white font-bold"
+                        >
+                          {lang === 'vi' ? 'Thêm loại chủ đề' : 'Agregar grupo de tema'}
+                        </Button>
+                        <Dialog open={materialTopicGroupCreateDialogOpen} onOpenChange={setMaterialTopicGroupCreateDialogOpen}>
+                          <DialogContent className="max-w-3xl">
+                            <DialogHeader>
+                              <DialogTitle className="text-[#6b1b31]">
+                                {lang === 'vi' ? 'Thêm loại chủ đề tài liệu' : 'Agregar grupo de tema de material'}
+                              </DialogTitle>
+                            </DialogHeader>
+                        <form onSubmit={onCreateMaterialTopicGroup} className="space-y-2 rounded-md border border-[#e5d9de] bg-[#fcfbfc] p-3">
+                          <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
+                            <div className="space-y-1 rounded-md border border-[#ece2e6] bg-white p-2">
+                              <p className="text-xs font-bold text-[#7a2038]">🇻🇳 Tiếng Việt</p>
+                              <Input
+                                placeholder="Tên VI"
+                                value={newMaterialTopicGroup.name_vi}
+                                onChange={(e) =>
+                                  setNewMaterialTopicGroup((prev) => ({ ...prev, name_vi: e.target.value }))
+                                }
+                                className="border-[#d2d2d2] bg-white h-9"
+                              />
+                              <Input
+                                placeholder="Mô tả VI"
+                                value={newMaterialTopicGroup.description_vi}
+                                onChange={(e) =>
+                                  setNewMaterialTopicGroup((prev) => ({
+                                    ...prev,
+                                    description_vi: e.target.value,
+                                  }))
+                                }
+                                className="border-[#d2d2d2] bg-white h-9"
+                              />
+                            </div>
+                            <div className="space-y-1 rounded-md border border-[#ece2e6] bg-white p-2">
+                              <p className="text-xs font-bold text-[#7a2038]">🇪🇸 Español</p>
+                              <Input
+                                placeholder="Nombre ES"
+                                value={newMaterialTopicGroup.name_es}
+                                onChange={(e) =>
+                                  setNewMaterialTopicGroup((prev) => ({ ...prev, name_es: e.target.value }))
+                                }
+                                className="border-[#d2d2d2] bg-white h-9"
+                              />
+                              <Input
+                                placeholder="Descripción ES"
+                                value={newMaterialTopicGroup.description_es}
+                                onChange={(e) =>
+                                  setNewMaterialTopicGroup((prev) => ({
+                                    ...prev,
+                                    description_es: e.target.value,
+                                  }))
+                                }
+                                className="border-[#d2d2d2] bg-white h-9"
+                              />
+                            </div>
+                          </div>
+                          <Button type="submit" className="h-10 rounded-md bg-[#7a2038] hover:bg-[#5a1428] text-white">
+                            {lang === 'vi' ? 'Thêm loại chủ đề' : 'Agregar grupo de tema'}
+                          </Button>
+                        </form>
+                          </DialogContent>
+                        </Dialog>
+                        <div className="mb-2">
+                          <Input
+                            value={materialTopicGroupSearch}
+                            onChange={(e) => setMaterialTopicGroupSearch(e.target.value)}
+                            placeholder={
+                              lang === 'vi'
+                                ? 'Tìm loại chủ đề theo mã, tên, mô tả...'
+                                : 'Buscar grupo por código, nombre, descripción...'
+                            }
+                            className="h-9 border-[#d2d2d2] bg-white"
+                          />
+                        </div>
+                        <div className="overflow-hidden rounded-md border border-[#e5d9de] divide-y divide-[#ece2e6] bg-white">
+                          {filteredMaterialTopicGroups.map((groupItem) => (
+                            <div
+                              key={groupItem.id}
+                              className="group rounded-none border-0 bg-white p-2 text-xs"
+                            >
+                              <div className="flex items-center justify-between gap-2">
+                                <div className="min-w-0">
+                                  <div className="font-bold text-[#5a1428]">
+                                    {lang === 'vi' ? groupItem.name_vi : groupItem.name_es}
+                                  </div>
+                                  <div className="text-xs text-[#5b5b5b]">
+                                    {lang === 'vi'
+                                      ? groupItem.description_vi || '-'
+                                      : groupItem.description_es || '-'}
+                                  </div>
+                                </div>
+                                <div className="admin-row-actions flex gap-1">
+                                  <AdminActionIconButton onClick={() => onStartEditMaterialTopicGroup(groupItem)} title={lang === 'vi' ? 'Sửa' : 'Editar'} kind="edit" className="h-8 w-8 rounded-md px-0" icon={<Edit className="h-3.5 w-3.5" />} />
+                                  <AdminActionIconButton onClick={() => onDeleteMaterialTopicGroup(groupItem)} title={lang === 'vi' ? 'Xóa' : 'Eliminar'} kind="delete" className="h-8 w-8 rounded-md px-0" icon={<Trash2 className="h-3.5 w-3.5" />} />
+                                </div>
+                              </div>
+                              {editingMaterialTopicGroupId === groupItem.id && (
+                                <Dialog open={editingMaterialTopicGroupId === groupItem.id} onOpenChange={(open) => !open && setEditingMaterialTopicGroupId(null)}>
+                                  <DialogContent className="max-w-3xl">
+                                    <DialogHeader>
+                                      <DialogTitle className="text-[#6b1b31]">
+                                        {lang === 'vi' ? 'Sửa loại chủ đề tài liệu' : 'Editar grupo de tema'}
+                                      </DialogTitle>
+                                    </DialogHeader>
+                                    <div className="space-y-3">
+                                      <Input value={editMaterialTopicGroupForm.code} onChange={(e) => setEditMaterialTopicGroupForm((p) => ({ ...p, code: e.target.value }))} className="h-9 border-[#d2d2d2]" />
+                                      <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
+                                        <div className="space-y-2 rounded-md border border-[#e8d7dd] bg-white p-3">
+                                          <p className="text-xs font-bold text-[#7a2038]">🇻🇳 Tiếng Việt</p>
+                                          <Input value={editMaterialTopicGroupForm.name_vi} onChange={(e) => setEditMaterialTopicGroupForm((p) => ({ ...p, name_vi: e.target.value }))} className="h-9 border-[#d2d2d2]" />
+                                          <Input value={editMaterialTopicGroupForm.description_vi} onChange={(e) => setEditMaterialTopicGroupForm((p) => ({ ...p, description_vi: e.target.value }))} className="h-9 border-[#d2d2d2]" />
+                                        </div>
+                                        <div className="space-y-2 rounded-md border border-[#e8d7dd] bg-white p-3">
+                                          <p className="text-xs font-bold text-[#7a2038]">🇪🇸 Español</p>
+                                          <Input value={editMaterialTopicGroupForm.name_es} onChange={(e) => setEditMaterialTopicGroupForm((p) => ({ ...p, name_es: e.target.value }))} className="h-9 border-[#d2d2d2]" />
+                                          <Input value={editMaterialTopicGroupForm.description_es} onChange={(e) => setEditMaterialTopicGroupForm((p) => ({ ...p, description_es: e.target.value }))} className="h-9 border-[#d2d2d2]" />
+                                        </div>
+                                      </div>
+                                      <div className="flex gap-2">
+                                        <Button type="button" size="sm" onClick={() => onSaveEditMaterialTopicGroup(groupItem)} className="h-9 bg-[#7a2038] hover:bg-[#5a1428] text-white">{lang === 'vi' ? 'Lưu' : 'Guardar'}</Button>
+                                        <Button type="button" size="sm" variant="outline" onClick={() => setEditingMaterialTopicGroupId(null)} className="h-9 border-[#d2d2d2] bg-white">{lang === 'vi' ? 'Hủy' : 'Cancelar'}</Button>
+                                      </div>
+                                    </div>
+                                  </DialogContent>
+                                </Dialog>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      )}
+                      {materialsSubTab === 'subjects' && (
+                      <>
+                      <div className="mb-2 max-w-sm">
+                        <Label className="text-xs text-[#5b5b5b]">
+                          {lang === 'vi' ? 'Lọc theo loại chủ đề' : 'Filtrar por grupo de tema'}
+                        </Label>
+                        <Select
+                          value={materialSubjectFilterGroupId}
+                          onValueChange={setMaterialSubjectFilterGroupId}
+                        >
+                          <SelectTrigger className="h-9 border-[#d2d2d2] bg-white">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">
+                              {lang === 'vi' ? 'Tất cả loại chủ đề' : 'Todos los grupos'}
+                            </SelectItem>
+                            {materialTopicGroups.map((g) => (
+                              <SelectItem key={g.id} value={String(g.id)}>
+                                {g.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="mb-2 space-y-1">
+                        <p className="text-sm font-semibold text-[#7a2038]">
+                          {lang === 'vi'
+                            ? 'Chủ đề tài liệu - tạo mới ở đây'
+                            : 'Tema de material - crear nuevo aquí'}
+                        </p>
+                        <Button
+                          type="button"
+                          onClick={() => setMaterialSubjectCreateDialogOpen(true)}
+                          className="h-9 w-full justify-center bg-[#7a2038] hover:bg-[#5a1428] text-white font-bold"
+                        >
+                          {lang === 'vi' ? 'Thêm chủ đề' : 'Agregar tema'}
+                        </Button>
+                      </div>
+                      <Dialog open={materialSubjectCreateDialogOpen} onOpenChange={setMaterialSubjectCreateDialogOpen}>
+                        <DialogContent className="max-w-4xl">
+                          <DialogHeader>
+                            <DialogTitle className="text-[#6b1b31]">
+                              {lang === 'vi' ? 'Thêm chủ đề tài liệu' : 'Agregar tema de material'}
+                            </DialogTitle>
+                          </DialogHeader>
                       <form
                         onSubmit={onCreateSubject}
-                        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2 mb-3"
+                        className="mb-2 space-y-2 rounded-md border border-[#e5d9de] bg-[#fcfbfc] p-3"
                       >
-                        <Input
-                          placeholder="Tên VI"
-                          value={subjectForm.name_vi}
-                          onChange={(e) =>
-                            setSubjectForm({ ...subjectForm, name_vi: e.target.value })
+                        <Select
+                          value={String(subjectForm.material_topic_group_id || 1)}
+                          onValueChange={(v) =>
+                            setSubjectForm({ ...subjectForm, material_topic_group_id: Number(v) })
                           }
-                          required
-                          className="border-[#d2d2d2] bg-white h-9"
-                        />
-                        <Input
-                          placeholder="Nombre ES"
-                          value={subjectForm.name_es}
-                          onChange={(e) =>
-                            setSubjectForm({ ...subjectForm, name_es: e.target.value })
-                          }
-                          required
-                          className="border-[#d2d2d2] bg-white h-9"
-                        />
-                        <Input
-                          placeholder={lang === 'vi' ? 'Mô tả VI' : 'Descripción VI'}
-                          value={subjectForm.description_vi}
-                          onChange={(e) =>
-                            setSubjectForm({ ...subjectForm, description_vi: e.target.value })
-                          }
-                          className="border-[#d2d2d2] bg-white h-9"
-                        />
-                        <div className="flex gap-2">
-                          <Input
-                            placeholder={lang === 'vi' ? 'Mô tả ES' : 'Descripción ES'}
-                            value={subjectForm.description_es}
-                            onChange={(e) =>
-                              setSubjectForm({ ...subjectForm, description_es: e.target.value })
-                            }
-                            className="border-[#d2d2d2] bg-white h-9"
-                          />
-                          <Button
-                            type="submit"
-                            className="h-9 bg-[#7a2038] hover:bg-[#5a1428] text-white font-bold"
-                          >
-                            {lang === 'vi' ? 'Thêm' : 'Agregar'}
-                          </Button>
+                        >
+                          <SelectTrigger className="border-[#d2d2d2] bg-white h-9">
+                            <SelectValue
+                              placeholder={lang === 'vi' ? 'Loại chủ đề' : 'Grupo de tema'}
+                            />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {materialTopicGroups.map((g) => (
+                              <SelectItem key={g.id} value={String(g.id)}>
+                                {g.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
+                          <div className="space-y-2 rounded-md border border-[#ece2e6] bg-white p-2">
+                            <p className="text-xs font-bold text-[#7a2038]">🇻🇳 Tiếng Việt</p>
+                            <Input
+                              placeholder="Tên VI"
+                              value={subjectForm.name_vi}
+                              onChange={(e) =>
+                                setSubjectForm({ ...subjectForm, name_vi: e.target.value })
+                              }
+                              required
+                              className="border-[#d2d2d2] bg-white h-9"
+                            />
+                            <Input
+                              placeholder="Mô tả VI"
+                              value={subjectForm.description_vi}
+                              onChange={(e) =>
+                                setSubjectForm({ ...subjectForm, description_vi: e.target.value })
+                              }
+                              className="border-[#d2d2d2] bg-white h-9"
+                            />
+                          </div>
+                          <div className="space-y-2 rounded-md border border-[#ece2e6] bg-white p-2">
+                            <p className="text-xs font-bold text-[#7a2038]">🇪🇸 Español</p>
+                            <Input
+                              placeholder="Nombre ES"
+                              value={subjectForm.name_es}
+                              onChange={(e) =>
+                                setSubjectForm({ ...subjectForm, name_es: e.target.value })
+                              }
+                              required
+                              className="border-[#d2d2d2] bg-white h-9"
+                            />
+                            <Input
+                              placeholder="Descripción ES"
+                              value={subjectForm.description_es}
+                              onChange={(e) =>
+                                setSubjectForm({ ...subjectForm, description_es: e.target.value })
+                              }
+                              className="border-[#d2d2d2] bg-white h-9"
+                            />
+                          </div>
                         </div>
+                        <Button
+                          type="submit"
+                          className="h-9 bg-[#7a2038] hover:bg-[#5a1428] text-white font-bold"
+                        >
+                          {lang === 'vi' ? 'Thêm chủ đề' : 'Agregar tema'}
+                        </Button>
                       </form>
+                        </DialogContent>
+                      </Dialog>
 
-                      <div className="space-y-2">
-                        {adminSubjects.map((item) => (
+                      <div className="mb-2">
+                        <Input
+                          value={materialSubjectSearch}
+                          onChange={(e) => setMaterialSubjectSearch(e.target.value)}
+                          placeholder={
+                            lang === 'vi'
+                              ? 'Tìm chủ đề theo mã, tên, mô tả...'
+                              : 'Buscar tema por código, nombre, descripción...'
+                          }
+                          className="h-9 border-[#d2d2d2] bg-white"
+                        />
+                      </div>
+                      <div className="space-y-0 divide-y divide-[#ece2e6] overflow-hidden rounded-md border border-[#e5d9de] bg-white">
+                        {filteredAdminSubjects.map((item) => (
                           <div
                             key={item.id}
-                            className="p-2 border border-[#d2d2d2] bg-white rounded-sm"
+                            className="p-2 border-0 bg-white rounded-none"
                           >
                             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                               <div className="min-w-0">
                                 <div className="font-bold text-[#5a1428]">
-                                  {item.code} - {item.name_vi}
+                                  {lang === 'vi' ? item.name_vi : item.name_es}
                                 </div>
-                                <div className="text-xs text-[#5b5b5b]">{item.name_es}</div>
+                                <div className="text-[11px] text-[#7a2038]">
+                                  {lang === 'vi'
+                                    ? item.material_topic_group_name_vi || '-'
+                                    : item.material_topic_group_name_es || '-'}
+                                </div>
+                                <div className="text-xs text-[#5b5b5b]">
+                                  {lang === 'vi'
+                                    ? item.description_vi || '-'
+                                    : item.description_es || '-'}
+                                </div>
                               </div>
                               <div className="flex gap-1">
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => onStartEditSubject(item)}
-                                  className="h-8 border-[#d2d2d2] bg-white hover:bg-[#fdf5f8]"
-                                >
-                                  <Edit className="h-3.5 w-3.5" />
-                                </Button>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => onDeleteSubject(item)}
-                                  className="h-8 border-destructive text-destructive hover:bg-destructive/10"
-                                >
-                                  <Trash2 className="h-3.5 w-3.5" />
-                                </Button>
+                                <AdminActionIconButton onClick={() => onStartEditSubject(item)} title={lang === 'vi' ? 'Sửa chủ đề' : 'Editar tema'} kind="edit" icon={<Edit className="h-3.5 w-3.5" />} />
+                                <AdminActionIconButton onClick={() => onDeleteSubject(item)} title={lang === 'vi' ? 'Xóa chủ đề' : 'Eliminar tema'} kind="delete" icon={<Trash2 className="h-3.5 w-3.5" />} />
                               </div>
                             </div>
                             {editingSubjectId === item.id && (
-                              <div className="admin-surface-edit mt-3 rounded-xl p-3">
-                                <div className="mb-2 flex flex-wrap items-center gap-2 border-b border-[#e8c4c8] pb-2">
-                                  <Edit className="h-3.5 w-3.5 shrink-0 text-[#7a2038]" aria-hidden />
-                                  <span className="text-[11px] font-bold uppercase tracking-wide text-[#6b1b31]">
-                                    {lang === 'vi'
-                                      ? 'Sửa tên & mô tả chủ đề — Lưu để áp dụng'
-                                      : 'Editar tema — Guardar para aplicar'}
-                                  </span>
-                                </div>
-                              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2">
+                              <Dialog open={editingSubjectId === item.id} onOpenChange={(open) => !open && onCancelEditSubject()}>
+                                <DialogContent className="max-w-4xl">
+                                  <DialogHeader>
+                                    <DialogTitle className="text-[#6b1b31]">
+                                      {lang === 'vi' ? 'Sửa chủ đề tài liệu' : 'Editar tema de material'}
+                                    </DialogTitle>
+                                  </DialogHeader>
+                              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-2">
+                                <Select
+                                  value={String(editSubjectForm.material_topic_group_id || 1)}
+                                  onValueChange={(v) =>
+                                    setEditSubjectForm({
+                                      ...editSubjectForm,
+                                      material_topic_group_id: Number(v),
+                                    })
+                                  }
+                                >
+                                  <SelectTrigger className="border-[#d2d2d2] bg-white h-9">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {materialTopicGroups.map((g) => (
+                                      <SelectItem key={g.id} value={String(g.id)}>
+                                        {g.name}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
                                 <Input
                                   value={editSubjectForm.name_vi}
                                   onChange={(e) =>
@@ -2385,34 +3198,93 @@ export default function Admin() {
                                   </Button>
                                 </div>
                               </div>
-                              </div>
+                                </DialogContent>
+                              </Dialog>
                             )}
                           </div>
                         ))}
                       </div>
+                      </>
+                      )}
                     </div>
                   )}
 
                   {/* Add Material Form */}
-                  {materialsSubTab === 'create' && (
-                    <div className="border border-[#dbe3ee] bg-white rounded-2xl shadow-sm p-4 md:p-5">
-                      <h3 className="font-bold text-[#5a1428] mb-3 text-base md:text-lg">
-                        {lang === 'vi' ? 'Thêm tài liệu song ngữ' : 'Agregar material bilingüe'}
-                      </h3>
+                  {materialsSubTab === 'manage' && (
+                    <div className="border border-[#dbe3ee] bg-white rounded-none p-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <h3 className="font-bold text-[#5a1428] text-base md:text-lg">
+                          {lang === 'vi' ? 'Thêm tài liệu song ngữ' : 'Agregar material bilingüe'}
+                        </h3>
+                        <Button
+                          type="button"
+                          onClick={() => setMaterialCreateDialogOpen(true)}
+                          className="h-9 bg-[#7a2038] hover:bg-[#5a1428] text-white font-bold"
+                        >
+                          {lang === 'vi' ? 'Thêm mới' : 'Agregar nuevo'}
+                        </Button>
+                      </div>
+                      <Dialog open={materialCreateDialogOpen} onOpenChange={setMaterialCreateDialogOpen}>
+                        <DialogContent className="max-w-6xl">
+                          <DialogHeader>
+                            <DialogTitle className="text-[#6b1b31]">
+                              {lang === 'vi' ? 'Thêm tài liệu song ngữ' : 'Agregar material bilingüe'}
+                            </DialogTitle>
+                          </DialogHeader>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
                         <div>
                           <Label className="text-xs text-[#5b5b5b]">
-                            {lang === 'vi' ? 'Chủ đề' : 'Tema'}
+                            {lang === 'vi' ? 'Loại chủ đề' : 'Grupo de tema'}
                           </Label>
                           <Select
-                            value={String(selectedSubjectId)}
-                            onValueChange={(v) => setSelectedSubjectId(Number(v))}
+                            value={materialCreateFilterGroupId}
+                            onValueChange={(v) => {
+                              setMaterialCreateFilterGroupId(v);
+                              const gid = Number(v);
+                              const scoped =
+                                v === 'all' || !Number.isFinite(gid) || gid <= 0
+                                  ? subjects
+                                  : subjects.filter(
+                                      (item: any) => Number(item.material_topic_group_id) === gid
+                                    );
+                              if (
+                                scoped.length &&
+                                !scoped.some((s: any) => Number(s.id) === Number(selectedSubjectId))
+                              ) {
+                                setSelectedSubjectId(Number(scoped[0].id));
+                              }
+                            }}
                           >
                             <SelectTrigger className="border-[#d2d2d2] bg-white h-9">
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                              {subjects.map((s: any) => (
+                              <SelectItem value="all">
+                                {lang === 'vi' ? 'Tất cả loại chủ đề' : 'Todos los grupos'}
+                              </SelectItem>
+                              {materialTopicGroups.map((g) => (
+                                <SelectItem key={g.id} value={String(g.id)}>
+                                  {g.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div>
+                          <Label className="text-xs text-[#5b5b5b]">
+                            {lang === 'vi' ? 'Chủ đề' : 'Tema'}
+                          </Label>
+                          <Select
+                            value={selectedSubjectId != null ? String(selectedSubjectId) : ''}
+                            onValueChange={(v) => setSelectedSubjectId(Number(v))}
+                          >
+                            <SelectTrigger className="border-[#d2d2d2] bg-white h-9">
+                              <SelectValue
+                                placeholder={lang === 'vi' ? 'Chọn chủ đề' : 'Seleccionar tema'}
+                              />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {createSubjectsByGroup.map((s: any) => (
                                 <SelectItem key={s.id} value={String(s.id)}>
                                   {s.name}
                                 </SelectItem>
@@ -2423,9 +3295,9 @@ export default function Admin() {
                       </div>
                       <form
                         onSubmit={onCreateBilingualMaterial}
-                        className="grid grid-cols-1 md:grid-cols-2 gap-3"
+                        className="grid grid-cols-1 gap-2 md:grid-cols-2"
                       >
-                        <div className="border border-[#d2d2d2] bg-white p-3 rounded-sm">
+                        <div className="border border-[#d2d2d2] bg-white p-2 rounded-none">
                           <h4 className="font-bold text-[#5a1428] mb-2 text-sm">🇻🇳 Tiếng Việt</h4>
                           <div className="space-y-2">
                             <div>
@@ -2546,7 +3418,7 @@ export default function Admin() {
                             </div>
                           </div>
                         </div>
-                        <div className="border border-[#d2d2d2] bg-white p-3 rounded-sm">
+                        <div className="border border-[#d2d2d2] bg-white p-2 rounded-none">
                           <h4 className="font-bold text-[#5a1428] mb-2 text-sm">🇪🇸 Español</h4>
                           <div className="space-y-2">
                             <div>
@@ -2682,35 +3554,79 @@ export default function Admin() {
                           </Button>
                         </div>
                       </form>
+                        </DialogContent>
+                      </Dialog>
                     </div>
                   )}
 
                   {/* Materials List */}
-                  {materialsSubTab === 'list' && (
-                    <div className="border border-[#dbe3ee] bg-white rounded-2xl shadow-sm p-4 md:p-5">
-                      <h3 className="font-bold text-[#5a1428] mb-3 text-base md:text-lg">
+                  {materialsSubTab === 'manage' && (
+                    <div className="border border-[#dbe3ee] bg-white rounded-none p-3">
+                      <h3 className="mb-2 font-bold text-[#5a1428] text-base md:text-base">
                         {lang === 'vi' ? 'Danh sách tài liệu' : 'Lista del temario'} (
                         {filteredMaterials.length})
                       </h3>
-                      <p className="mb-3 text-sm text-[#5c4a50]">
-                        {lang === 'vi'
-                          ? 'Chọn chủ đề để lọc. Biểu tượng tải xuống mở PDF (chỉ xem). Biểu tượng bút mở form chỉnh sửa bên dưới — vùng có viền đỏ đậm là chế độ sửa.'
-                          : 'Elija un tema para filtrar. La descarga abre el PDF (solo lectura). El lápiz abre el formulario de edición debajo — el borde granate indica modo edición.'}
-                      </p>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
                         <div>
                           <Label className="text-xs text-[#5b5b5b]">
-                            {lang === 'vi' ? 'Chủ đề tài liệu' : 'Tema de material'}
+                            {lang === 'vi' ? 'Loại chủ đề' : 'Grupo de tema'}
                           </Label>
                           <Select
-                            value={String(selectedSubjectId)}
-                            onValueChange={(v) => setSelectedSubjectId(Number(v))}
+                            value={materialListFilterGroupId}
+                            onValueChange={(v) => {
+                              setMaterialListFilterGroupId(v);
+                              const gid = Number(v);
+                              const scoped =
+                                v === 'all' || !Number.isFinite(gid) || gid <= 0
+                                  ? subjects
+                                  : subjects.filter(
+                                      (item: any) => Number(item.material_topic_group_id) === gid
+                                    );
+                              if (scoped.length) {
+                                const nextSubjectId = scoped.some(
+                                  (s: any) => Number(s.id) === Number(selectedSubjectId)
+                                )
+                                  ? Number(selectedSubjectId)
+                                  : Number(scoped[0].id);
+                                setSelectedSubjectId(nextSubjectId);
+                                void loadMaterials(nextSubjectId);
+                              }
+                            }}
                           >
                             <SelectTrigger className="border-[#d2d2d2] bg-white h-9">
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                              {subjects.map((s: any) => (
+                              <SelectItem value="all">
+                                {lang === 'vi' ? 'Tất cả loại chủ đề' : 'Todos los grupos'}
+                              </SelectItem>
+                              {materialTopicGroups.map((g) => (
+                                <SelectItem key={g.id} value={String(g.id)}>
+                                  {g.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div>
+                          <Label className="text-xs text-[#5b5b5b]">
+                            {lang === 'vi' ? 'Chủ đề tài liệu' : 'Tema de material'}
+                          </Label>
+                          <Select
+                            value={selectedSubjectId != null ? String(selectedSubjectId) : ''}
+                            onValueChange={(v) => {
+                              const nextSubjectId = Number(v);
+                              setSelectedSubjectId(nextSubjectId);
+                              void loadMaterials(nextSubjectId);
+                            }}
+                          >
+                            <SelectTrigger className="border-[#d2d2d2] bg-white h-9">
+                              <SelectValue
+                                placeholder={lang === 'vi' ? 'Chọn chủ đề' : 'Seleccionar tema'}
+                              />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {listSubjectsByGroup.map((s: any) => (
                                 <SelectItem key={s.id} value={String(s.id)}>
                                   {s.name}
                                 </SelectItem>
@@ -2737,11 +3653,11 @@ export default function Admin() {
                           className="h-9 border-[#d2d2d2] bg-white"
                         />
                       </div>
-                      <div className="space-y-2">
+                      <div className="space-y-0 divide-y divide-[#ece2e6] border border-[#e9dfe3]">
                         {paginatedMaterials.map((item: any) => (
                           <div
                             key={item.id}
-                            className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 border border-[#d2d2d2] bg-white rounded-sm"
+                            className="flex flex-col gap-2 border-0 bg-white p-2 sm:flex-row sm:items-center sm:justify-between"
                           >
                             <div className="min-w-0">
                               <div className="font-bold text-[#5a1428]">
@@ -2773,29 +3689,18 @@ export default function Admin() {
                                   <Download className="h-3.5 w-3.5" />
                                 </a>
                               </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => onStartEditMaterial(item)}
-                                title={lang === 'vi' ? 'Chỉnh sửa tài liệu' : 'Editar material'}
-                                className="h-8 gap-1 border-[#c49aa4] bg-[#fff8f9] text-[#5a1428] hover:bg-[#fce8ec]"
-                              >
-                                <Edit className="h-3.5 w-3.5 shrink-0" />
-                                <span className="hidden text-xs font-semibold sm:inline">
-                                  {lang === 'vi' ? 'Sửa' : 'Editar'}
-                                </span>
-                              </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => onDeleteMaterial(item)}
-                                className="h-8 border-destructive text-destructive hover:bg-destructive/10"
-                              >
-                                <Trash2 className="h-3.5 w-3.5" />
-                              </Button>
+                              <AdminActionIconButton onClick={() => onStartEditMaterial(item)} title={lang === 'vi' ? 'Chỉnh sửa tài liệu' : 'Editar material'} kind="edit" className="h-8 w-8 px-0" icon={<Edit className="h-3.5 w-3.5 shrink-0" />} />
+                              <AdminActionIconButton onClick={() => onDeleteMaterial(item)} title={lang === 'vi' ? 'Xóa tài liệu' : 'Eliminar material'} kind="delete" icon={<Trash2 className="h-3.5 w-3.5" />} />
                             </div>
                             {editingMaterialId === item.id && (
-                              <div className="admin-surface-edit w-full mt-3 rounded-xl p-3 md:p-4">
+                            <Dialog open={editingMaterialId === item.id} onOpenChange={(open) => !open && onCancelEditMaterial()}>
+                              <DialogContent className="max-w-6xl">
+                                <DialogHeader>
+                                  <DialogTitle className="text-[#6b1b31]">
+                                    {lang === 'vi' ? 'Sửa tài liệu' : 'Editar material'}
+                                  </DialogTitle>
+                                </DialogHeader>
+                              <div className="w-full rounded-none border border-[#e9dfe3] bg-[#faf7f8] p-2 md:p-2">
                                 <div className="mb-3 flex flex-wrap items-center gap-2 border-b border-[#e8c4c8] pb-2">
                                   <Edit className="h-4 w-4 shrink-0 text-[#7a2038]" aria-hidden />
                                   <span className="text-xs font-bold uppercase tracking-wide text-[#6b1b31]">
@@ -2805,6 +3710,32 @@ export default function Admin() {
                                   </span>
                                 </div>
                               <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
+                                <div className="md:col-span-2">
+                                  <Label className="text-xs text-[#5b5b5b]">
+                                    {lang === 'vi' ? 'Chủ đề tài liệu' : 'Tema de material'}
+                                  </Label>
+                                  <Select
+                                    value={editMaterialForm.subject_id}
+                                    onValueChange={(v) =>
+                                      setEditMaterialForm((prev) => ({ ...prev, subject_id: v }))
+                                    }
+                                  >
+                                    <SelectTrigger className="h-9 border-[#d2d2d2] bg-white">
+                                      <SelectValue
+                                        placeholder={
+                                          lang === 'vi' ? 'Chọn chủ đề' : 'Seleccionar tema'
+                                        }
+                                      />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {subjects.map((s: any) => (
+                                        <SelectItem key={s.id} value={String(s.id)}>
+                                          {s.name}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </div>
                                 <div>
                                   <Label className="text-xs text-[#5b5b5b]">Tiêu đề (VI)</Label>
                                   <Input
@@ -3061,6 +3992,8 @@ export default function Admin() {
                                 </div>
                               </div>
                               </div>
+                              </DialogContent>
+                            </Dialog>
                             )}
                           </div>
                         ))}
@@ -3078,120 +4011,339 @@ export default function Admin() {
               )}
 
               {activeTab === 'quizzes' && (
-                <div className="space-y-4">
-                  <div className="flex flex-wrap gap-2">
+                <div className="space-y-0">
+                  <div className="sticky top-0 z-10 mb-2 flex flex-wrap gap-2 border-b border-[#e3d7dc] bg-white px-2 py-2">
                     {[
                       {
+                        id: 'topic_groups',
+                        label: lang === 'vi' ? 'Loại chủ đề' : 'Grupo de tema',
+                      },
+                      {
                         id: 'types',
-                        label: lang === 'vi' ? 'Nhóm loại bài thi' : 'Tipos de examen',
+                        label: lang === 'vi' ? 'Chủ đề' : 'Temas',
                       },
                       {
-                        id: 'create',
-                        label: lang === 'vi' ? 'Tạo bài thi mới' : 'Crear examen nuevo',
+                        id: 'manage',
+                        label: lang === 'vi' ? 'Bài thi' : 'Exámenes',
                       },
-                      {
-                        id: 'list',
-                        label: lang === 'vi' ? 'Xem & chỉnh sửa' : 'Ver y editar',
-                      },
-                    ].map((tab) => (
-                      <button
-                        key={tab.id}
-                        onClick={() => setQuizzesSubTab(tab.id as 'types' | 'create' | 'list')}
-                        className={`px-3 py-2 rounded-sm border font-semibold text-sm transition-colors ${
-                          quizzesSubTab === tab.id
-                            ? 'border-[#7a2038] bg-[#f5d6df] text-[#6b1b31]'
-                            : 'border-[#bcbcbc] bg-white text-[#5f5f5f] hover:bg-[#f0f0f0]'
-                        }`}
-                      >
-                        {tab.label}
-                      </button>
-                    ))}
+                    ].map((tab) => {
+                      const isActive =
+                        tab.id === 'topic_groups'
+                          ? quizzesSubTab === 'types' && quizzesHierarchyTab === 'topic_groups'
+                          : tab.id === 'types'
+                            ? quizzesSubTab === 'types' && quizzesHierarchyTab === 'types'
+                            : quizzesSubTab === tab.id;
+
+                      return (
+                        <button
+                          key={tab.id}
+                          onClick={() => {
+                            if (tab.id === 'topic_groups' || tab.id === 'types') {
+                              setQuizzesSubTab('types');
+                              setQuizzesHierarchyTab(tab.id as 'topic_groups' | 'types');
+                              return;
+                            }
+                            setQuizzesSubTab(tab.id as 'manage');
+                          }}
+                          className={`px-3 py-2 rounded-md border font-semibold text-sm transition-colors ${
+                            isActive
+                              ? 'border-[#7a2038] bg-[#f6dce4] text-[#6b1b31]'
+                              : 'border-[#e3d7dc] bg-white text-[#5f5f5f] hover:bg-[#f9f3f6]'
+                          }`}
+                        >
+                          {tab.label}
+                        </button>
+                      );
+                    })}
                   </div>
 
                   {quizzesSubTab === 'types' && (
-                    <div className="border border-[#dbe3ee] bg-white rounded-2xl shadow-sm p-4 md:p-5">
-                      <h3 className="font-bold text-[#5a1428] mb-3 text-base md:text-lg">
-                        {lang === 'vi'
-                          ? 'Nhóm loại bài thi (ví dụ: lý thuyết, biển báo…)'
-                          : 'Tipos de examen (p. ej. teoría, señales…)'}
-                      </h3>
-                      <p className="mb-3 text-sm text-[#5c4a50]">
-                        {lang === 'vi'
-                          ? 'Loại đề giúp gom bài thi theo từng mục. Học viên chọn loại khi làm bài trên trang web.'
-                          : 'Los tipos agrupan los exámenes. El alumno elige el tipo al practicar en la web.'}
-                      </p>
+                    <div className="rounded-none border border-[#dbe3ee] bg-white p-3">
+                      <div className="mb-1">
+                        <h3 className="font-bold text-[#5a1428] text-base md:text-lg">
+                          {lang === 'vi'
+                            ? quizzesHierarchyTab === 'topic_groups'
+                              ? 'Loại chủ đề (để phân loại bài thi)'
+                              : 'Chủ đề (để phân loại bài thi)'
+                            : quizzesHierarchyTab === 'topic_groups'
+                              ? 'Grupo de tema (para organizar exámenes)'
+                              : 'Temas (para organizar exámenes)'}
+                        </h3>
+                      </div>
+                      {quizzesHierarchyTab === 'topic_groups' && (
+                      <div className="mb-0 space-y-2">
+                        <p className="text-sm font-semibold text-[#7a2038]">
+                          {lang === 'vi'
+                            ? 'Loại chủ đề bài thi - tạo mới ở đây'
+                            : 'Grupo de tema de examen - crear nuevo aquí'}
+                        </p>
+                        <Button
+                          type="button"
+                          onClick={() => setQuizTopicGroupCreateDialogOpen(true)}
+                          className="h-9 w-full justify-center bg-[#7a2038] hover:bg-[#5a1428] text-white font-bold"
+                        >
+                          {lang === 'vi' ? 'Thêm loại chủ đề' : 'Agregar grupo de tema'}
+                        </Button>
+                        <Dialog open={quizTopicGroupCreateDialogOpen} onOpenChange={setQuizTopicGroupCreateDialogOpen}>
+                          <DialogContent className="max-w-3xl">
+                            <DialogHeader>
+                              <DialogTitle className="text-[#6b1b31]">
+                                {lang === 'vi' ? 'Thêm loại chủ đề bài thi' : 'Agregar grupo de tema de examen'}
+                              </DialogTitle>
+                            </DialogHeader>
+                        <form onSubmit={onCreateQuizTopicGroup} className="space-y-2 rounded-md border border-[#e5d9de] bg-[#fcfbfc] p-3">
+                          <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
+                            <div className="space-y-1 rounded-md border border-[#ece2e6] bg-white p-2">
+                              <p className="text-xs font-bold text-[#7a2038]">🇻🇳 Tiếng Việt</p>
+                              <Input placeholder="Tên VI" value={newQuizTopicGroup.name_vi} onChange={(e) => setNewQuizTopicGroup((p) => ({ ...p, name_vi: e.target.value }))} className="border-[#d2d2d2] bg-white h-9" />
+                              <Input placeholder="Mô tả VI" value={newQuizTopicGroup.description_vi} onChange={(e) => setNewQuizTopicGroup((p) => ({ ...p, description_vi: e.target.value }))} className="border-[#d2d2d2] bg-white h-9" />
+                            </div>
+                            <div className="space-y-1 rounded-md border border-[#ece2e6] bg-white p-2">
+                              <p className="text-xs font-bold text-[#7a2038]">🇪🇸 Español</p>
+                              <Input placeholder="Nombre ES" value={newQuizTopicGroup.name_es} onChange={(e) => setNewQuizTopicGroup((p) => ({ ...p, name_es: e.target.value }))} className="border-[#d2d2d2] bg-white h-9" />
+                              <Input placeholder="Descripción ES" value={newQuizTopicGroup.description_es} onChange={(e) => setNewQuizTopicGroup((p) => ({ ...p, description_es: e.target.value }))} className="border-[#d2d2d2] bg-white h-9" />
+                            </div>
+                          </div>
+                          <Button type="submit" className="h-10 rounded-md bg-[#7a2038] hover:bg-[#5a1428] text-white">{lang === 'vi' ? 'Thêm loại chủ đề' : 'Agregar grupo de tema'}</Button>
+                        </form>
+                          </DialogContent>
+                        </Dialog>
+                        <div className="mb-2">
+                          <Input
+                            value={quizTopicGroupSearch}
+                            onChange={(e) => setQuizTopicGroupSearch(e.target.value)}
+                            placeholder={
+                              lang === 'vi'
+                                ? 'Tìm loại chủ đề theo mã, tên, mô tả...'
+                                : 'Buscar grupo por código, nombre, descripción...'
+                            }
+                            className="h-9 border-[#d2d2d2] bg-white"
+                          />
+                        </div>
+                        <div className="overflow-hidden rounded-md border border-[#e5d9de] divide-y divide-[#ece2e6] bg-white">
+                          {filteredQuizTopicGroups.map((groupItem) => (
+                            <div key={groupItem.id} className="group rounded-none border-0 bg-white p-2 text-xs">
+                              <div className="flex items-center justify-between gap-2">
+                                <div className="min-w-0">
+                                  <div className="font-bold text-[#5a1428]">
+                                    {lang === 'vi' ? groupItem.name_vi : groupItem.name_es}
+                                  </div>
+                                  <div className="text-xs text-[#5b5b5b]">
+                                    {lang === 'vi'
+                                      ? groupItem.description_vi || '-'
+                                      : groupItem.description_es || '-'}
+                                  </div>
+                                </div>
+                                <div className="admin-row-actions flex gap-1">
+                                  <AdminActionIconButton onClick={() => onStartEditQuizTopicGroup(groupItem)} title={lang === 'vi' ? 'Sửa' : 'Editar'} kind="edit" className="h-8 w-8 rounded-md px-0" icon={<Edit className="h-3.5 w-3.5" />} />
+                                  <AdminActionIconButton onClick={() => onDeleteQuizTopicGroup(groupItem)} title={lang === 'vi' ? 'Xóa' : 'Eliminar'} kind="delete" className="h-8 w-8 rounded-md px-0" icon={<Trash2 className="h-3.5 w-3.5" />} />
+                                </div>
+                              </div>
+                              {editingQuizTopicGroupId === groupItem.id && (
+                                <Dialog open={editingQuizTopicGroupId === groupItem.id} onOpenChange={(open) => !open && setEditingQuizTopicGroupId(null)}>
+                                  <DialogContent className="max-w-3xl">
+                                    <DialogHeader>
+                                      <DialogTitle className="text-[#6b1b31]">
+                                        {lang === 'vi' ? 'Sửa loại chủ đề bài thi' : 'Editar grupo de examen'}
+                                      </DialogTitle>
+                                    </DialogHeader>
+                                    <div className="space-y-3">
+                                      <Input value={editQuizTopicGroupForm.code} onChange={(e) => setEditQuizTopicGroupForm((p) => ({ ...p, code: e.target.value }))} className="h-9 border-[#d2d2d2]" />
+                                      <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
+                                        <div className="space-y-2 rounded-md border border-[#e8d7dd] bg-white p-3">
+                                          <p className="text-xs font-bold text-[#7a2038]">🇻🇳 Tiếng Việt</p>
+                                          <Input value={editQuizTopicGroupForm.name_vi} onChange={(e) => setEditQuizTopicGroupForm((p) => ({ ...p, name_vi: e.target.value }))} className="h-9 border-[#d2d2d2]" />
+                                          <Input value={editQuizTopicGroupForm.description_vi} onChange={(e) => setEditQuizTopicGroupForm((p) => ({ ...p, description_vi: e.target.value }))} className="h-9 border-[#d2d2d2]" />
+                                        </div>
+                                        <div className="space-y-2 rounded-md border border-[#e8d7dd] bg-white p-3">
+                                          <p className="text-xs font-bold text-[#7a2038]">🇪🇸 Español</p>
+                                          <Input value={editQuizTopicGroupForm.name_es} onChange={(e) => setEditQuizTopicGroupForm((p) => ({ ...p, name_es: e.target.value }))} className="h-9 border-[#d2d2d2]" />
+                                          <Input value={editQuizTopicGroupForm.description_es} onChange={(e) => setEditQuizTopicGroupForm((p) => ({ ...p, description_es: e.target.value }))} className="h-9 border-[#d2d2d2]" />
+                                        </div>
+                                      </div>
+                                      <div className="flex gap-2">
+                                        <Button type="button" size="sm" onClick={() => onSaveEditQuizTopicGroup(groupItem)} className="h-9 bg-[#7a2038] hover:bg-[#5a1428] text-white">{lang === 'vi' ? 'Lưu' : 'Guardar'}</Button>
+                                        <Button type="button" size="sm" variant="outline" onClick={() => setEditingQuizTopicGroupId(null)} className="h-9 border-[#d2d2d2] bg-white">{lang === 'vi' ? 'Hủy' : 'Cancelar'}</Button>
+                                      </div>
+                                    </div>
+                                  </DialogContent>
+                                </Dialog>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      )}
+                      {quizzesHierarchyTab === 'types' && (
+                      <>
+                      <div className="mb-2 max-w-sm">
+                        <Label className="text-xs text-[#5b5b5b]">
+                          {lang === 'vi' ? 'Lọc theo loại chủ đề' : 'Filtrar por grupo de tema'}
+                        </Label>
+                        <Select
+                          value={quizCategoryFilterGroupId}
+                          onValueChange={setQuizCategoryFilterGroupId}
+                        >
+                          <SelectTrigger className="h-9 border-[#d2d2d2] bg-white">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">
+                              {lang === 'vi' ? 'Tất cả loại chủ đề' : 'Todos los grupos'}
+                            </SelectItem>
+                            {quizTopicGroupsAdmin.map((groupItem) => (
+                              <SelectItem key={groupItem.id} value={String(groupItem.id)}>
+                                {getQuizTopicGroupLabel(groupItem)}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="mb-2 space-y-1">
+                        <p className="text-sm font-semibold text-[#7a2038]">
+                          {lang === 'vi'
+                            ? 'Chủ đề bài thi - tạo mới ở đây'
+                            : 'Tema de examen - crear nuevo aquí'}
+                        </p>
+                        <Button
+                          type="button"
+                          onClick={() => setQuizCategoryCreateDialogOpen(true)}
+                          className="h-9 w-full justify-center bg-[#7a2038] hover:bg-[#5a1428] text-white font-bold"
+                        >
+                          {lang === 'vi' ? 'Thêm chủ đề bài thi' : 'Agregar tema de examen'}
+                        </Button>
+                      </div>
+                      <Dialog open={quizCategoryCreateDialogOpen} onOpenChange={setQuizCategoryCreateDialogOpen}>
+                        <DialogContent className="max-w-4xl">
+                          <DialogHeader>
+                            <DialogTitle className="text-[#6b1b31]">
+                              {lang === 'vi' ? 'Thêm chủ đề bài thi' : 'Agregar tema de examen'}
+                            </DialogTitle>
+                          </DialogHeader>
                       <form
-                        onSubmit={onCreateQuizType}
-                        className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-3"
+                        onSubmit={onCreateQuizCategory}
+                        className="mb-2 space-y-2 rounded-md border border-[#e5d9de] bg-[#fcfbfc] p-3"
                       >
-                        <Input
-                          placeholder={
-                            lang === 'vi' ? 'Ten VI (cho phep dau, khoang trang)' : 'Nombre VI'
-                          }
-                          value={newQuizType.name_vi}
+                        <select
+                          value={newQuizCategory.quiz_topic_group_id}
                           onChange={(e) =>
-                            setNewQuizType((prev) => ({ ...prev, name_vi: e.target.value }))
+                            setNewQuizCategory((prev) => ({
+                              ...prev,
+                              quiz_topic_group_id: e.target.value,
+                            }))
                           }
-                          className="border-[#d2d2d2] bg-white h-9"
-                        />
-                        <Input
-                          placeholder={
-                            lang === 'vi' ? 'Ten ES (cho phep dau, khoang trang)' : 'Nombre ES'
-                          }
-                          value={newQuizType.name_es}
-                          onChange={(e) =>
-                            setNewQuizType((prev) => ({ ...prev, name_es: e.target.value }))
-                          }
-                          className="border-[#d2d2d2] bg-white h-9"
-                        />
-                        <Input
-                          placeholder={
-                            lang === 'vi' ? 'Mo ta VI (tuy chon)' : 'Descripcion VI (opcional)'
-                          }
-                          value={newQuizType.description_vi}
-                          onChange={(e) =>
-                            setNewQuizType((prev) => ({ ...prev, description_vi: e.target.value }))
-                          }
-                          className="border-[#d2d2d2] bg-white h-9"
-                        />
-                        <Input
-                          placeholder={
-                            lang === 'vi' ? 'Mo ta ES (tuy chon)' : 'Descripcion ES (opcional)'
-                          }
-                          value={newQuizType.description_es}
-                          onChange={(e) =>
-                            setNewQuizType((prev) => ({ ...prev, description_es: e.target.value }))
-                          }
-                          className="border-[#d2d2d2] bg-white h-9"
-                        />
+                          className="h-9 rounded-md border border-[#d2d2d2] bg-white px-2 text-sm"
+                        >
+                          <option value="">
+                            {lang === 'vi' ? 'Chọn loại chủ đề' : 'Selecciona grupo de tema'}
+                          </option>
+                          {quizTopicGroupsAdmin.map((groupItem) => (
+                            <option key={groupItem.id} value={String(groupItem.id)}>
+                              {getQuizTopicGroupLabel(groupItem)}
+                            </option>
+                          ))}
+                        </select>
+                        <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
+                          <div className="space-y-2 rounded-md border border-[#ece2e6] bg-white p-2">
+                            <p className="text-xs font-bold text-[#7a2038]">🇻🇳 Tiếng Việt</p>
+                            <Input
+                              placeholder="Tên VI"
+                              value={newQuizCategory.name_vi}
+                              onChange={(e) =>
+                                setNewQuizCategory((prev) => ({ ...prev, name_vi: e.target.value }))
+                              }
+                              className="border-[#d2d2d2] bg-white h-9"
+                            />
+                            <Input
+                              placeholder="Mô tả VI"
+                              value={newQuizCategory.description_vi}
+                              onChange={(e) =>
+                                setNewQuizCategory((prev) => ({ ...prev, description_vi: e.target.value }))
+                              }
+                              className="border-[#d2d2d2] bg-white h-9"
+                            />
+                          </div>
+                          <div className="space-y-2 rounded-md border border-[#ece2e6] bg-white p-2">
+                            <p className="text-xs font-bold text-[#7a2038]">🇪🇸 Español</p>
+                            <Input
+                              placeholder="Nombre ES"
+                              value={newQuizCategory.name_es}
+                              onChange={(e) =>
+                                setNewQuizCategory((prev) => ({ ...prev, name_es: e.target.value }))
+                              }
+                              className="border-[#d2d2d2] bg-white h-9"
+                            />
+                            <Input
+                              placeholder="Descripción ES"
+                              value={newQuizCategory.description_es}
+                              onChange={(e) =>
+                                setNewQuizCategory((prev) => ({ ...prev, description_es: e.target.value }))
+                              }
+                              className="border-[#d2d2d2] bg-white h-9"
+                            />
+                          </div>
+                        </div>
                         <Button
                           type="submit"
                           className="h-9 bg-[#7a2038] hover:bg-[#5a1428] text-white font-bold"
                         >
-                          {lang === 'vi' ? 'Thêm loại đề' : 'Agregar tipo'}
+                          {lang === 'vi' ? 'Thêm chủ đề bài thi' : 'Agregar tema de examen'}
                         </Button>
                       </form>
-                      <div className="space-y-2">
-                        {quizTypes.map((typeItem) => (
+                        </DialogContent>
+                      </Dialog>
+                      <div className="mb-2">
+                        <Input
+                          value={quizCategorySearch}
+                          onChange={(e) => setQuizCategorySearch(e.target.value)}
+                          placeholder={
+                            lang === 'vi'
+                              ? 'Tìm chủ đề theo mã, tên, mô tả...'
+                              : 'Buscar tema por código, nombre, descripción...'
+                          }
+                          className="h-9 border-[#d2d2d2] bg-white"
+                        />
+                      </div>
+                      <div className="space-y-0 divide-y divide-[#ece2e6] overflow-hidden rounded-md border border-[#e5d9de] bg-white">
+                        {filteredQuizCategories.map((categoryItem) => (
                           <div
-                            key={typeItem.id}
-                            className="p-2 border border-[#d2d2d2] bg-white rounded-sm flex items-center justify-between gap-2"
+                            key={categoryItem.id}
+                            className="flex items-center justify-between gap-2 border-0 bg-white p-2 rounded-none"
                           >
-                            {editingQuizTypeId === typeItem.id ? (
-                              <div className="admin-surface-edit w-full rounded-xl p-3">
+                            {editingQuizCategoryId === categoryItem.id ? (
+                              <div className="w-full rounded-none border border-[#e9dfe3] bg-[#faf7f8] p-2">
                                 <div className="mb-2 flex flex-wrap items-center gap-2 border-b border-[#e8c4c8] pb-2">
                                   <Edit className="h-3.5 w-3.5 text-[#7a2038]" aria-hidden />
                                   <span className="text-[11px] font-bold uppercase text-[#6b1b31]">
                                     {lang === 'vi'
-                                      ? 'Sửa loại bài thi'
-                                      : 'Editar tipo de examen'}
+                                      ? 'Sửa chủ đề bài thi'
+                                      : 'Editar tema de examen'}
                                   </span>
                                 </div>
                               <div className="grid w-full grid-cols-1 gap-2 md:grid-cols-2">
-                                <Input
-                                  value={editQuizTypeValue.name_vi}
+                                <select
+                                  value={editQuizCategoryForm.quiz_topic_group_id}
                                   onChange={(e) =>
-                                    setEditQuizTypeValue((prev) => ({
+                                    setEditQuizCategoryForm((prev) => ({
+                                      ...prev,
+                                      quiz_topic_group_id: e.target.value,
+                                    }))
+                                  }
+                                  className="h-9 rounded-none border border-[#d2d2d2] bg-white px-2 text-sm"
+                                >
+                                  <option value="">
+                                    {lang === 'vi' ? 'Chọn loại chủ đề' : 'Selecciona grupo de tema'}
+                                  </option>
+                                  {quizTopicGroupsAdmin.map((groupItem) => (
+                                    <option key={groupItem.id} value={String(groupItem.id)}>
+                                      {getQuizTopicGroupLabel(groupItem)}
+                                    </option>
+                                  ))}
+                                </select>
+                                <Input
+                                  value={editQuizCategoryForm.name_vi}
+                                  onChange={(e) =>
+                                    setEditQuizCategoryForm((prev) => ({
                                       ...prev,
                                       name_vi: e.target.value,
                                     }))
@@ -3199,9 +4351,9 @@ export default function Admin() {
                                   className="border-[#d2d2d2] bg-white h-9"
                                 />
                                 <Input
-                                  value={editQuizTypeValue.name_es}
+                                  value={editQuizCategoryForm.name_es}
                                   onChange={(e) =>
-                                    setEditQuizTypeValue((prev) => ({
+                                    setEditQuizCategoryForm((prev) => ({
                                       ...prev,
                                       name_es: e.target.value,
                                     }))
@@ -3209,9 +4361,9 @@ export default function Admin() {
                                   className="border-[#d2d2d2] bg-white h-9"
                                 />
                                 <Input
-                                  value={editQuizTypeValue.description_vi}
+                                  value={editQuizCategoryForm.description_vi}
                                   onChange={(e) =>
-                                    setEditQuizTypeValue((prev) => ({
+                                    setEditQuizCategoryForm((prev) => ({
                                       ...prev,
                                       description_vi: e.target.value,
                                     }))
@@ -3219,9 +4371,9 @@ export default function Admin() {
                                   className="border-[#d2d2d2] bg-white h-9"
                                 />
                                 <Input
-                                  value={editQuizTypeValue.description_es}
+                                  value={editQuizCategoryForm.description_es}
                                   onChange={(e) =>
-                                    setEditQuizTypeValue((prev) => ({
+                                    setEditQuizCategoryForm((prev) => ({
                                       ...prev,
                                       description_es: e.target.value,
                                     }))
@@ -3231,7 +4383,7 @@ export default function Admin() {
                                 <div className="md:col-span-2 flex gap-2">
                                   <Button
                                     size="sm"
-                                    onClick={() => onSaveEditQuizType(typeItem.id)}
+                                    onClick={() => onSaveEditQuizCategory(categoryItem)}
                                     className="h-9 bg-[#7a2038] hover:bg-[#5a1428] text-white"
                                   >
                                     {lang === 'vi' ? 'Lưu' : 'Guardar'}
@@ -3239,7 +4391,7 @@ export default function Admin() {
                                   <Button
                                     size="sm"
                                     variant="outline"
-                                    onClick={() => setEditingQuizTypeId(null)}
+                                    onClick={() => setEditingQuizCategoryId(null)}
                                     className="h-9 border-[#d2d2d2] bg-white"
                                   >
                                     {lang === 'vi' ? 'Hủy' : 'Cancelar'}
@@ -3251,59 +4403,143 @@ export default function Admin() {
                               <>
                                 <div>
                                   <div className="font-semibold text-[#5a1428]">
-                                    {getQuizTypeLabel(typeItem)}
+                                    {lang === 'vi' ? categoryItem.name_vi : categoryItem.name_es}
                                   </div>
-                                  <div className="text-xs text-[#5b5b5b]">{typeItem.code}</div>
+                                  <div className="text-xs text-[#7a2038]">
+                                    {lang === 'vi'
+                                      ? categoryItem.quiz_topic_group_name_vi || '-'
+                                      : categoryItem.quiz_topic_group_name_es || '-'}
+                                  </div>
+                                  <div className="text-xs text-[#5b5b5b]">
+                                    {lang === 'vi'
+                                      ? categoryItem.description_vi || '-'
+                                      : categoryItem.description_es || '-'}
+                                  </div>
                                 </div>
                                 <div className="flex gap-1">
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => onStartEditQuizType(typeItem)}
-                                    className="h-8 border-[#d2d2d2] bg-white hover:bg-[#fdf5f8]"
-                                  >
-                                    <Edit className="h-3.5 w-3.5" />
-                                  </Button>
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => onDeleteQuizType(typeItem)}
-                                    className="h-8 border-destructive text-destructive hover:bg-destructive/10"
-                                  >
-                                    <Trash2 className="h-3.5 w-3.5" />
-                                  </Button>
+                                  <AdminActionIconButton onClick={() => onStartEditQuizCategory(categoryItem)} title={lang === 'vi' ? 'Sửa chủ đề bài thi' : 'Editar tema de examen'} kind="edit" icon={<Edit className="h-3.5 w-3.5" />} />
+                                  <AdminActionIconButton onClick={() => onDeleteQuizCategory(categoryItem)} title={lang === 'vi' ? 'Xóa chủ đề bài thi' : 'Eliminar tema de examen'} kind="delete" icon={<Trash2 className="h-3.5 w-3.5" />} />
                                 </div>
                               </>
                             )}
                           </div>
                         ))}
                       </div>
+                      </>
+                      )}
                     </div>
                   )}
 
                   {/* Create Quiz Form */}
-                  {quizzesSubTab === 'create' && (
-                    <div className="border border-[#dbe3ee] bg-white rounded-2xl shadow-sm p-4 md:p-5">
-                      <h3 className="font-bold text-[#5a1428] mb-3 text-base md:text-lg">
-                        {lang === 'vi' ? 'Tạo đề thi mới' : 'Crear examen'}
-                      </h3>
-                      <form onSubmit={onCreateQuiz} className="space-y-3">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {quizzesSubTab === 'manage' && (
+                    <div className="border border-[#dbe3ee] bg-white rounded-none p-3">
+                      <div className="mb-2 flex items-center justify-between gap-2">
+                        <h3 className="font-bold text-[#5a1428] text-base md:text-base">
+                          {lang === 'vi' ? 'Tạo đề thi mới' : 'Crear examen'}
+                        </h3>
+                        <Button
+                          type="button"
+                          onClick={() => {
+                            setQuizCreateModalStep('meta');
+                            setQuizCreateDialogOpen(true);
+                          }}
+                          className="h-9 bg-[#7a2038] hover:bg-[#5a1428] text-white font-bold"
+                        >
+                          {lang === 'vi' ? 'Thêm mới' : 'Agregar nuevo'}
+                        </Button>
+                      </div>
+                      <Dialog open={quizCreateDialogOpen} onOpenChange={setQuizCreateDialogOpen}>
+                        <DialogContent className="max-w-6xl">
+                          <DialogHeader>
+                            <DialogTitle className="text-[#6b1b31]">
+                              {lang === 'vi' ? 'Tạo đề thi mới' : 'Crear examen'}
+                            </DialogTitle>
+                          </DialogHeader>
+                      <div className="w-full rounded-none border border-[#e9dfe3] bg-[#faf7f8] p-2 md:p-2">
+                        <div className="mb-3 flex flex-wrap items-center gap-2 border-b border-[#e8c4c8] pb-2">
+                          <Edit className="h-4 w-4 shrink-0 text-[#7a2038]" aria-hidden />
+                          <span className="text-xs font-bold uppercase tracking-wide text-[#6b1b31]">
+                            {lang === 'vi'
+                              ? 'Tạo bài thi mới — thông tin & câu hỏi'
+                              : 'Crear examen nuevo — datos y preguntas'}
+                          </span>
+                        </div>
+                        <div className="mb-2 flex items-center justify-between gap-2">
+                          <span className="text-xs font-semibold text-[#7a2038]">
+                            {quizCreateModalStep === 'meta'
+                              ? lang === 'vi'
+                                ? 'Bước 1/2: Thông tin đề'
+                                : 'Paso 1/2: Datos del examen'
+                              : lang === 'vi'
+                                ? 'Bước 2/2: Câu hỏi & trả lời'
+                                : 'Paso 2/2: Preguntas y respuestas'}
+                          </span>
+                          <div className="flex gap-1">
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              onClick={() => setQuizCreateModalStep('meta')}
+                              className={`h-7 border-[#d2d2d2] px-2 text-xs ${quizCreateModalStep === 'meta' ? 'bg-[#f5d6df] text-[#6b1b31]' : 'bg-white'}`}
+                            >
+                              {lang === 'vi' ? 'Thông tin' : 'Datos'}
+                            </Button>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              onClick={() => setQuizCreateModalStep('questions')}
+                              className={`h-7 border-[#d2d2d2] px-2 text-xs ${quizCreateModalStep === 'questions' ? 'bg-[#f5d6df] text-[#6b1b31]' : 'bg-white'}`}
+                            >
+                              {lang === 'vi' ? 'Câu hỏi' : 'Preguntas'}
+                            </Button>
+                          </div>
+                        </div>
+                      <form onSubmit={onCreateQuiz} className="space-y-2">
+                        {quizCreateModalStep === 'meta' && (
+                          <>
+                        <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
                           <div>
                             <Label className="text-xs text-[#5b5b5b]">
-                              {lang === 'vi' ? 'Loại đề' : 'Tipo'}
+                              {lang === 'vi' ? 'Loại chủ đề' : 'Grupo de tema'}
                             </Label>
                             <Select
-                              value={quizForm.quiz_type}
-                              onValueChange={(v) => setQuizForm({ ...quizForm, quiz_type: v })}
+                              value={quizForm.quiz_topic_group_id}
+                              onValueChange={(v) =>
+                                setQuizForm((prev) => ({
+                                  ...prev,
+                                  quiz_topic_group_id: v,
+                                  category_id: '',
+                                }))
+                              }
                             >
                               <SelectTrigger className="border-[#d2d2d2] bg-white h-9">
-                                <SelectValue />
+                                <SelectValue placeholder={lang === 'vi' ? 'Chọn loại chủ đề' : 'Seleccionar grupo'} />
                               </SelectTrigger>
                               <SelectContent>
-                                {activeQuizTypes.map((typeItem) => (
-                                  <SelectItem key={typeItem.id} value={typeItem.code}>
-                                    {getQuizTypeLabel(typeItem)}
+                                {quizTopicGroupsAdmin.map((groupItem) => (
+                                  <SelectItem key={groupItem.id} value={String(groupItem.id)}>
+                                    {lang === 'vi' ? groupItem.name_vi : groupItem.name_es}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div>
+                            <Label className="text-xs text-[#5b5b5b]">
+                              {lang === 'vi' ? 'Chủ đề' : 'Tema'}
+                            </Label>
+                            <Select
+                              value={quizForm.category_id}
+                              onValueChange={(v) => setQuizForm((prev) => ({ ...prev, category_id: v }))}
+                            >
+                              <SelectTrigger className="border-[#d2d2d2] bg-white h-9">
+                                <SelectValue placeholder={lang === 'vi' ? 'Chọn chủ đề' : 'Seleccionar tema'} />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {createQuizCategories.map((categoryItem) => (
+                                  <SelectItem key={categoryItem.id} value={String(categoryItem.id)}>
+                                    {lang === 'vi' ? categoryItem.name_vi : categoryItem.name_es}
                                   </SelectItem>
                                 ))}
                               </SelectContent>
@@ -3322,7 +4558,7 @@ export default function Admin() {
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                          <div className="border border-[#d2d2d2] bg-white p-3 rounded-sm">
+                          <div className="border border-[#d2d2d2] bg-white p-2 rounded-none">
                             <h4 className="font-bold text-[#5a1428] mb-2 text-sm">🇻🇳 Tiếng Việt</h4>
                             <div className="space-y-2">
                               <Input
@@ -3354,7 +4590,7 @@ export default function Admin() {
                               />
                             </div>
                           </div>
-                          <div className="border border-[#d2d2d2] bg-white p-3 rounded-sm">
+                          <div className="border border-[#d2d2d2] bg-white p-2 rounded-none">
                             <h4 className="font-bold text-[#5a1428] mb-2 text-sm">🇪🇸 Español</h4>
                             <div className="space-y-2">
                               <Input
@@ -3387,9 +4623,12 @@ export default function Admin() {
                             </div>
                           </div>
                         </div>
+                          </>
+                        )}
 
                         {/* Question Builder */}
-                        <div className="border border-[#d2d2d2] bg-white p-3 rounded-sm">
+                        {quizCreateModalStep === 'questions' && (
+                        <div className="border border-[#d2d2d2] bg-white p-2 rounded-none">
                           <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
                             <h4 className="font-bold text-[#5a1428] text-sm">
                               📝 {lang === 'vi' ? 'Câu hỏi' : 'Preguntas'}
@@ -3424,8 +4663,8 @@ export default function Admin() {
                               </button>
                             ))}
                           </div>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                            <div className="border border-[#d2d2d2] bg-[#f9f9f9] p-3 rounded-sm">
+                          <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
+                            <div className="border border-[#d2d2d2] bg-[#f9f9f9] p-2 rounded-none">
                               <h5 className="font-semibold text-[#5a1428] mb-2 text-sm">
                                 🇻🇳 Tiếng Việt
                               </h5>
@@ -3451,7 +4690,7 @@ export default function Admin() {
                                 />
                                 <div className="space-y-2.5 pt-1">
                                   <Input
-                                    placeholder="Đáp án A"
+                                    placeholder="Trả lời A"
                                     value={currentQuestionDraft.answer_vi_1}
                                     onChange={(e) =>
                                       updateCurrentQuestionField('answer_vi_1', e.target.value)
@@ -3460,7 +4699,7 @@ export default function Admin() {
                                     className="border-[#d2d2d2] bg-white h-9"
                                   />
                                   <Input
-                                    placeholder="Đáp án B"
+                                    placeholder="Trả lời B"
                                     value={currentQuestionDraft.answer_vi_2}
                                     onChange={(e) =>
                                       updateCurrentQuestionField('answer_vi_2', e.target.value)
@@ -3469,7 +4708,7 @@ export default function Admin() {
                                     className="border-[#d2d2d2] bg-white h-9"
                                   />
                                   <Input
-                                    placeholder="Đáp án C"
+                                    placeholder="Trả lời C"
                                     value={currentQuestionDraft.answer_vi_3}
                                     onChange={(e) =>
                                       updateCurrentQuestionField('answer_vi_3', e.target.value)
@@ -3480,7 +4719,7 @@ export default function Admin() {
                                 </div>
                               </div>
                             </div>
-                            <div className="border border-[#d2d2d2] bg-[#f9f9f9] p-3 rounded-sm">
+                            <div className="border border-[#d2d2d2] bg-[#f9f9f9] p-2 rounded-none">
                               <h5 className="font-semibold text-[#5a1428] mb-2 text-sm">
                                 🇪🇸 Español
                               </h5>
@@ -3539,7 +4778,7 @@ export default function Admin() {
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
                             <div>
                               <Label className="text-xs text-[#5b5b5b]">
-                                {lang === 'vi' ? 'Đáp án đúng' : 'Correcta'}
+                                {lang === 'vi' ? 'Trả lời đúng' : 'Correcta'}
                               </Label>
                               <Select
                                 value={currentQuestionDraft.correct_index}
@@ -3587,54 +4826,119 @@ export default function Admin() {
                             </div>
                           </div>
                         </div>
+                        )}
 
-                        <Button
-                          type="submit"
-                          disabled={creatingQuiz}
-                          className="h-10 bg-[#7a2038] hover:bg-[#5a1428] text-white font-bold"
-                        >
-                          {creatingQuiz ? '⏳...' : lang === 'vi' ? 'Tạo đề thi' : 'Crear examen'}
-                        </Button>
+                        <div className="flex gap-2">
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setQuizCreateModalStep('meta')}
+                            disabled={quizCreateModalStep === 'meta'}
+                            className="h-9 border-[#d2d2d2] bg-white"
+                          >
+                            {lang === 'vi' ? 'Quay lại' : 'Atrás'}
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setQuizCreateModalStep('questions')}
+                            disabled={quizCreateModalStep === 'questions'}
+                            className="h-9 border-[#d2d2d2] bg-white"
+                          >
+                            {lang === 'vi' ? 'Tiếp theo' : 'Siguiente'}
+                          </Button>
+                          {quizCreateModalStep === 'questions' && (
+                            <Button
+                              type="submit"
+                              disabled={creatingQuiz}
+                              className="h-10 bg-[#7a2038] hover:bg-[#5a1428] text-white font-bold"
+                            >
+                              {creatingQuiz ? '⏳...' : lang === 'vi' ? 'Tạo đề thi' : 'Crear examen'}
+                            </Button>
+                          )}
+                        </div>
                       </form>
+                      </div>
+                        </DialogContent>
+                      </Dialog>
                     </div>
                   )}
 
                   {/* Quizzes List */}
-                  {quizzesSubTab === 'list' && (
-                    <div className="border border-[#dbe3ee] bg-white rounded-2xl shadow-sm p-4 md:p-5">
-                      <h3 className="font-bold text-[#5a1428] mb-3 text-base md:text-lg">
+                  {quizzesSubTab === 'manage' && (
+                    <div className="border border-[#dbe3ee] bg-white rounded-none p-3">
+                      <h3 className="mb-2 font-bold text-[#5a1428] text-base md:text-base">
                         {lang === 'vi' ? 'Danh sách đề thi' : 'Lista de exámenes'} (
                         {filteredAdminQuizzes.length})
                       </h3>
-                      <p className="mb-3 text-sm text-[#5c4a50]">
-                        {lang === 'vi'
-                          ? 'Bấm bút chì để mở khu chỉnh sửa (tiêu đề, mô tả, câu hỏi). Khu có viền đỏ bên trái là đang sửa. Biểu tượng mắt bật/tắt hiển thị bài thi cho học viên.'
-                          : 'Use el lápiz para editar (título, descripción, preguntas). El borde granate indica edición. El icono del ojo activa/desactiva el examen para los alumnos.'}
-                      </p>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
                         <div>
                           <Label className="text-xs text-[#5b5b5b]">
-                            {lang === 'vi' ? 'Loại đề thi' : 'Tipo de examen'}
+                            {lang === 'vi' ? 'Loại chủ đề' : 'Grupo de tema'}
                           </Label>
                           <Select
-                            value={selectedQuizTypeFilter}
-                            onValueChange={setSelectedQuizTypeFilter}
+                            value={quizListFilterGroupId}
+                            onValueChange={(v) => {
+                              setQuizListFilterGroupId(v);
+                              const gid = Number(v);
+                              const scoped =
+                                v === 'all' || !Number.isFinite(gid) || gid <= 0
+                                  ? quizCategoriesAdmin
+                                  : quizCategoriesAdmin.filter(
+                                      (item) => Number(item.quiz_topic_group_id) === gid
+                                    );
+                              if (
+                                quizListFilterCategoryId !== 'all' &&
+                                !scoped.some(
+                                  (item) => Number(item.id) === Number(quizListFilterCategoryId)
+                                )
+                              ) {
+                                setQuizListFilterCategoryId('all');
+                              }
+                            }}
                           >
                             <SelectTrigger className="border-[#d2d2d2] bg-white h-9">
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
                               <SelectItem value="all">
-                                {lang === 'vi' ? 'Tất cả loại đề' : 'Todos los tipos'}
+                                {lang === 'vi' ? 'Tất cả loại chủ đề' : 'Todos los grupos'}
                               </SelectItem>
-                              {quizTypes.map((typeItem) => (
-                                <SelectItem key={typeItem.id} value={String(typeItem.id)}>
-                                  {getQuizTypeLabel(typeItem)}
+                              {quizTopicGroupsAdmin.map((groupItem) => (
+                                <SelectItem key={groupItem.id} value={String(groupItem.id)}>
+                                  {getQuizTopicGroupLabel(groupItem)}
                                 </SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
                         </div>
+                        <div>
+                          <Label className="text-xs text-[#5b5b5b]">
+                            {lang === 'vi' ? 'Chủ đề bài thi' : 'Tema de examen'}
+                          </Label>
+                          <Select
+                            value={quizListFilterCategoryId}
+                            onValueChange={setQuizListFilterCategoryId}
+                          >
+                            <SelectTrigger className="border-[#d2d2d2] bg-white h-9">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="all">
+                                {lang === 'vi' ? 'Tất cả chủ đề' : 'Todos los temas'}
+                              </SelectItem>
+                              {listQuizCategoriesByGroup.map((categoryItem) => (
+                                <SelectItem key={categoryItem.id} value={String(categoryItem.id)}>
+                                  {lang === 'vi' ? categoryItem.name_vi : categoryItem.name_es}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-1 mb-3">
                         <div>
                           <Label className="text-xs text-[#5b5b5b]">
                             {lang === 'vi' ? 'Tìm kiếm đề thi' : 'Buscar examen'}
@@ -3651,11 +4955,11 @@ export default function Admin() {
                           />
                         </div>
                       </div>
-                      <div className="space-y-2">
+                      <div className="space-y-0 divide-y divide-[#ece2e6] border border-[#e9dfe3]">
                         {paginatedAdminQuizzes.map((item: any) => (
                           <div
                             key={item.id}
-                            className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 border border-[#d2d2d2] bg-white rounded-sm"
+                            className="flex flex-col gap-2 border-0 bg-white p-2 sm:flex-row sm:items-center sm:justify-between"
                           >
                             <div className="min-w-0">
                               <div className="font-bold text-[#5a1428]">
@@ -3666,7 +4970,6 @@ export default function Admin() {
                               </div>
                               <div className="mt-1 flex items-center gap-2 flex-wrap">
                                 <span className="text-xs text-[#5b5b5b]">{item.code}</span>
-                                <span className="text-xs text-[#5b5b5b]">{getQuizTypeDisplayName(item)}</span>
                                 <span className="text-xs text-[#5b5b5b]">
                                   {item.total_questions} {lang === 'vi' ? 'câu' : 'preg'}
                                 </span>
@@ -3682,18 +4985,13 @@ export default function Admin() {
                               </div>
                             </div>
                             <div className="flex gap-1">
-                              <Button
-                                variant="outline"
-                                size="sm"
+                              <AdminActionIconButton
                                 onClick={() => onStartEditQuiz(item)}
                                 title={lang === 'vi' ? 'Chỉnh sửa đề thi' : 'Editar examen'}
-                                className="h-8 gap-1 border-[#c49aa4] bg-[#fff8f9] text-[#5a1428] hover:bg-[#fce8ec]"
-                              >
-                                <Edit className="h-3.5 w-3.5 shrink-0" />
-                                <span className="hidden text-xs font-semibold sm:inline">
-                                  {lang === 'vi' ? 'Sửa' : 'Editar'}
-                                </span>
-                              </Button>
+                                kind="edit"
+                                className="h-8 w-8 px-0"
+                                icon={<Edit className="h-3.5 w-3.5 shrink-0" />}
+                              />
                               <Button
                                 variant="outline"
                                 size="sm"
@@ -3706,17 +5004,17 @@ export default function Admin() {
                                   <Eye className="h-3.5 w-3.5" />
                                 )}
                               </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => onDeleteQuiz(item)}
-                                className="h-8 border-destructive text-destructive hover:bg-destructive/10"
-                              >
-                                <Trash2 className="h-3.5 w-3.5" />
-                              </Button>
+                              <AdminActionIconButton onClick={() => onDeleteQuiz(item)} title={lang === 'vi' ? 'Xóa đề thi' : 'Eliminar examen'} kind="delete" icon={<Trash2 className="h-3.5 w-3.5" />} />
                             </div>
                             {editingQuizId === item.id && (
-                              <div className="admin-surface-edit w-full mt-3 rounded-xl p-3 md:p-4">
+                              <Dialog open={editingQuizId === item.id} onOpenChange={(open) => !open && onCancelEditQuiz()}>
+                                <DialogContent className="max-w-6xl">
+                                  <DialogHeader>
+                                    <DialogTitle className="text-[#6b1b31]">
+                                      {lang === 'vi' ? 'Sửa bài thi' : 'Editar examen'}
+                                    </DialogTitle>
+                                  </DialogHeader>
+                              <div className="w-full rounded-none border border-[#e9dfe3] bg-[#faf7f8] p-2 md:p-2">
                                 <div className="mb-3 flex flex-wrap items-center gap-2 border-b border-[#e8c4c8] pb-2">
                                   <Edit className="h-4 w-4 shrink-0 text-[#7a2038]" aria-hidden />
                                   <span className="text-xs font-bold uppercase tracking-wide text-[#6b1b31]">
@@ -3725,24 +5023,83 @@ export default function Admin() {
                                       : 'Editar examen — datos y preguntas'}
                                   </span>
                                 </div>
+                                <div className="mb-2 flex items-center justify-between gap-2">
+                                  <span className="text-xs font-semibold text-[#7a2038]">
+                                    {editQuizModalStep === 'meta'
+                                      ? lang === 'vi'
+                                        ? 'Bước 1/2: Thông tin đề'
+                                        : 'Paso 1/2: Datos del examen'
+                                      : lang === 'vi'
+                                        ? 'Bước 2/2: Câu hỏi & trả lời'
+                                        : 'Paso 2/2: Preguntas y respuestas'}
+                                  </span>
+                                  <div className="flex gap-1">
+                                    <Button
+                                      type="button"
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => setEditQuizModalStep('meta')}
+                                      className={`h-7 border-[#d2d2d2] px-2 text-xs ${editQuizModalStep === 'meta' ? 'bg-[#f5d6df] text-[#6b1b31]' : 'bg-white'}`}
+                                    >
+                                      {lang === 'vi' ? 'Thông tin' : 'Datos'}
+                                    </Button>
+                                    <Button
+                                      type="button"
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => setEditQuizModalStep('questions')}
+                                      className={`h-7 border-[#d2d2d2] px-2 text-xs ${editQuizModalStep === 'questions' ? 'bg-[#f5d6df] text-[#6b1b31]' : 'bg-white'}`}
+                                    >
+                                      {lang === 'vi' ? 'Câu hỏi' : 'Preguntas'}
+                                    </Button>
+                                  </div>
+                                </div>
                               <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
+                                {editQuizModalStep === 'meta' && (
+                                  <>
                                 <div>
                                   <Label className="text-xs text-[#5b5b5b]">
-                                    {lang === 'vi' ? 'Loại đề' : 'Tipo'}
+                                    {lang === 'vi' ? 'Loại chủ đề' : 'Grupo de tema'}
                                   </Label>
                                   <Select
-                                    value={editQuizForm.quiz_type}
+                                    value={editQuizForm.quiz_topic_group_id}
                                     onValueChange={(v) =>
-                                      setEditQuizForm({ ...editQuizForm, quiz_type: v })
+                                      setEditQuizForm((prev) => ({
+                                        ...prev,
+                                        quiz_topic_group_id: v,
+                                        category_id: '',
+                                      }))
                                     }
                                   >
                                     <SelectTrigger className="h-9 border-[#d2d2d2] bg-white">
-                                      <SelectValue />
+                                      <SelectValue placeholder={lang === 'vi' ? 'Chọn loại chủ đề' : 'Seleccionar grupo'} />
                                     </SelectTrigger>
                                     <SelectContent>
-                                      {activeQuizTypes.map((typeItem) => (
-                                        <SelectItem key={typeItem.id} value={typeItem.code}>
-                                          {getQuizTypeLabel(typeItem)}
+                                      {quizTopicGroupsAdmin.map((groupItem) => (
+                                        <SelectItem key={groupItem.id} value={String(groupItem.id)}>
+                                          {lang === 'vi' ? groupItem.name_vi : groupItem.name_es}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                                <div>
+                                  <Label className="text-xs text-[#5b5b5b]">
+                                    {lang === 'vi' ? 'Chủ đề' : 'Tema'}
+                                  </Label>
+                                  <Select
+                                    value={editQuizForm.category_id}
+                                    onValueChange={(v) =>
+                                      setEditQuizForm((prev) => ({ ...prev, category_id: v }))
+                                    }
+                                  >
+                                    <SelectTrigger className="h-9 border-[#d2d2d2] bg-white">
+                                      <SelectValue placeholder={lang === 'vi' ? 'Chọn chủ đề' : 'Seleccionar tema'} />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {editQuizCategories.map((categoryItem) => (
+                                        <SelectItem key={categoryItem.id} value={String(categoryItem.id)}>
+                                          {lang === 'vi' ? categoryItem.name_vi : categoryItem.name_es}
                                         </SelectItem>
                                       ))}
                                     </SelectContent>
@@ -3759,7 +5116,9 @@ export default function Admin() {
                                   />
                                 </div>
                                 <div>
-                                  <Label className="text-xs text-[#5b5b5b]">VI</Label>
+                                  <Label className="text-xs text-[#5b5b5b]">
+                                    {lang === 'vi' ? 'Tiêu đề VI' : 'Título VI'}
+                                  </Label>
                                   <Input
                                     value={editQuizForm.title_vi}
                                     onChange={(e) =>
@@ -3769,7 +5128,9 @@ export default function Admin() {
                                   />
                                 </div>
                                 <div>
-                                  <Label className="text-xs text-[#5b5b5b]">ES</Label>
+                                  <Label className="text-xs text-[#5b5b5b]">
+                                    {lang === 'vi' ? 'Tiêu đề ES' : 'Título ES'}
+                                  </Label>
                                   <Input
                                     value={editQuizForm.title_es}
                                     onChange={(e) =>
@@ -3868,13 +5229,10 @@ export default function Admin() {
                                     </SelectContent>
                                   </Select>
                                 </div>
+                                  </>
+                                )}
+                                {editQuizModalStep === 'questions' && (
                                 <div className="md:col-span-2 border border-[#d2d2d2] bg-white rounded-sm p-3 space-y-3">
-                                  <div className="text-sm font-semibold text-[#5a1428]">
-                                    {lang === 'vi'
-                                      ? 'Sửa chi tiết câu hỏi, đáp án và ảnh'
-                                      : 'Editar preguntas, respuestas e imagen'}
-                                  </div>
-
                                   {loadingEditQuizDetail ? (
                                     <div className="text-xs text-[#5b5b5b]">
                                       {lang === 'vi'
@@ -3883,79 +5241,66 @@ export default function Admin() {
                                     </div>
                                   ) : (
                                     <div className="space-y-3">
-                                      {editQuizQuestions.length > 0 && (
-                                        <>
-                                          <div className="flex flex-wrap items-center justify-between gap-2">
-                                            <span className="text-xs text-[#5b5b5b]">
-                                              {lang === 'vi' ? 'Câu' : 'Pregunta'} {currentEditQuestionIndex + 1}/
-                                              {editQuizQuestions.length}
-                                            </span>
-                                            <div className="flex gap-1 flex-wrap">
-                                              <Button
-                                                type="button"
-                                                variant="outline"
-                                                size="sm"
-                                                onClick={onAddEditQuestion}
-                                                className="h-7 border-[#d2d2d2] bg-white px-2 text-xs"
-                                              >
-                                                {lang === 'vi' ? 'Thêm câu' : 'Agregar pregunta'}
-                                              </Button>
-                                              <Button
-                                                type="button"
-                                                variant="outline"
-                                                size="sm"
-                                                onClick={() =>
-                                                  setCurrentEditQuestionIndex((prev) => Math.max(0, prev - 1))
-                                                }
-                                                disabled={currentEditQuestionIndex === 0}
-                                                className="h-7 border-[#d2d2d2] bg-white px-2 text-xs"
-                                              >
-                                                {lang === 'vi' ? 'Trước' : 'Prev'}
-                                              </Button>
-                                              <Button
-                                                type="button"
-                                                variant="outline"
-                                                size="sm"
-                                                onClick={() =>
-                                                  setCurrentEditQuestionIndex((prev) =>
-                                                    Math.min(editQuizQuestions.length - 1, prev + 1)
-                                                  )
-                                                }
-                                                disabled={currentEditQuestionIndex >= editQuizQuestions.length - 1}
-                                                className="h-7 border-[#d2d2d2] bg-white px-2 text-xs"
-                                              >
-                                                {lang === 'vi' ? 'Sau' : 'Next'}
-                                              </Button>
-                                            </div>
-                                          </div>
+                                      <div className="flex flex-wrap items-center justify-between gap-2">
+                                        <span className="text-xs font-semibold text-[#5a1428]">
+                                          {lang === 'vi'
+                                            ? `Danh sách câu hỏi (${editQuizQuestions.length})`
+                                            : `Lista de preguntas (${editQuizQuestions.length})`}
+                                        </span>
+                                        <Button
+                                          type="button"
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={onAddEditQuestion}
+                                          className="h-7 border-[#d2d2d2] bg-white px-2 text-xs"
+                                        >
+                                          {lang === 'vi' ? 'Thêm câu' : 'Agregar pregunta'}
+                                        </Button>
+                                      </div>
 
-                                          <div className="flex flex-wrap gap-1">
-                                            {editQuizQuestions.map((_, idx) => (
-                                              <button
-                                                key={`edit-q-${idx}`}
-                                                type="button"
-                                                onClick={() => setCurrentEditQuestionIndex(idx)}
-                                                className={`h-7 w-7 text-xs font-bold rounded-sm border transition-colors ${idx === currentEditQuestionIndex ? 'border-[#7a2038] bg-[#f5d6df] text-[#6b1b31]' : 'border-[#bcbcbc] bg-white text-[#5f5f5f] hover:bg-[#f0f0f0]'}`}
-                                              >
-                                                {idx + 1}
-                                              </button>
-                                            ))}
-                                          </div>
-                                        </>
+                                      {editQuizQuestions.length > 0 && (
+                                        <div className="flex flex-wrap gap-1.5">
+                                          {editQuizQuestions.map((_, idx) => (
+                                            <button
+                                              key={`edit-q-${idx}`}
+                                              type="button"
+                                              onClick={() => setCurrentEditQuestionIndex(idx)}
+                                              title={`${lang === 'vi' ? 'Câu' : 'Pregunta'} ${idx + 1}`}
+                                              className={`h-8 w-8 rounded-sm border text-xs font-bold transition-colors ${idx === currentEditQuestionIndex ? 'border-[#7a2038] bg-[#f5d6df] text-[#6b1b31]' : 'border-[#bcbcbc] bg-white text-[#5f5f5f] hover:bg-[#f0f0f0]'}`}
+                                            >
+                                              {idx + 1}
+                                            </button>
+                                          ))}
+                                        </div>
+                                      )}
+
+                                      {editQuizQuestions.length === 0 && (
+                                        <div className="rounded-sm border border-dashed border-[#e1c8d0] bg-[#fff9fb] px-3 py-2 text-xs text-[#7a2038]">
+                                          {lang === 'vi'
+                                            ? 'Đề thi này chưa có câu hỏi. Bấm "Thêm câu" để bắt đầu.'
+                                            : 'Este examen aun no tiene preguntas. Pulse "Agregar pregunta".'}
+                                        </div>
                                       )}
 
                                       {currentEditQuestion && (
                                         <div
                                           key={`edit-question-${currentEditQuestion.id ?? currentEditQuestionIndex}`}
-                                          className="border border-[#d2d2d2] rounded-sm p-3 bg-[#fcfcfc]"
+                                          className="border border-[#d2d2d2] rounded-sm p-2 bg-[#fcfcfc]"
                                         >
-                                          <div className="text-xs font-bold text-[#7a2038] mb-2">
+                                          <div className="text-xs font-bold text-[#7a2038] mb-1">
                                             {lang === 'vi' ? 'Câu' : 'Pregunta'} {currentEditQuestionIndex + 1}
                                           </div>
 
-                                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                            <div className="space-y-2">
-                                              <Label className="text-xs text-[#5b5b5b]">VI</Label>
+                                          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                            <div className="space-y-1.5 rounded-sm border border-[#edd5dc] bg-[#fff9fb] p-2">
+                                              <div className="space-y-0.5">
+                                                <Label className="block text-xs font-bold text-[#7a2038]">
+                                                  🇻🇳 Tiếng Việt
+                                                </Label>
+                                                <Label className="block text-[11px] text-[#5b5b5b]">
+                                                  {lang === 'vi' ? 'Câu hỏi VI' : 'Pregunta VI'}
+                                                </Label>
+                                              </div>
                                               <Textarea
                                                 value={currentEditQuestion.question_text_vi}
                                                 onChange={(e) =>
@@ -3965,9 +5310,12 @@ export default function Admin() {
                                                     e.target.value
                                                   )
                                                 }
-                                                rows={2}
+                                                rows={1}
                                                 className="border-[#d2d2d2] bg-white"
                                               />
+                                              <Label className="text-[11px] text-[#5b5b5b]">
+                                                {lang === 'vi' ? 'Giải thích VI' : 'Explicación VI'}
+                                              </Label>
                                               <Textarea
                                                 value={currentEditQuestion.explanation_vi}
                                                 onChange={(e) =>
@@ -3977,7 +5325,7 @@ export default function Admin() {
                                                     e.target.value
                                                   )
                                                 }
-                                                rows={2}
+                                                rows={1}
                                                 placeholder={
                                                   lang === 'vi' ? 'Giải thích VI' : 'Explicación VI'
                                                 }
@@ -3985,8 +5333,15 @@ export default function Admin() {
                                               />
                                             </div>
 
-                                            <div className="space-y-2">
-                                              <Label className="text-xs text-[#5b5b5b]">ES</Label>
+                                            <div className="space-y-1.5 rounded-sm border border-[#edd5dc] bg-[#fff9fb] p-2">
+                                              <div className="space-y-0.5">
+                                                <Label className="block text-xs font-bold text-[#7a2038]">
+                                                  🇪🇸 Español
+                                                </Label>
+                                                <Label className="block text-[11px] text-[#5b5b5b]">
+                                                  {lang === 'vi' ? 'Câu hỏi ES' : 'Pregunta ES'}
+                                                </Label>
+                                              </div>
                                               <Textarea
                                                 value={currentEditQuestion.question_text_es}
                                                 onChange={(e) =>
@@ -3996,9 +5351,12 @@ export default function Admin() {
                                                     e.target.value
                                                   )
                                                 }
-                                                rows={2}
+                                                rows={1}
                                                 className="border-[#d2d2d2] bg-white"
                                               />
+                                              <Label className="text-[11px] text-[#5b5b5b]">
+                                                {lang === 'vi' ? 'Giải thích ES' : 'Explicación ES'}
+                                              </Label>
                                               <Textarea
                                                 value={currentEditQuestion.explanation_es}
                                                 onChange={(e) =>
@@ -4008,7 +5366,7 @@ export default function Admin() {
                                                     e.target.value
                                                   )
                                                 }
-                                                rows={2}
+                                                rows={1}
                                                 placeholder={
                                                   lang === 'vi' ? 'Giải thích ES' : 'Explicación ES'
                                                 }
@@ -4017,16 +5375,32 @@ export default function Admin() {
                                             </div>
                                           </div>
 
-                                          <div className="mt-3 space-y-2">
+                                          <div className="mt-2 space-y-1.5">
+                                            <div className="hidden md:grid md:grid-cols-[44px_minmax(0,1fr)_minmax(0,1fr)_44px] gap-2 text-[11px] font-semibold text-[#7a2038]">
+                                              <div>{lang === 'vi' ? 'Trả lời' : 'Resp.'}</div>
+                                              <div>
+                                                {lang === 'vi' ? 'Nội dung trả lời VI' : 'Texto respuesta VI'}
+                                              </div>
+                                              <div>
+                                                {lang === 'vi' ? 'Nội dung trả lời ES' : 'Texto respuesta ES'}
+                                              </div>
+                                              <div className="text-right">
+                                                {lang === 'vi' ? 'Đúng' : 'Ok'}
+                                              </div>
+                                            </div>
                                             {(currentEditQuestion.answers || []).map(
                                               (answer: any, answerIndex: number) => (
                                                 <div
                                                   key={`edit-answer-${currentEditQuestionIndex}-${answer.id ?? answerIndex}`}
-                                                  className="grid grid-cols-1 md:grid-cols-12 gap-2"
+                                                  className="rounded-sm border border-[#ead9de] bg-white p-2 md:grid md:grid-cols-[44px_minmax(0,1fr)_minmax(0,1fr)_44px] md:gap-2 md:border-0 md:bg-transparent md:p-0 space-y-2 md:space-y-0"
                                                 >
-                                                  <div className="md:col-span-1 text-xs font-semibold text-[#7a2038] flex items-center">
+                                                  <div className="text-xs font-semibold text-[#7a2038] flex items-center md:min-h-9">
                                                     {String.fromCharCode(65 + answerIndex)}
                                                   </div>
+                                                  <div className="space-y-1 md:space-y-0">
+                                                    <Label className="text-[11px] text-[#5b5b5b] md:hidden">
+                                                      {lang === 'vi' ? 'Nội dung trả lời VI' : 'Texto respuesta VI'}
+                                                    </Label>
                                                   <Input
                                                     value={answer.answer_text_vi}
                                                     onChange={(e) =>
@@ -4037,9 +5411,14 @@ export default function Admin() {
                                                         e.target.value
                                                       )
                                                     }
-                                                    placeholder="VI"
-                                                    className="md:col-span-5 h-9 border-[#d2d2d2] bg-white"
+                                                    placeholder={`${lang === 'vi' ? 'Trả lời' : 'Respuesta'} ${String.fromCharCode(65 + answerIndex)} (VI)`}
+                                                    className="h-9 border-[#d2d2d2] bg-white"
                                                   />
+                                                  </div>
+                                                  <div className="space-y-1 md:space-y-0">
+                                                    <Label className="text-[11px] text-[#5b5b5b] md:hidden">
+                                                      {lang === 'vi' ? 'Nội dung trả lời ES' : 'Texto respuesta ES'}
+                                                    </Label>
                                                   <Input
                                                     value={answer.answer_text_es}
                                                     onChange={(e) =>
@@ -4050,10 +5429,14 @@ export default function Admin() {
                                                         e.target.value
                                                       )
                                                     }
-                                                    placeholder="ES"
-                                                    className="md:col-span-5 h-9 border-[#d2d2d2] bg-white"
+                                                    placeholder={`${lang === 'vi' ? 'Trả lời' : 'Respuesta'} ${String.fromCharCode(65 + answerIndex)} (ES)`}
+                                                    className="h-9 border-[#d2d2d2] bg-white"
                                                   />
-                                                  <div className="md:col-span-1 flex items-center justify-end">
+                                                  </div>
+                                                  <div className="flex items-center justify-end gap-2 md:gap-0">
+                                                    <Label className="text-[11px] text-[#5b5b5b] md:hidden">
+                                                      {lang === 'vi' ? 'Đánh dấu đúng' : 'Marcar correcta'}
+                                                    </Label>
                                                     <input
                                                       type="radio"
                                                       checked={answer.is_correct}
@@ -4071,40 +5454,7 @@ export default function Admin() {
                                             )}
                                           </div>
 
-                                          <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
-                                            <div>
-                                              <Label className="text-xs text-[#5b5b5b]">
-                                                {lang === 'vi' ? 'Đáp án đúng' : 'Respuesta correcta'}
-                                              </Label>
-                                              <Select
-                                                value={String(
-                                                  ((currentEditQuestion.answers || []).findIndex(
-                                                    (answer: any) => answer.is_correct
-                                                  ) >=
-                                                  0
-                                                    ? (currentEditQuestion.answers || []).findIndex(
-                                                        (answer: any) => answer.is_correct
-                                                      )
-                                                    : 0) + 1
-                                                )}
-                                                onValueChange={(value) =>
-                                                  setEditCorrectAnswer(
-                                                    currentEditQuestionIndex,
-                                                    Number(value) - 1
-                                                  )
-                                                }
-                                              >
-                                                <SelectTrigger className="h-9 border-[#d2d2d2] bg-white">
-                                                  <SelectValue />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                  <SelectItem value="1">A</SelectItem>
-                                                  <SelectItem value="2">B</SelectItem>
-                                                  <SelectItem value="3">C</SelectItem>
-                                                </SelectContent>
-                                              </Select>
-                                            </div>
-
+                                          <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-2">
                                             <div>
                                               <Label className="text-xs text-[#5b5b5b]">
                                                 {lang === 'vi' ? 'Ảnh câu hỏi' : 'Imagen de pregunta'}
@@ -4172,7 +5522,18 @@ export default function Admin() {
                                     </div>
                                   )}
                                 </div>
+                                )}
                                 <div className="md:col-span-2 flex gap-2">
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => setEditQuizModalStep('questions')}
+                                    disabled={editQuizModalStep === 'questions'}
+                                    className="h-9 border-[#d2d2d2] bg-white"
+                                  >
+                                    {lang === 'vi' ? 'Tiếp theo' : 'Siguiente'}
+                                  </Button>
                                   <Button
                                     size="sm"
                                     onClick={() => onSaveEditQuiz(item)}
@@ -4199,6 +5560,8 @@ export default function Admin() {
                                 </div>
                               </div>
                               </div>
+                                </DialogContent>
+                              </Dialog>
                             )}
                           </div>
                         ))}
@@ -4218,7 +5581,7 @@ export default function Admin() {
           </div>
         </div>
       </main>
-      <Footer />
+      
     </div>
   );
 }

@@ -5,10 +5,35 @@ const { authRequired, authOptional, requireRoles } = require('../../middleware/a
 const router = express.Router();
 
 router.get('/quizzes', authOptional, quizController.listQuizzes);
+router.get('/topic-groups', quizController.listTopicGroups);
 router.get('/categories', quizController.listCategories);
 router.get('/types', quizController.listTypes);
 router.get('/quizzes/:id', quizController.getQuizDetail);
 router.post('/quizzes', authRequired, requireRoles('admin'), quizController.createManualQuiz);
+router.get(
+  '/admin/topic-groups',
+  authRequired,
+  requireRoles('admin'),
+  quizController.listAdminTopicGroups
+);
+router.post(
+  '/admin/topic-groups',
+  authRequired,
+  requireRoles('admin'),
+  quizController.createTopicGroup
+);
+router.patch(
+  '/admin/topic-groups/:id',
+  authRequired,
+  requireRoles('admin'),
+  quizController.updateTopicGroup
+);
+router.delete(
+  '/admin/topic-groups/:id',
+  authRequired,
+  requireRoles('admin'),
+  quizController.deleteTopicGroup
+);
 router.get(
   '/admin/categories',
   authRequired,
