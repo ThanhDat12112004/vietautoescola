@@ -20,7 +20,9 @@ import {
 import { Camera, Pencil, User as UserIcon } from '@/components/BrandIcons';
 import { getStoredAuth, updateStoredAuthUser } from '@/lib/auth';
 import { motion } from 'framer-motion';
+import { Flame, Lock, Target } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 
 function toStoredMediaPath(uploaded: { key?: string; cdn_url?: string } | null | undefined) {
   if (!uploaded) return '';
@@ -99,6 +101,32 @@ const Profile = () => {
     return idx >= 0 ? idx + 1 : null;
   }, [dashboard, leaderboard]);
 
+  const rankMotivation = useMemo(() => {
+    if (!rank) {
+      return lang === 'vi'
+        ? 'Làm bài thi để tích điểm và xuất hiện trên bảng xếp hạng — mỗi bài đều đếm!'
+        : 'Haz exámenes para sumar puntos y entrar en el ranking: ¡cada intento cuenta!';
+    }
+    if (rank === 1) {
+      return lang === 'vi'
+        ? 'Bạn đang dẫn đầu bảng — duy trì nhịp luyện để giữ ngôi vương!'
+        : 'Lideras la clasificación: ¡mantén el ritmo para seguir arriba!';
+    }
+    if (rank <= 3) {
+      return lang === 'vi'
+        ? `Bạn đang top #${rank} — thêm vài bài nữa để tranh hạng cao hơn!`
+        : `¡Estás en el top #${rank}! Unos exámenes más y subes posiciones.`;
+    }
+    if (rank <= 10) {
+      return lang === 'vi'
+        ? `Bạn đã lọt top 10 (#${rank}) — cố một nhịp nữa để tiến xa hơn!`
+        : `¡Entre los 10 primeros (#${rank})! Sigue practicando para subir.`;
+    }
+    return lang === 'vi'
+      ? `Hạng #${rank} — mỗi lần làm bài đều giúp bạn tiến lên.`
+      : `Puesto #${rank}: cada examen te acerca a los primeros puestos.`;
+  }, [rank, lang]);
+
   if (loading) {
     return (
       <div className="app-page page-auth-bg flex min-h-screen flex-col">
@@ -140,6 +168,10 @@ const Profile = () => {
   const stats = dashboard.stats;
   const attempts = dashboard.history || [];
   const storedEmail = getStoredAuth()?.user?.email || '-';
+  const totalQuizzes = Number(stats.total_quizzes || 0);
+  const totalQuestions = Number(stats.total_questions || 0);
+  const hasLearningActivity = totalQuizzes > 0 || Number(stats.total_score || 0) > 0;
+  const noAccuracyDataYet = totalQuizzes === 0 && totalQuestions === 0;
 
   const startEditName = () => {
     setIsEditingPassword(false);
@@ -343,11 +375,25 @@ const Profile = () => {
     <div className="app-page page-auth-bg flex min-h-screen flex-col">
       <Navbar />
 
-      <div className="w-full border-b-2 border-primary/15">
-        <div className="px-4 pb-8 pt-6 sm:px-6 md:px-10 md:pb-10 md:pt-8 lg:px-12">
+      <div className="relative w-full overflow-hidden border-b-2 border-primary/15 bg-[linear-gradient(165deg,rgba(255,250,251,0.98)_0%,rgba(255,255,255,0.94)_42%,rgba(245,228,234,0.42)_100%)]">
+        <div
+          className="pointer-events-none absolute inset-0 opacity-[0.09]"
+          aria-hidden
+          style={{
+            backgroundImage:
+              'radial-gradient(circle at 12% 18%, hsl(var(--primary)) 0%, transparent 42%), radial-gradient(circle at 88% 8%, #E3C565 0%, transparent 38%)',
+          }}
+        />
+        <div className="relative px-4 pb-8 pt-6 sm:px-6 md:px-10 md:pb-10 md:pt-8 lg:px-12">
           <div className="flex flex-col gap-8 lg:flex-row lg:items-start lg:gap-10">
             <div className="flex flex-col items-center gap-5 sm:flex-row sm:items-start">
-              <div className="mx-auto h-[7.25rem] w-[7.25rem] shrink-0 rounded-full bg-gradient-to-br from-[#E3C565]/85 to-[#E3C565]/35 p-[3px] shadow-sm sm:mx-0 md:h-[8rem] md:w-[8rem]">
+              <div
+                className={`mx-auto h-[7.25rem] w-[7.25rem] shrink-0 rounded-full bg-gradient-to-br from-[#E3C565]/85 to-[#E3C565]/35 p-[3px] shadow-sm sm:mx-0 md:h-[8rem] md:w-[8rem] ${
+                  rank != null && rank <= 3
+                    ? 'ring-2 ring-[#E3C565]/80 shadow-[0_0_32px_rgba(227,197,101,0.38)]'
+                    : ''
+                }`}
+              >
                 <div className="flex h-full w-full items-center justify-center overflow-hidden rounded-full bg-muted/50">
                   {stats.avatar_url ? (
                     <img
@@ -485,6 +531,49 @@ const Profile = () => {
               ))}
             </div>
           </div>
+
+          <div className="mt-8 space-y-3">
+            <div className="flex flex-col gap-3 rounded-2xl border border-primary/18 bg-white/75 px-4 py-4 shadow-sm backdrop-blur-sm sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+              <div className="flex min-w-0 gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/[0.08] text-primary">
+                  <Flame className="h-5 w-5" aria-hidden />
+                </div>
+                <p className="text-sm leading-snug text-foreground/90">{rankMotivation}</p>
+              </div>
+              {!hasLearningActivity && (
+                <Button
+                  asChild
+                  className="w-full shrink-0 brand-cta-primary sm:w-auto"
+                >
+                  <Link to="/quizzes">{t('Làm bài ngay', 'Hacer un examen')}</Link>
+                </Button>
+              )}
+            </div>
+
+            <div className="flex flex-col gap-3 rounded-2xl border border-dashed border-primary/20 bg-white/55 px-4 py-3.5 sm:flex-row sm:items-center sm:gap-4">
+              <div className="flex min-w-0 gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#E3C565]/15 text-[#6b4a00]">
+                  <Target className="h-5 w-5" aria-hidden />
+                </div>
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-wide text-primary/80">
+                    {t('Gợi ý hôm nay', 'Objetivo de hoy')}
+                  </p>
+                  <p className="mt-0.5 text-sm text-muted-foreground">
+                    {hasLearningActivity
+                      ? t(
+                          'Thử làm thêm 1–2 bài để duy trì tiến độ và cải thiện tỷ lệ đúng.',
+                          'Haz 1–2 exámenes más para mantener el ritmo y mejorar tu porcentaje.'
+                        )
+                      : t(
+                          'Bắt đầu với 1–2 bài thi bất kỳ — thống kê và hạng sẽ cập nhật ngay sau khi nộp bài.',
+                          'Empieza con 1–2 tests: tus estadísticas y ranking se actualizan al enviar.'
+                        )}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -523,9 +612,10 @@ const Profile = () => {
 
               <TabsContent value="info" className="mt-0 outline-none">
                 <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-                  <div className="grid gap-10 lg:grid-cols-2 lg:gap-12">
-                    <div className="space-y-8">
-                      <div className="space-y-2 text-sm">
+                  <div className="rounded-2xl border-2 border-primary/20 bg-white/95 p-5 shadow-[0_1px_0_rgba(255,255,255,0.8)_inset] md:p-7">
+                    <div className="grid gap-8 lg:grid-cols-2 lg:gap-0">
+                    <div className="space-y-8 lg:border-r-2 lg:border-primary/25 lg:pr-6 xl:pr-9">
+                      <div className="space-y-2 rounded-xl border border-primary/10 bg-primary/[0.03] px-4 py-3 text-sm md:px-5 md:py-4">
                         <p>
                           <span className="text-muted-foreground">Username</span>{' '}
                           <span className="font-medium text-foreground">{stats.username}</span>
@@ -536,20 +626,25 @@ const Profile = () => {
                         </p>
                       </div>
 
-                      <section className="border-t-2 border-primary/12 pt-8">
-                        <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
-                          <h3 className="font-display text-sm font-bold text-primary md:text-base">
-                            {t('Mật khẩu đăng nhập', 'Contraseña')}
-                          </h3>
+                      <section className="border-t border-primary/15 pt-8">
+                        <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
+                          <div className="min-w-0">
+                            <h3 className="font-display text-base font-bold tracking-tight text-foreground md:text-lg">
+                              {t('Mật khẩu đăng nhập', 'Contraseña')}
+                            </h3>
+                            <p className="mt-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                              {t('Bảo mật tài khoản', 'Seguridad de la cuenta')}
+                            </p>
+                          </div>
                           {!isEditingPassword ? (
                             <Button
                               type="button"
                               size="sm"
-                              variant="outline"
-                              className="shrink-0 border-primary/25"
+                              className="brand-cta-primary h-10 w-full shrink-0 gap-2 rounded-xl px-5 font-semibold text-brand-onCta shadow-md transition hover:opacity-[0.96] sm:w-auto [&_svg]:text-brand-onCta"
                               onClick={startEditPassword}
                               disabled={nameSaving || passwordSaving}
                             >
+                              <Lock className="h-4 w-4 shrink-0" aria-hidden />
                               {t('Đổi mật khẩu', 'Cambiar contraseña')}
                             </Button>
                           ) : (
@@ -632,10 +727,31 @@ const Profile = () => {
                       </section>
                     </div>
 
-                    <section className="border-t border-dashed border-primary/18 pt-8 lg:border-l-2 lg:border-t-0 lg:border-solid lg:border-primary/12 lg:pl-8 lg:pt-0">
-                      <h3 className="mb-4 font-display text-sm font-bold text-primary md:text-base">
+                    <section className="border-t-2 border-primary/15 pt-8 lg:border-t-0 lg:pl-6 lg:pt-0 xl:pl-9">
+                      <h3 className="mb-4 font-display text-base font-bold tracking-tight text-foreground md:text-lg">
                         {t('Thống kê học tập', 'Estadísticas')}
                       </h3>
+                      {!hasLearningActivity && (
+                        <div className="mb-4 rounded-xl border border-primary/15 bg-primary/[0.04] px-4 py-3 text-sm text-muted-foreground">
+                          <p className="font-medium text-foreground/90">
+                            {t(
+                              'Bạn chưa có lượt làm bài nào',
+                              'Aún no has completado exámenes'
+                            )}
+                          </p>
+                          <p className="mt-1 text-xs leading-relaxed">
+                            {t(
+                              'Làm bài ngay để xem điểm, tỷ lệ đúng và tiến độ trên hồ sơ.',
+                              'Haz un examen para ver puntos, porcentaje y progreso en tu perfil.'
+                            )}
+                          </p>
+                          <Button asChild className="mt-3 brand-cta-primary" size="sm">
+                            <Link to="/quizzes">
+                              {t('Làm bài ngay', 'Hacer un examen')}
+                            </Link>
+                          </Button>
+                        </div>
+                      )}
                       <div className="mb-4 grid grid-cols-2 gap-4">
                         {[
                           {
@@ -674,12 +790,21 @@ const Profile = () => {
                             {Number(stats.average_percentage || 0).toFixed(1)}%
                           </span>
                         </div>
+                        {noAccuracyDataYet ? (
+                          <p className="mb-2 text-[11px] leading-relaxed text-muted-foreground">
+                            {t(
+                              'Chưa có dữ liệu — thanh tiến độ sẽ hiển thị sau khi bạn làm ít nhất một bài.',
+                              'Sin datos: la barra mostrará tu progreso tras el primer examen.'
+                            )}
+                          </p>
+                        ) : null}
                         <Progress
                           value={Number(stats.average_percentage || 0)}
                           className="h-2.5 bg-primary/10"
                         />
                       </div>
                     </section>
+                    </div>
                   </div>
                 </motion.div>
               </TabsContent>
@@ -747,11 +872,26 @@ const Profile = () => {
                           ))}
                           {attempts.length === 0 && (
                             <tr>
-                              <td
-                                colSpan={5}
-                                className="px-4 py-5 text-center text-xs text-muted-foreground"
-                              >
-                                {t('Chưa có lịch sử làm bài', 'Sin historial')}
+                              <td colSpan={5} className="px-4 py-10">
+                                <div className="mx-auto flex max-w-md flex-col items-center text-center">
+                                  <p className="text-sm font-semibold text-foreground">
+                                    {t(
+                                      'Chưa có lịch sử làm bài',
+                                      'Sin historial de exámenes'
+                                    )}
+                                  </p>
+                                  <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+                                    {t(
+                                      'Mỗi lần làm bài sẽ hiện ở đây kèm điểm và ngày — bắt đầu ngay nhé!',
+                                      'Cada intento aparecerá aquí con nota y fecha: ¡empieza cuando quieras!'
+                                    )}
+                                  </p>
+                                  <Button asChild className="mt-5 brand-cta-primary" size="sm">
+                                    <Link to="/quizzes">
+                                      {t('Làm bài ngay', 'Hacer un examen')}
+                                    </Link>
+                                  </Button>
+                                </div>
                               </td>
                             </tr>
                           )}
@@ -772,6 +912,17 @@ const Profile = () => {
                       ? `${t('Xếp hạng', 'Posición')} #${rank}`
                       : t('Chưa có thứ hạng', 'Sin posición')}
                   </p>
+                  <p className="mt-2 max-w-xl text-[11px] leading-relaxed text-muted-foreground">
+                    {t(
+                      'Danh sách bên dưới là top 10 theo tổng điểm — làm thêm bài để so kèo với học viên khác.',
+                      'La lista muestra el top 10 por puntos totales: practica para compararte con otros.'
+                    )}
+                  </p>
+                  {!hasLearningActivity && leaderboard.length > 0 && (
+                    <Button asChild variant="outline" size="sm" className="mt-3 border-primary/25">
+                      <Link to="/quizzes">{t('Làm bài để vào bảng', 'Haz un examen para entrar')}</Link>
+                    </Button>
+                  )}
                   <div className="mt-4 divide-y divide-primary/10">
                     {leaderboard.map((user, i) => {
                       const isMe = user.id === stats.id;

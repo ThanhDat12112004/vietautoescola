@@ -50,6 +50,7 @@ import {
 import { getStoredAuth } from '@/lib/auth';
 import {
   BookOpen,
+  CalendarDays,
   CheckCircle2,
   Download,
   Edit,
@@ -157,6 +158,64 @@ function formatUserRole(role: string, lang: 'vi' | 'es'): string {
   return role || '—';
 }
 
+/** Số dòng tối đa mỗi trang trong các danh sách admin (tài khoản, tài liệu, đề thi). */
+const ADMIN_LIST_PAGE_SIZE = 50;
+
+function AdminListPaginationControls({
+  lang,
+  page,
+  pageSize,
+  total,
+  onPageChange,
+}: {
+  lang: 'vi' | 'es';
+  page: number;
+  pageSize: number;
+  total: number;
+  onPageChange: (page: number) => void;
+}) {
+  if (total <= 0) return null;
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const safePage = Math.min(Math.max(1, page), totalPages);
+  const from = (safePage - 1) * pageSize + 1;
+  const to = Math.min(safePage * pageSize, total);
+
+  return (
+    <div className="flex flex-col gap-2 pt-3 mt-2 border-t border-[#e8dfe3] sm:flex-row sm:items-center sm:justify-between">
+      <p className="text-xs text-[#5b5b5b]">
+        {lang === 'vi'
+          ? `Hiển thị ${from}–${to} trong ${total} mục`
+          : `Mostrando ${from}–${to} de ${total}`}
+      </p>
+      <div className="flex items-center gap-2">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="h-8 border-[#d2d2d2] bg-white hover:bg-[#fdf5f8]"
+          disabled={safePage <= 1}
+          onClick={() => onPageChange(safePage - 1)}
+        >
+          {lang === 'vi' ? 'Trước' : 'Anterior'}
+        </Button>
+        <span className="text-xs font-semibold tabular-nums text-[#5a1428]">
+          {safePage} / {totalPages}
+        </span>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="h-8 border-[#d2d2d2] bg-white hover:bg-[#fdf5f8]"
+          disabled={safePage >= totalPages}
+          onClick={() => onPageChange(safePage + 1)}
+        >
+          {lang === 'vi' ? 'Sau' : 'Siguiente'}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 const DEFAULT_QUIZ_TYPE_CODE = 'general';
 
 export default function Admin() {
@@ -175,6 +234,13 @@ export default function Admin() {
   const [userCreatedFrom, setUserCreatedFrom] = useState('');
   const [userCreatedTo, setUserCreatedTo] = useState('');
   const [userCreatedSort, setUserCreatedSort] = useState<'desc' | 'asc'>('desc');
+  const [userRoleFilter, setUserRoleFilter] = useState<'all' | 'student' | 'teacher' | 'admin'>(
+    'all'
+  );
+  const [userStatusFilter, setUserStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
+  const [adminUsersListPage, setAdminUsersListPage] = useState(1);
+  const [adminMaterialsListPage, setAdminMaterialsListPage] = useState(1);
+  const [adminQuizzesListPage, setAdminQuizzesListPage] = useState(1);
   const [materialSearch, setMaterialSearch] = useState('');
   const [quizSearch, setQuizSearch] = useState('');
   const [editingUserId, setEditingUserId] = useState<number | null>(null);
@@ -431,12 +497,32 @@ export default function Admin() {
     [adminQuizzes, selectedQuizTypeFilter, quizTypes, lang, quizSearch]
   );
 
+  const adminUserQuickStats = useMemo(() => {
+    const total = users.length;
+    const active = users.filter((u) => u.is_active).length;
+    const start = new Date();
+    start.setHours(0, 0, 0, 0);
+    const end = new Date();
+    end.setHours(23, 59, 59, 999);
+    const newToday = users.filter((u) => {
+      const ca = parseDateSafe(u.created_at);
+      return ca != null && ca >= start && ca <= end;
+    }).length;
+    return { total, active, inactive: total - active, newToday };
+  }, [users]);
+
   const filteredUsers = useMemo(() => {
     const keyword = userSearch.trim().toLowerCase();
     const fromDate = userCreatedFrom ? new Date(`${userCreatedFrom}T00:00:00`) : null;
     const toDate = userCreatedTo ? new Date(`${userCreatedTo}T23:59:59`) : null;
 
     const filtered = users.filter((item) => {
+      const roleLower = String(item.role || '').toLowerCase();
+      if (userRoleFilter !== 'all' && roleLower !== userRoleFilter) return false;
+
+      if (userStatusFilter === 'active' && !item.is_active) return false;
+      if (userStatusFilter === 'inactive' && item.is_active) return false;
+
       const matchesKeyword = keyword
         ? [
             String(item.username || ''),
@@ -464,7 +550,15 @@ export default function Admin() {
       const bTime = parseDateSafe(b.created_at)?.getTime() ?? 0;
       return userCreatedSort === 'desc' ? bTime - aTime : aTime - bTime;
     });
-  }, [users, userSearch, userCreatedFrom, userCreatedTo, userCreatedSort]);
+  }, [
+    users,
+    userSearch,
+    userCreatedFrom,
+    userCreatedTo,
+    userCreatedSort,
+    userRoleFilter,
+    userStatusFilter,
+  ]);
 
   const filteredMaterials = useMemo(() => {
     const keyword = materialSearch.trim().toLowerCase();
@@ -482,6 +576,73 @@ export default function Admin() {
         .includes(keyword)
     );
   }, [materials, materialSearch]);
+
+  useEffect(() => {
+    setAdminUsersListPage(1);
+  }, [
+    userSearch,
+    userCreatedFrom,
+    userCreatedTo,
+    userCreatedSort,
+    userRoleFilter,
+    userStatusFilter,
+  ]);
+
+  useEffect(() => {
+    const totalPages = Math.max(1, Math.ceil(filteredUsers.length / ADMIN_LIST_PAGE_SIZE));
+    setAdminUsersListPage((p) => (p > totalPages ? totalPages : p));
+  }, [filteredUsers.length]);
+
+  useEffect(() => {
+    setAdminMaterialsListPage(1);
+  }, [materialSearch, selectedSubjectId]);
+
+  useEffect(() => {
+    const totalPages = Math.max(1, Math.ceil(filteredMaterials.length / ADMIN_LIST_PAGE_SIZE));
+    setAdminMaterialsListPage((p) => (p > totalPages ? totalPages : p));
+  }, [filteredMaterials.length]);
+
+  useEffect(() => {
+    setAdminQuizzesListPage(1);
+  }, [quizSearch, selectedQuizTypeFilter]);
+
+  useEffect(() => {
+    const totalPages = Math.max(1, Math.ceil(filteredAdminQuizzes.length / ADMIN_LIST_PAGE_SIZE));
+    setAdminQuizzesListPage((p) => (p > totalPages ? totalPages : p));
+  }, [filteredAdminQuizzes.length]);
+
+  const adminUsersTotalPages = Math.max(1, Math.ceil(filteredUsers.length / ADMIN_LIST_PAGE_SIZE));
+  const adminUsersPage = Math.min(Math.max(1, adminUsersListPage), adminUsersTotalPages);
+  const paginatedUsers = useMemo(() => {
+    const start = (adminUsersPage - 1) * ADMIN_LIST_PAGE_SIZE;
+    return filteredUsers.slice(start, start + ADMIN_LIST_PAGE_SIZE);
+  }, [filteredUsers, adminUsersPage]);
+
+  const adminMaterialsTotalPages = Math.max(
+    1,
+    Math.ceil(filteredMaterials.length / ADMIN_LIST_PAGE_SIZE)
+  );
+  const adminMaterialsPage = Math.min(
+    Math.max(1, adminMaterialsListPage),
+    adminMaterialsTotalPages
+  );
+  const paginatedMaterials = useMemo(() => {
+    const start = (adminMaterialsPage - 1) * ADMIN_LIST_PAGE_SIZE;
+    return filteredMaterials.slice(start, start + ADMIN_LIST_PAGE_SIZE);
+  }, [filteredMaterials, adminMaterialsPage]);
+
+  const adminQuizzesTotalPages = Math.max(
+    1,
+    Math.ceil(filteredAdminQuizzes.length / ADMIN_LIST_PAGE_SIZE)
+  );
+  const adminQuizzesPage = Math.min(
+    Math.max(1, adminQuizzesListPage),
+    adminQuizzesTotalPages
+  );
+  const paginatedAdminQuizzes = useMemo(() => {
+    const start = (adminQuizzesPage - 1) * ADMIN_LIST_PAGE_SIZE;
+    return filteredAdminQuizzes.slice(start, start + ADMIN_LIST_PAGE_SIZE);
+  }, [filteredAdminQuizzes, adminQuizzesPage]);
 
   useEffect(() => {
     const syncAuth = () => {
@@ -1327,11 +1488,11 @@ export default function Admin() {
     },
     {
       id: 'materials',
-      label: lang === 'vi' ? 'Tài liệu (PDF)' : 'Materiales (PDF)',
+      label: lang === 'vi' ? 'Tài liệu (PDF)' : 'Temario (PDF)',
       desc:
         lang === 'vi'
           ? 'Chủ đề, tải lên và quản lý file cho học viên'
-          : 'Temas, subir archivos y gestionar materiales',
+          : 'Temas, subir archivos y gestionar el temario',
       icon: BookOpen,
     },
     {
@@ -1431,7 +1592,7 @@ export default function Admin() {
             <p className="mt-2 max-w-3xl text-sm leading-relaxed text-[#4a383e] md:text-[15px]">
               {lang === 'vi'
                 ? 'Tại đây bạn quản lý toàn bộ nội dung hiển thị cho học viên trên website: tài khoản, tài liệu PDF và bài thi. Giao diện chia theo từng bước — không cần biết lập trình; chỉ cần chọn mục bên trái rồi thao tác theo form.'
-                : 'Aquí se gestiona lo que ven los alumnos en la web: cuentas, materiales PDF y exámenes. La pantalla está organizada por pasos; no hace falta saber de informática: elija una sección a la izquierda y siga los formularios.'}
+                : 'Aquí se gestiona lo que ven los alumnos en la web: cuentas, temario en PDF y exámenes. La pantalla está organizada por pasos; no hace falta saber de informática: elija una sección a la izquierda y siga los formularios.'}
             </p>
             <ul className="mt-4 grid gap-3 sm:grid-cols-3">
               <li className="rounded-xl border border-[#dbe3ee] bg-white/90 px-3 py-3 text-left shadow-sm">
@@ -1446,7 +1607,7 @@ export default function Admin() {
               </li>
               <li className="rounded-xl border border-[#dbe3ee] bg-white/90 px-3 py-3 text-left shadow-sm">
                 <span className="text-xs font-bold text-[#7a2038]">
-                  {lang === 'vi' ? '2. Tài liệu' : '2. Materiales'}
+                  {lang === 'vi' ? '2. Tài liệu' : '2. Temario'}
                 </span>
                 <p className="mt-1 text-[13px] leading-snug text-[#5c4a50]">
                   {lang === 'vi'
@@ -1505,119 +1666,248 @@ export default function Admin() {
                 <div className="space-y-4">
                   {/* Users List */}
                   <div className="border border-[#dbe3ee] bg-white rounded-2xl shadow-sm p-4 md:p-5">
-                    <h3 className="font-bold text-[#5a1428] mb-3 text-base md:text-lg">
+                    <h3 className="font-bold text-[#5a1428] mb-2 text-base md:text-lg">
                       {lang === 'vi' ? 'Danh sách tài khoản' : 'Listado de cuentas'} (
-                      {filteredUsers.length})
+                      {filteredUsers.length}
+                      {filteredUsers.length !== users.length ? ` / ${users.length}` : ''})
                     </h3>
                     <p className="mb-3 text-sm text-[#5c4a50]">
                       {lang === 'vi'
-                        ? 'Mỗi dòng là một người đã đăng ký. Bạn có thể tìm theo tên đăng nhập, email hoặc họ tên; dùng ngày đăng ký để lọc theo thời gian.'
-                        : 'Cada fila es una persona registrada. Puede buscar por usuario, email o nombre; use las fechas para filtrar.'}
+                        ? 'Bấm vào dòng để mở tóm tắt điểm và lịch sử. Dùng ô tìm kiếm, vai trò, trạng thái và khoảng ngày đăng ký để thu hẹp danh sách.'
+                        : 'Pulse una fila para ver puntos e historial. Filtre por búsqueda, rol, estado y fechas de registro.'}
                     </p>
-                    <div className="mb-3">
-                      <Input
-                        value={userSearch}
-                        onChange={(e) => setUserSearch(e.target.value)}
-                        placeholder={
-                          lang === 'vi'
-                            ? 'Tìm theo tên đăng nhập, email hoặc họ tên…'
-                            : 'Buscar por usuario, email o nombre…'
-                        }
-                        className="h-9 border-[#d2d2d2] bg-white"
-                      />
+
+                    <div className="mb-4 grid grid-cols-1 gap-2 sm:grid-cols-3">
+                      <div className="rounded-xl border border-[#e5dde0] bg-[linear-gradient(180deg,#fff_0%,#fdf8fa_100%)] px-3 py-3 shadow-sm">
+                        <div className="flex items-center gap-2 text-[#7a2038]">
+                          <Users className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
+                          <span className="text-[11px] font-bold uppercase tracking-wide">
+                            {lang === 'vi' ? 'Tổng tài khoản' : 'Total cuentas'}
+                          </span>
+                        </div>
+                        <p className="mt-1 text-2xl font-bold tabular-nums text-[#5a1428]">
+                          {adminUserQuickStats.total}
+                        </p>
+                      </div>
+                      <div className="rounded-xl border border-[#dbe3ee] bg-white px-3 py-3 shadow-sm">
+                        <div className="flex items-center gap-2 text-[#5b5b73]">
+                          <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600/90" aria-hidden />
+                          <span className="text-[11px] font-bold uppercase tracking-wide">
+                            {lang === 'vi' ? 'Đang hoạt động' : 'Activas'}
+                          </span>
+                        </div>
+                        <p className="mt-1 text-2xl font-bold tabular-nums text-[#5a1428]">
+                          {adminUserQuickStats.active}
+                          <span className="text-sm font-normal text-[#8a7a80]">
+                            {' '}
+                            ({adminUserQuickStats.inactive}{' '}
+                            {lang === 'vi' ? 'khóa' : 'bloq.'})
+                          </span>
+                        </p>
+                      </div>
+                      <div className="rounded-xl border border-[#dbe3ee] bg-white px-3 py-3 shadow-sm">
+                        <div className="flex items-center gap-2 text-[#5b5b73]">
+                          <CalendarDays className="h-4 w-4 shrink-0 text-[#7a2038]/80" aria-hidden />
+                          <span className="text-[11px] font-bold uppercase tracking-wide">
+                            {lang === 'vi' ? 'Mới hôm nay' : 'Nuevas hoy'}
+                          </span>
+                        </div>
+                        <p className="mt-1 text-2xl font-bold tabular-nums text-[#5a1428]">
+                          {adminUserQuickStats.newToday}
+                        </p>
+                      </div>
                     </div>
-                    <div className="mb-3 grid grid-cols-1 md:grid-cols-3 gap-2">
-                      <Input
-                        type="date"
-                        value={userCreatedFrom}
-                        onChange={(e) => setUserCreatedFrom(e.target.value)}
-                        aria-label={lang === 'vi' ? 'Từ ngày đăng ký' : 'Desde fecha de registro'}
-                        className="h-9 border-[#d2d2d2] bg-white"
-                      />
-                      <Input
-                        type="date"
-                        value={userCreatedTo}
-                        onChange={(e) => setUserCreatedTo(e.target.value)}
-                        aria-label={lang === 'vi' ? 'Đến ngày đăng ký' : 'Hasta fecha de registro'}
-                        className="h-9 border-[#d2d2d2] bg-white"
-                      />
-                      <Select
-                        value={userCreatedSort}
-                        onValueChange={(value: 'asc' | 'desc') => setUserCreatedSort(value)}
-                      >
-                        <SelectTrigger className="h-9 border-[#d2d2d2] bg-white">
-                          <SelectValue
+
+                    <div className="sticky top-0 z-10 -mx-4 mb-3 space-y-3 border-b border-[#ebd8df] bg-white/95 px-4 py-3 backdrop-blur-sm md:-mx-5 md:px-5">
+                      <div>
+                        <Label className="text-[11px] font-semibold uppercase tracking-wide text-[#7a2038]/90">
+                          {lang === 'vi' ? 'Vai trò' : 'Rol'}
+                        </Label>
+                        <div className="mt-1.5 flex flex-wrap gap-1.5">
+                          {(
+                            [
+                              { id: 'all' as const, vi: 'Tất cả', es: 'Todas' },
+                              { id: 'student' as const, vi: 'Học viên', es: 'Alumnos' },
+                              { id: 'teacher' as const, vi: 'Giáo viên', es: 'Profesores' },
+                              { id: 'admin' as const, vi: 'Quản trị', es: 'Admin' },
+                            ] as const
+                          ).map((tab) => (
+                            <button
+                              key={tab.id}
+                              type="button"
+                              onClick={() => setUserRoleFilter(tab.id)}
+                              className={`rounded-lg border px-2.5 py-1.5 text-xs font-semibold transition-colors ${
+                                userRoleFilter === tab.id
+                                  ? 'border-[#7a2038] bg-[#f5d6df]/80 text-[#5a1428] shadow-sm'
+                                  : 'border-[#d2c8cc] bg-white text-[#5f5f5f] hover:bg-[#faf7f8]'
+                              }`}
+                            >
+                              {lang === 'vi' ? tab.vi : tab.es}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 gap-2 md:grid-cols-2 lg:grid-cols-4">
+                        <div className="lg:col-span-2">
+                          <Input
+                            value={userSearch}
+                            onChange={(e) => setUserSearch(e.target.value)}
                             placeholder={
-                              lang === 'vi' ? 'Sắp xếp theo ngày đăng ký' : 'Ordenar por fecha'
+                              lang === 'vi'
+                                ? 'Tìm theo tên đăng nhập, email hoặc họ tên…'
+                                : 'Buscar por usuario, email o nombre…'
                             }
+                            className="h-9 border-[#d2d2d2] bg-white"
                           />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="desc">
-                            {lang === 'vi' ? 'Mới nhất trước' : 'Mas recientes primero'}
-                          </SelectItem>
-                          <SelectItem value="asc">
-                            {lang === 'vi' ? 'Cũ nhất trước' : 'Mas antiguos primero'}
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
+                        </div>
+                        <Select
+                          value={userStatusFilter}
+                          onValueChange={(value: 'all' | 'active' | 'inactive') =>
+                            setUserStatusFilter(value)
+                          }
+                        >
+                          <SelectTrigger className="h-9 border-[#d2d2d2] bg-white">
+                            <SelectValue
+                              placeholder={
+                                lang === 'vi' ? 'Trạng thái tài khoản' : 'Estado de la cuenta'
+                              }
+                            />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">
+                              {lang === 'vi' ? 'Mọi trạng thái' : 'Todos los estados'}
+                            </SelectItem>
+                            <SelectItem value="active">
+                              {lang === 'vi' ? 'Đang hoạt động' : 'Activa'}
+                            </SelectItem>
+                            <SelectItem value="inactive">
+                              {lang === 'vi' ? 'Đã khóa' : 'Bloqueada'}
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <Select
+                          value={userCreatedSort}
+                          onValueChange={(value: 'asc' | 'desc') => setUserCreatedSort(value)}
+                        >
+                          <SelectTrigger className="h-9 border-[#d2d2d2] bg-white">
+                            <SelectValue
+                              placeholder={
+                                lang === 'vi' ? 'Sắp xếp theo ngày đăng ký' : 'Ordenar por fecha'
+                              }
+                            />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="desc">
+                              {lang === 'vi' ? 'Mới nhất trước' : 'Mas recientes primero'}
+                            </SelectItem>
+                            <SelectItem value="asc">
+                              {lang === 'vi' ? 'Cũ nhất trước' : 'Mas antiguos primero'}
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
+                        <div className="grid flex-1 grid-cols-1 gap-2 sm:grid-cols-2 min-w-0">
+                          <Input
+                            type="date"
+                            value={userCreatedFrom}
+                            onChange={(e) => setUserCreatedFrom(e.target.value)}
+                            aria-label={lang === 'vi' ? 'Từ ngày đăng ký' : 'Desde fecha de registro'}
+                            className="h-9 border-[#d2d2d2] bg-white"
+                          />
+                          <Input
+                            type="date"
+                            value={userCreatedTo}
+                            onChange={(e) => setUserCreatedTo(e.target.value)}
+                            aria-label={lang === 'vi' ? 'Đến ngày đăng ký' : 'Hasta fecha de registro'}
+                            className="h-9 border-[#d2d2d2] bg-white"
+                          />
+                        </div>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="h-9 shrink-0 border-[#d2d2d2] bg-white hover:bg-[#fdf5f8]"
+                          onClick={() => {
+                            setUserCreatedFrom('');
+                            setUserCreatedTo('');
+                            setUserCreatedSort('desc');
+                            setUserSearch('');
+                            setUserRoleFilter('all');
+                            setUserStatusFilter('all');
+                          }}
+                        >
+                          {lang === 'vi' ? 'Đặt lại bộ lọc' : 'Restablecer filtros'}
+                        </Button>
+                      </div>
                     </div>
-                    <div className="mb-3 flex justify-end">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        className="h-8 border-[#d2d2d2] bg-white hover:bg-[#fdf5f8]"
-                        onClick={() => {
-                          setUserCreatedFrom('');
-                          setUserCreatedTo('');
-                          setUserCreatedSort('desc');
-                        }}
-                      >
-                        {lang === 'vi' ? 'Xóa bộ lọc ngày' : 'Limpiar filtro de fecha'}
-                      </Button>
-                    </div>
+
                     <div className="space-y-2">
-                      {filteredUsers.map((item: any) => (
+                      {paginatedUsers.map((item: any, rowIdx: number) => {
+                        const zebra = rowIdx % 2 === 1;
+                        return (
                         <div
                           key={item.id}
-                          className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 border border-[#d2d2d2] bg-white rounded-sm"
+                          role="button"
+                          tabIndex={0}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              void onViewUserDashboard(item);
+                            }
+                          }}
+                          onClick={() => void onViewUserDashboard(item)}
+                          className={`cursor-pointer rounded-md border border-[#e3dbde] p-3 transition-colors ${
+                            zebra ? 'bg-[#f9fafb]' : 'bg-white'
+                          } hover:bg-[#f1f5f9]/95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#7a2038]`}
                         >
-                          <div className="min-w-0">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <span className="font-bold text-[#5a1428]">{item.username}</span>
-                              <span
-                                className={`text-xs px-2 py-0.5 rounded border ${item.role === 'admin' ? 'border-red-300 bg-red-50 text-red-700' : item.role === 'teacher' ? 'border-blue-300 bg-blue-50 text-blue-700' : 'border-green-300 bg-green-50 text-green-700'}`}
-                              >
+                          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                          <div className="min-w-0 flex-1">
+                            <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                              <span className="text-base font-semibold tracking-tight text-[#5a1428]">
+                                {item.username}
+                              </span>
+                              <span className="text-[11px] font-medium uppercase tracking-wide text-[#8a7a80]">
                                 {formatUserRole(item.role, lang)}
                               </span>
                               <span
-                                className={`text-xs px-2 py-0.5 rounded border ${item.is_active ? 'border-green-300 bg-green-50 text-green-700' : 'border-gray-300 bg-gray-100 text-gray-600'}`}
+                                className={`text-[11px] font-semibold ${
+                                  item.is_active ? 'text-emerald-700' : 'text-[#6b6570]'
+                                }`}
                               >
-                                {item.is_active ? (
-                                  <CheckCircle2 className="h-3 w-3 inline" />
-                                ) : (
-                                  <Lock className="h-3 w-3 inline" />
-                                )}
+                                {item.is_active
+                                  ? lang === 'vi'
+                                    ? '· Hoạt động'
+                                    : '· Activa'
+                                  : lang === 'vi'
+                                    ? '· Đã khóa'
+                                    : '· Bloqueada'}
                               </span>
                             </div>
-                            <div className="text-xs text-[#5b5b5b] mt-1">
-                              {item.email} | {item.full_name || '-'}
+                            <div className="mt-0.5 truncate text-xs text-[#6b6570]">
+                              {item.email}
+                              {item.full_name ? ` · ${item.full_name}` : ''}
                             </div>
-                            <div className="text-xs text-[#5b5b5b] mt-1">
-                              {lang === 'vi' ? 'Ngày đăng ký' : 'Fecha de registro'}:{' '}
+                            <div className="mt-0.5 text-[11px] text-[#9a9096]">
+                              {lang === 'vi' ? 'Đăng ký:' : 'Alta:'}{' '}
                               {formatDateTime(item.created_at)}
                             </div>
                           </div>
-                          <div className="flex gap-1 flex-wrap">
+                          <div
+                            className="flex shrink-0 flex-wrap gap-2 sm:justify-end"
+                            onClick={(e) => e.stopPropagation()}
+                            onKeyDown={(e) => e.stopPropagation()}
+                          >
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => onViewUserDashboard(item)}
+                              onClick={() => void onViewUserDashboard(item)}
                               title={lang === 'vi' ? 'Xem điểm & lịch sử (không sửa)' : 'Ver puntos e historial'}
-                              className="h-8 gap-1 border-sky-300/80 bg-sky-50/90 text-sky-900 hover:bg-sky-100"
+                              className="h-9 min-h-9 gap-1.5 border-[#b8d4e8] bg-sky-50/90 px-3 text-sky-950 hover:bg-sky-100"
                             >
-                              <Eye className="h-3.5 w-3.5 shrink-0" />
-                              <span className="hidden text-xs font-semibold sm:inline">
+                              <Eye className="h-4 w-4 shrink-0" />
+                              <span className="text-xs font-semibold">
                                 {lang === 'vi' ? 'Xem' : 'Ver'}
                               </span>
                             </Button>
@@ -1626,10 +1916,10 @@ export default function Admin() {
                               size="sm"
                               onClick={() => onStartEditUser(item)}
                               title={lang === 'vi' ? 'Sửa thông tin tài khoản' : 'Editar cuenta'}
-                              className="h-8 gap-1 border-[#c49aa4] bg-[#fff5f6] text-[#5a1428] hover:bg-[#fce8ec]"
+                              className="h-9 min-h-9 gap-1.5 border-[#c49aa4] bg-[#fff5f6] px-3 text-[#5a1428] hover:bg-[#fce8ec]"
                             >
-                              <Edit className="h-3.5 w-3.5 shrink-0" />
-                              <span className="hidden text-xs font-semibold sm:inline">
+                              <Edit className="h-4 w-4 shrink-0" />
+                              <span className="text-xs font-semibold">
                                 {lang === 'vi' ? 'Sửa' : 'Editar'}
                               </span>
                             </Button>
@@ -1637,25 +1927,32 @@ export default function Admin() {
                               variant="outline"
                               size="sm"
                               onClick={() => onToggleLockUser(item)}
-                              className="h-8 border-[#d2d2d2] bg-white hover:bg-[#fdf5f8]"
+                              title={lang === 'vi' ? 'Khóa / mở khóa' : 'Bloquear / desbloquear'}
+                              className="h-9 min-h-9 border-[#d2d2d2] bg-white px-3 hover:bg-[#fdf5f8]"
                             >
                               {item.is_active ? (
-                                <Lock className="h-3.5 w-3.5" />
+                                <Lock className="h-4 w-4" />
                               ) : (
-                                <Unlock className="h-3.5 w-3.5" />
+                                <Unlock className="h-4 w-4" />
                               )}
                             </Button>
                             <Button
                               variant="outline"
                               size="sm"
                               onClick={() => onDeleteUser(item)}
-                              className="h-8 border-destructive text-destructive hover:bg-destructive/10"
+                              title={lang === 'vi' ? 'Xóa tài khoản' : 'Eliminar cuenta'}
+                              className="h-9 min-h-9 border-destructive px-3 text-destructive hover:bg-destructive/10"
                             >
-                              <Trash2 className="h-3.5 w-3.5" />
+                              <Trash2 className="h-4 w-4" />
                             </Button>
                           </div>
+                          </div>
                           {viewingUserId === item.id && (
-                            <div className="admin-surface-view w-full mt-3 rounded-xl p-3 md:p-4">
+                            <div
+                              className="admin-surface-view mt-3 w-full rounded-xl p-3 md:p-4"
+                              onClick={(e) => e.stopPropagation()}
+                              onKeyDown={(e) => e.stopPropagation()}
+                            >
                               <div className="mb-3 flex flex-wrap items-center gap-2 border-b border-sky-200/90 pb-2">
                                 <Eye className="h-4 w-4 shrink-0 text-sky-700" aria-hidden />
                                 <span className="text-xs font-bold uppercase tracking-wide text-sky-900">
@@ -1744,7 +2041,11 @@ export default function Admin() {
                             </div>
                           )}
                           {editingUserId === item.id && (
-                            <div className="admin-surface-edit w-full mt-3 rounded-xl p-3 md:p-4">
+                            <div
+                              className="admin-surface-edit mt-3 w-full rounded-xl p-3 md:p-4"
+                              onClick={(e) => e.stopPropagation()}
+                              onKeyDown={(e) => e.stopPropagation()}
+                            >
                               <div className="mb-3 flex flex-wrap items-center gap-2 border-b border-[#e8c4c8] pb-2">
                                 <Edit className="h-4 w-4 shrink-0 text-[#7a2038]" aria-hidden />
                                 <span className="text-xs font-bold uppercase tracking-wide text-[#6b1b31]">
@@ -1877,7 +2178,15 @@ export default function Admin() {
                             </div>
                           )}
                         </div>
-                      ))}
+                      );
+                      })}
+                      <AdminListPaginationControls
+                        lang={lang}
+                        page={adminUsersPage}
+                        pageSize={ADMIN_LIST_PAGE_SIZE}
+                        total={filteredUsers.length}
+                        onPageChange={setAdminUsersListPage}
+                      />
                     </div>
                   </div>
                 </div>
@@ -1920,7 +2229,7 @@ export default function Admin() {
                       <h3 className="font-bold text-[#5a1428] mb-3 text-base md:text-lg">
                         {lang === 'vi'
                           ? 'Nhóm chủ đề (để phân loại tài liệu)'
-                          : 'Temas (para organizar los materiales)'}
+                          : 'Temas (para organizar el temario)'}
                       </h3>
                       <p className="mb-3 text-sm text-[#5c4a50]">
                         {lang === 'vi'
@@ -2380,7 +2689,7 @@ export default function Admin() {
                   {materialsSubTab === 'list' && (
                     <div className="border border-[#dbe3ee] bg-white rounded-2xl shadow-sm p-4 md:p-5">
                       <h3 className="font-bold text-[#5a1428] mb-3 text-base md:text-lg">
-                        {lang === 'vi' ? 'Danh sách tài liệu' : 'Lista de materiales'} (
+                        {lang === 'vi' ? 'Danh sách tài liệu' : 'Lista del temario'} (
                         {filteredMaterials.length})
                       </h3>
                       <p className="mb-3 text-sm text-[#5c4a50]">
@@ -2429,7 +2738,7 @@ export default function Admin() {
                         />
                       </div>
                       <div className="space-y-2">
-                        {filteredMaterials.map((item: any) => (
+                        {paginatedMaterials.map((item: any) => (
                           <div
                             key={item.id}
                             className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 border border-[#d2d2d2] bg-white rounded-sm"
@@ -2755,6 +3064,13 @@ export default function Admin() {
                             )}
                           </div>
                         ))}
+                        <AdminListPaginationControls
+                          lang={lang}
+                          page={adminMaterialsPage}
+                          pageSize={ADMIN_LIST_PAGE_SIZE}
+                          total={filteredMaterials.length}
+                          onPageChange={setAdminMaterialsListPage}
+                        />
                       </div>
                     </div>
                   )}
@@ -3336,7 +3652,7 @@ export default function Admin() {
                         </div>
                       </div>
                       <div className="space-y-2">
-                        {filteredAdminQuizzes.map((item: any) => (
+                        {paginatedAdminQuizzes.map((item: any) => (
                           <div
                             key={item.id}
                             className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 border border-[#d2d2d2] bg-white rounded-sm"
@@ -3886,6 +4202,13 @@ export default function Admin() {
                             )}
                           </div>
                         ))}
+                        <AdminListPaginationControls
+                          lang={lang}
+                          page={adminQuizzesPage}
+                          pageSize={ADMIN_LIST_PAGE_SIZE}
+                          total={filteredAdminQuizzes.length}
+                          onPageChange={setAdminQuizzesListPage}
+                        />
                       </div>
                     </div>
                   )}

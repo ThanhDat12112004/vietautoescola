@@ -2,6 +2,7 @@ import BrandLogo from '@/components/BrandLogo';
 import Footer from '@/components/Footer';
 import Navbar from '@/components/Navbar';
 import { useLanguage } from '@/hooks/useLanguage';
+import { cn } from '@/lib/utils';
 import { BookOpen, Target, Trophy } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -33,12 +34,11 @@ export default function AuthSplitLayout({ children }: AuthSplitLayoutProps) {
     <div className="app-page flex min-h-screen flex-col">
       <Navbar />
       <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
-        <aside className="auth-split-brand relative flex min-h-[320px] flex-col overflow-hidden px-5 pb-8 pt-7 sm:min-h-[380px] sm:px-7 lg:min-h-0 lg:w-1/2 lg:flex-1 lg:px-9 lg:pb-12 lg:pt-11 xl:px-12">
+        {/* Cột trái: chỉ desktop (lg+). Mobile & tablet chỉ thấy form full width */}
+        <aside className="auth-split-brand relative hidden min-h-0 overflow-hidden px-5 pb-8 pt-7 sm:px-7 lg:flex lg:w-1/2 lg:flex-1 lg:flex-col lg:px-9 lg:pb-12 lg:pt-11 xl:px-12">
           <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_90%_55%_at_50%_-15%,rgba(155,28,49,0.14),transparent_50%)]" />
           <div className="auth-split-brand-pattern pointer-events-none absolute inset-0 opacity-[0.65]" />
           <div className="pointer-events-none absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-[rgba(155,28,49,0.06)] to-transparent" />
-          <span className="auth-split-corner-tl hidden lg:block" aria-hidden />
-          <span className="auth-split-corner-br hidden lg:block" aria-hidden />
 
           <div className="relative z-[1] flex min-h-0 flex-1 flex-col">
             <Link
@@ -79,11 +79,20 @@ export default function AuthSplitLayout({ children }: AuthSplitLayoutProps) {
             </div>
 
             <div className="mt-5 flex min-h-0 flex-1 flex-col lg:mt-6">
-              <div className="auth-illustration-frame flex min-h-[200px] flex-1 flex-col items-center justify-center rounded-2xl border-2 border-[#c9a227]/35 bg-gradient-to-b from-white/55 to-primary/[0.07] p-3 sm:min-h-[220px] sm:p-5 lg:min-h-[280px]">
+              <div
+                className={cn(
+                  'auth-illustration-frame relative flex min-h-[180px] flex-1 flex-col items-center justify-center overflow-hidden',
+                  'rounded-2xl border-2 border-[#c9a227]/35 bg-gradient-to-b from-white/55 to-primary/[0.07]',
+                  'p-3 sm:min-h-[200px] sm:p-4 lg:min-h-0 lg:max-h-[min(52vh,440px)] lg:flex-none'
+                )}
+              >
                 <img
                   src={ILLUSTRATION_SRC}
                   alt=""
-                  className="max-h-[min(52vh,420px)] w-full max-w-lg object-contain object-center drop-shadow-[0_16px_40px_rgba(58,10,20,0.15)]"
+                  width={800}
+                  height={600}
+                  decoding="async"
+                  className="mx-auto h-auto max-h-[min(42vh,360px)] w-auto max-w-full object-contain object-center drop-shadow-[0_12px_32px_rgba(58,10,20,0.12)] sm:max-h-[min(44vh,400px)] lg:max-h-[min(48vh,420px)]"
                 />
               </div>
               <p className="mt-3 text-center text-[11px] text-primary/45">
@@ -93,9 +102,16 @@ export default function AuthSplitLayout({ children }: AuthSplitLayoutProps) {
           </div>
         </aside>
 
-        <main className="auth-split-right flex min-h-0 flex-1 flex-col lg:w-1/2 lg:flex-1">
-          <div className="flex flex-1 flex-col justify-center overflow-y-auto px-4 py-8 sm:px-8 lg:px-10 lg:py-12 xl:px-14">
-            <div className="auth-form-card mx-auto w-full max-w-md rounded-2xl p-6 sm:p-8">
+        <main className="auth-split-right flex min-h-0 w-full flex-1 flex-col lg:w-1/2 lg:flex-1">
+          <div className="flex min-h-0 flex-1 flex-col justify-center overflow-y-auto px-4 py-8 sm:px-6 lg:justify-start lg:px-8 lg:py-10 xl:px-10">
+            <Link
+              to="/"
+              className="mb-4 inline-flex w-fit shrink-0 text-sm font-medium text-primary/90 underline-offset-4 transition hover:text-primary hover:underline lg:hidden"
+            >
+              ← {t('Về trang chủ', 'Inicio')}
+            </Link>
+            {/* Full width trong cột phải — tránh khối form nhỏ giữa khoảng trống */}
+            <div className="auth-form-card w-full max-w-none rounded-2xl p-6 sm:p-8 lg:p-10 xl:p-12">
               {children}
             </div>
           </div>

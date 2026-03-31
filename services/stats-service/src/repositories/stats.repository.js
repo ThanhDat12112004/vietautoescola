@@ -58,6 +58,7 @@ async function findHomeSummary() {
     total_questions: Number(questionsRow.total_questions || 0),
     total_students: Number(studentsRow.total_students || 0),
     pass_rate: passRate,
+    total_attempts: totalCompleted,
   };
 }
 
@@ -107,10 +108,44 @@ async function findUserAttemptHistory(userId, lang, limit = 30) {
   return rows;
 }
 
+/** Thứ hạng global (1 = cao nhất), cùng logic sắp xếp với findLeaderboard */
+async function findUserLeaderboardRank(userId) {
+  const [[row]] = await pool.query(
+    `SELECT
+       (
+         SELECT COUNT(*)
+         FROM users u2
+         WHERE u2.is_active = TRUE
+           AND (
+             u2.total_score > u.total_score
+             OR (
+               u2.total_score = u.total_score
+               AND u2.average_percentage > u.average_percentage
+             )
+             OR (
+               u2.total_score = u.total_score
+               AND u2.average_percentage = u.average_percentage
+               AND u2.total_correct > u.total_correct
+             )
+           )
+       ) + 1 AS leaderboard_rank,
+       u.total_score,
+       u.total_quizzes,
+       u.average_percentage
+     FROM users u
+     WHERE u.id = ? AND u.is_active = TRUE
+     LIMIT 1`,
+    [userId]
+  );
+
+  return row || null;
+}
+
 module.exports = {
   findUserSessionById,
   findLeaderboard,
   findHomeSummary,
   findUserStats,
   findUserAttemptHistory,
+  findUserLeaderboardRank,
 };

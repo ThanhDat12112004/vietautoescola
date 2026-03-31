@@ -1,3 +1,8 @@
+const path = require('path');
+require('dotenv').config({
+  path: process.env.ENV_FILE || path.resolve(__dirname, '../../.env'),
+});
+
 /** @type {import('next').NextConfig} */
 const API_ORIGIN =
   process.env.INTERNAL_API_BASE_URL ||

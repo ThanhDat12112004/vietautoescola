@@ -1,10 +1,20 @@
-import { clearAuth, getOrCreateDeviceId, getStoredAuth, type AuthUser } from '@/lib/auth';
+import { clearAuth, getStoredAuth, type AuthUser } from '@/lib/auth';
 import type { Language } from '@/lib/data';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8080';
+/** Server / tests: absolute gateway URL. Browser: '' so requests stay same-origin and Next.js rewrites proxy to the gateway (avoids blocking public HTTPS → localhost). */
+function getApiBaseUrl(): string {
+  if (typeof window !== 'undefined') {
+    return '';
+  }
+  return process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8080';
+}
 
 function shouldBypassNgrokWarning() {
-  return API_BASE_URL.includes('ngrok-free.app');
+  if (typeof window !== 'undefined' && window.location.hostname.includes('ngrok-free.app')) {
+    return true;
+  }
+  const base = process.env.NEXT_PUBLIC_API_BASE_URL || '';
+  return base.includes('ngrok-free.app');
 }
 
 function withNgrokHeaders(headers: Record<string, string>) {
@@ -60,7 +70,7 @@ async function apiRequest<T>(path: string, options: RequestOptions = {}): Promis
     }
   }
 
-  const response = await fetch(`${API_BASE_URL}${path}`, {
+  const response = await fetch(`${getApiBaseUrl()}${path}`, {
     method: options.method || 'GET',
     headers,
     body: options.body ? JSON.stringify(options.body) : undefined,
@@ -175,10 +185,19 @@ export type LeaderboardUser = {
   average_percentage: number;
 };
 
+export type MyLeaderboardRank = {
+  rank: number;
+  total_score: number;
+  total_quizzes: number;
+  average_percentage: number;
+};
+
 export type HomeSummary = {
   total_questions: number;
   total_students: number;
   pass_rate: number;
+  /** Tổng số lượt làm bài đã hoàn thành (user_quiz_attempts.status = completed) */
+  total_attempts: number;
 };
 
 export type QuizCategory = {
@@ -328,10 +347,7 @@ export async function register(payload: {
 export async function login(payload: { email: string; password: string }) {
   return apiRequest<LoginResponse>('/auth/login', {
     method: 'POST',
-    body: {
-      ...payload,
-      device_id: getOrCreateDeviceId(),
-    },
+    body: payload,
   });
 }
 
@@ -342,29 +358,9 @@ export async function logout() {
   });
 }
 
-export async function heartbeat() {
-  return apiRequest<{ ok: boolean }>('/auth/heartbeat', {
-    method: 'POST',
-    auth: true,
-  });
-}
-
-export function logoutBeacon(token: string) {
-  if (!token || typeof window === 'undefined') {
-    return;
-  }
-
-  const headers = withNgrokHeaders({ 'Content-Type': 'application/json' });
-
-  // keepalive lets the browser send this request while the page is unloading.
-  fetch(`${API_BASE_URL}/auth/logout-beacon`, {
-    method: 'POST',
-    headers,
-    body: JSON.stringify({ token }),
-    keepalive: true,
-  }).catch(() => {
-    // Best effort only; no UI feedback needed during unload.
-  });
+/** Poll while logged in: if someone else logs in, next poll gets 401 and client clears auth. */
+export async function pingSession() {
+  return apiRequest<{ ok: boolean }>('/auth/session', { method: 'GET', auth: true });
 }
 
 export async function getQuizzes(lang: Language) {
@@ -414,6 +410,10 @@ export async function getLeaderboard(limit = 10) {
   return apiRequest<LeaderboardUser[]>(`/stats/leaderboard?limit=${limit}`);
 }
 
+export async function getMyLeaderboardRank() {
+  return apiRequest<MyLeaderboardRank>('/stats/leaderboard/me', { auth: true });
+}
+
 export async function getHomeSummary() {
   return apiRequest<HomeSummary>('/stats/summary');
 }
@@ -431,11 +431,11 @@ export async function getAdminUserDashboard(userId: number, lang: Language) {
 }
 
 export async function getSubjects(lang: Language) {
-  return apiRequest<Subject[]>(`/materials/subjects?lang=${lang}`);
+  return apiRequest<Subject[]>(`/materials-api/subjects?lang=${lang}`);
 }
 
 export async function getAdminSubjects() {
-  return apiRequest<AdminSubject[]>('/materials/admin/subjects', { auth: true });
+  return apiRequest<AdminSubject[]>('/materials-api/admin/subjects', { auth: true });
 }
 
 export async function createAdminSubject(payload: {
@@ -444,7 +444,7 @@ export async function createAdminSubject(payload: {
   description_vi?: string;
   description_es?: string;
 }) {
-  return apiRequest<{ id: number; code: string }>('/materials/admin/subjects', {
+  return apiRequest<{ id: number; code: string }>('/materials-api/admin/subjects', {
     method: 'POST',
     body: payload,
     auth: true,
@@ -460,7 +460,7 @@ export async function updateAdminSubject(
     description_es?: string;
   }
 ) {
-  return apiRequest<{ id: number }>(`/materials/admin/subjects/${id}`, {
+  return apiRequest<{ id: number }>(`/materials-api/admin/subjects/${id}`, {
     method: 'PATCH',
     body: payload,
     auth: true,
@@ -468,19 +468,20 @@ export async function updateAdminSubject(
 }
 
 export async function deleteAdminSubject(id: number) {
-  return apiRequest<{ id: number }>(`/materials/admin/subjects/${id}`, {
+  return apiRequest<{ id: number }>(`/materials-api/admin/subjects/${id}`, {
     method: 'DELETE',
     auth: true,
   });
 }
 
 export async function getMaterialsBySubject(subjectId: number, lang: Language) {
-  return apiRequest<MaterialItem[]>(`/materials/subjects/${subjectId}/materials?lang=${lang}`);
+  return apiRequest<MaterialItem[]>(`/materials-api/subjects/${subjectId}/materials?lang=${lang}`);
 }
 
 function joinApiBase(pathname: string) {
   const normalized = pathname.startsWith('/') ? pathname : `/${pathname}`;
-  return `${API_BASE_URL.replace(/\/+$/, '')}${normalized}`;
+  const base = getApiBaseUrl().replace(/\/+$/, '');
+  return `${base}${normalized}`;
 }
 
 export function resolveMediaUrl(filePath: string) {
@@ -738,7 +739,7 @@ export async function deleteAdminQuiz(id: number) {
 }
 
 export async function updateAdminMaterial(id: number, payload: any) {
-  return apiRequest<{ message: string }>(`/materials/materials/${id}`, {
+  return apiRequest<{ message: string }>(`/materials-api/materials/${id}`, {
     method: 'PATCH',
     body: payload,
     auth: true,
@@ -746,7 +747,7 @@ export async function updateAdminMaterial(id: number, payload: any) {
 }
 
 export async function deleteAdminMaterial(id: number) {
-  return apiRequest<{ message: string }>(`/materials/materials/${id}`, {
+  return apiRequest<{ message: string }>(`/materials-api/materials/${id}`, {
     method: 'DELETE',
     auth: true,
   });
@@ -754,7 +755,7 @@ export async function deleteAdminMaterial(id: number) {
 
 export async function createBilingualMaterial(subjectId: number, payload: any) {
   return apiRequest<{ id: number }>(
-    `/materials/subjects/${subjectId}/materials/bilingual`,
+    `/materials-api/subjects/${subjectId}/materials/bilingual`,
     { method: 'POST', body: payload, auth: true }
   );
 }
@@ -768,7 +769,7 @@ export async function uploadMaterialFile(file: File, langCode: string) {
   if (stored?.token) {
     headers.Authorization = `Bearer ${stored.token}`;
   }
-  const response = await fetch(`${API_BASE_URL}/media/upload-material`, {
+  const response = await fetch(`${getApiBaseUrl()}/media/upload-material`, {
     method: 'POST',
     headers,
     body: formData,
@@ -795,7 +796,7 @@ export async function uploadQuestionImage(file: File) {
   if (stored?.token) {
     headers.Authorization = `Bearer ${stored.token}`;
   }
-  const response = await fetch(`${API_BASE_URL}/media/upload-image`, {
+  const response = await fetch(`${getApiBaseUrl()}/media/upload-image`, {
     method: 'POST',
     headers,
     body: formData,
@@ -822,7 +823,7 @@ export async function uploadAvatarImage(file: File) {
   if (stored?.token) {
     headers.Authorization = `Bearer ${stored.token}`;
   }
-  const response = await fetch(`${API_BASE_URL}/media/upload-avatar`, {
+  const response = await fetch(`${getApiBaseUrl()}/media/upload-avatar`, {
     method: 'POST',
     headers,
     body: formData,

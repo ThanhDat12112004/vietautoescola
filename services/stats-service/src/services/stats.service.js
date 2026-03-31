@@ -21,4 +21,20 @@ async function getUserDashboard(userId, lang) {
   return { stats, history };
 }
 
-module.exports = { getLeaderboard, getHomeSummary, getUserDashboard };
+async function getMyLeaderboardRank(userId) {
+  const row = await statsRepository.findUserLeaderboardRank(userId);
+  if (!row) {
+    const appError = new Error('User not found');
+    appError.status = 404;
+    throw appError;
+  }
+
+  return {
+    rank: Number(row.leaderboard_rank || 0),
+    total_score: Number(row.total_score || 0),
+    total_quizzes: Number(row.total_quizzes || 0),
+    average_percentage: Number(row.average_percentage || 0),
+  };
+}
+
+module.exports = { getLeaderboard, getHomeSummary, getUserDashboard, getMyLeaderboardRank };

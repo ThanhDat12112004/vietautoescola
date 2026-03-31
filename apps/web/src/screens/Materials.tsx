@@ -187,7 +187,7 @@ const Materials = () => {
         setError(
           err instanceof Error
             ? err.message
-            : t('Không tải được tài liệu', 'No se pudo cargar materiales')
+            : t('Không tải được tài liệu', 'No se pudo cargar el temario')
         );
       } finally {
         if (active) {
@@ -442,15 +442,15 @@ const Materials = () => {
           <div className="w-full px-2 py-5 sm:px-3 md:py-6">
             <div className="max-w-3xl border-l-[3px] border-primary/60 pl-3 sm:pl-4">
               <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-primary/80">
-                {t('Tài liệu', 'Materiales')}
+                {t('Tài liệu', 'Temario')}
               </p>
               <h1 className="mt-1.5 font-display text-[1.65rem] font-bold leading-tight tracking-tight text-foreground md:text-[2rem]">
-                {t('Tài liệu học tập', 'Materiales de estudio')}
+                {t('Tài liệu học tập', 'Temario de estudio')}
               </h1>
               <p className="mt-2 max-w-2xl text-[15px] leading-relaxed text-foreground/72 md:text-[0.97rem]">
                 {t(
                   'Xem trực tiếp hoặc tải về tài liệu song ngữ để ôn tập',
-                  'Visualiza directamente o descarga materiales bilingües para estudiar'
+                  'Visualiza directamente o descarga contenido bilingüe del temario para estudiar'
                 )}
               </p>
               {activeSubjectInfo && (
@@ -577,18 +577,18 @@ const Materials = () => {
 
             {loadingMaterials && (
               <p className="text-sm text-muted-foreground">
-                {t('Đang tải tài liệu...', 'Cargando materiales...')}
+                {t('Đang tải tài liệu...', 'Cargando el temario...')}
               </p>
             )}
 
             {!loadingMaterials && materials.length === 0 && !loadingSubjects && subjects.length > 0 && (
               <p className="text-sm text-muted-foreground">
-                {t('Chưa có tài liệu', 'No hay materiales')}
+                {t('Chưa có tài liệu', 'No hay contenido en el temario')}
               </p>
             )}
             {!loadingMaterials && materials.length > 0 && filteredMaterials.length === 0 && (
               <p className="py-8 text-center text-sm text-muted-foreground">
-                {t('Không có tài liệu phù hợp.', 'No hay materiales que coincidan.')}
+                {t('Không có tài liệu phù hợp.', 'Sin coincidencias en el temario.')}
               </p>
             )}
 
@@ -696,7 +696,7 @@ const Materials = () => {
               <div className="mt-8 -mx-2 flex flex-col items-center gap-4 border-t-2 border-primary/25 bg-card px-3 py-5 shadow-[0_-2px_12px_rgba(45,38,36,0.06)] sm:-mx-3 sm:gap-5 sm:px-4">
                 <p className="text-center text-sm font-semibold tabular-nums text-foreground sm:text-[15px]">
                   {t('Trang', 'Página')} {effectivePage}/{totalPages} · {filteredMaterials.length}{' '}
-                  {t('tài liệu', 'materiales')}
+                  {t('tài liệu', 'documentos del temario')}
                 </p>
                 <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-2.5">
                   <Button

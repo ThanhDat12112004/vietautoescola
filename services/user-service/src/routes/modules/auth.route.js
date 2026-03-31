@@ -7,8 +7,7 @@ const router = express.Router();
 
 router.post('/register', authController.register);
 router.post('/login', authController.login);
-router.post('/logout-beacon', authController.logoutBeacon);
-router.post('/heartbeat', authRequired, authController.heartbeat);
+router.get('/session', authRequired, authController.sessionPing);
 router.post('/logout', authRequired, authController.logout);
 router.patch('/me/avatar', authRequired, authController.updateMyAvatar);
 router.patch('/me', authRequired, authController.updateMyProfile);

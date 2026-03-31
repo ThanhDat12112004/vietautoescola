@@ -30,11 +30,11 @@ export default function BrandLogo({
 
   if (!logoError) {
     return (
-      <div className={cn('flex items-center gap-2', className)}>
+      <div className={cn('flex flex-nowrap items-center gap-2', className)}>
         <img
           src={BRAND_LOGO_SRC}
           alt="Viet Autoescuela"
-          className={cn('h-10 w-auto object-contain', imageClassName)}
+          className={cn('h-10 w-auto shrink-0 object-contain', imageClassName)}
           onError={() => setLogoError(true)}
         />
         {withText && brandText}
@@ -43,8 +43,8 @@ export default function BrandLogo({
   }
 
   return (
-    <div className={cn('flex items-center gap-2', className)}>
-      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary shadow-sm">
+    <div className={cn('flex flex-nowrap items-center gap-2', className)}>
+      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary shadow-sm">
         <Car className="h-4 w-4 text-primary-foreground" />
       </div>
       {withText && brandText}

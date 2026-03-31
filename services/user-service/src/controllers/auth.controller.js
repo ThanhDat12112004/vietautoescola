@@ -35,23 +35,9 @@ async function logout(req, res, next) {
   }
 }
 
-async function logoutBeacon(req, res, next) {
-  try {
-    const token = req.body?.token || '';
-    const result = await authService.logoutByToken(token);
-    return res.json(result);
-  } catch (error) {
-    return next(error);
-  }
-}
-
-async function heartbeat(req, res, next) {
-  try {
-    const result = await authService.heartbeat(req.user.id, req.user.sid);
-    return res.json(result);
-  } catch (error) {
-    return next(error);
-  }
+/** Lightweight check: auth middleware validates JWT + current_session_id; use for client polling. */
+function sessionPing(_req, res) {
+  return res.json({ ok: true });
 }
 
 async function updateMyAvatar(req, res, next) {
@@ -82,8 +68,7 @@ module.exports = {
   register,
   login,
   logout,
-  logoutBeacon,
-  heartbeat,
+  sessionPing,
   updateMyAvatar,
   updateMyProfile,
 };

@@ -11,7 +11,7 @@ async function createUser({ username, email, passwordHash, fullName }) {
 
 async function findUserByEmail(email) {
   const [rows] = await pool.execute(
-    'SELECT id, username, email, role, full_name, password_hash, avatar_url, is_active, current_session_id, session_last_seen_at FROM users WHERE email = ? LIMIT 1',
+    'SELECT id, username, email, role, full_name, password_hash, avatar_url, is_active, current_session_id FROM users WHERE email = ? LIMIT 1',
     [email]
   );
 
@@ -20,34 +20,22 @@ async function findUserByEmail(email) {
 
 async function updateLoginSession(userId, sessionId) {
   await pool.execute(
-    'UPDATE users SET last_login_at = NOW(), current_session_id = ?, session_last_seen_at = NOW() WHERE id = ?',
+    'UPDATE users SET last_login_at = NOW(), current_session_id = ? WHERE id = ?',
     [sessionId, userId]
   );
 }
 
 async function clearCurrentSession(userId) {
-  await pool.execute(
-    'UPDATE users SET current_session_id = NULL, session_last_seen_at = NULL WHERE id = ?',
-    [userId]
-  );
+  await pool.execute('UPDATE users SET current_session_id = NULL WHERE id = ?', [userId]);
 }
 
 async function findSessionByUserId(userId) {
   const [rows] = await pool.execute(
-    'SELECT id, role, is_active, current_session_id, session_last_seen_at FROM users WHERE id = ? LIMIT 1',
+    'SELECT id, role, is_active, current_session_id FROM users WHERE id = ? LIMIT 1',
     [userId]
   );
 
   return rows[0] || null;
-}
-
-async function touchCurrentSession(userId, sessionId) {
-  const [result] = await pool.execute(
-    'UPDATE users SET session_last_seen_at = NOW() WHERE id = ? AND current_session_id = ?',
-    [userId, sessionId]
-  );
-
-  return result.affectedRows;
 }
 
 async function findAllUsers() {
@@ -199,7 +187,6 @@ module.exports = {
   updateUserByAdmin,
   deleteUserById,
   setUserLock,
-  touchCurrentSession,
   updateAvatarUrl,
   updateProfileByUser,
 };

@@ -52,4 +52,19 @@ async function getUserDashboard(req, res, next) {
   }
 }
 
-module.exports = { getLeaderboard, getSummary, getMyDashboard, getUserDashboard };
+async function getMyLeaderboardRank(req, res, next) {
+  try {
+    const data = await statsService.getMyLeaderboardRank(req.user.id);
+    return res.json(data);
+  } catch (error) {
+    return next(error);
+  }
+}
+
+module.exports = {
+  getLeaderboard,
+  getSummary,
+  getMyDashboard,
+  getUserDashboard,
+  getMyLeaderboardRank,
+};
