@@ -19,9 +19,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { logout } from '@/lib/api/auth';
+import { resolveMediaUrl } from '@/lib/api/upload';
 import { cn } from '@/lib/utils';
 import { useLanguage } from '@/hooks/useLanguage';
-import { logout, resolveMediaUrl } from '@/lib/api';
 import { clearAuth, getStoredAuth, type AuthUser } from '@/lib/auth';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useEffect, useState } from 'react';

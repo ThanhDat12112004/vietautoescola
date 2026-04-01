@@ -48,8 +48,8 @@ async function resolveQuizTypeId(payload = {}) {
   return normalizeQuizTypeId(payload.quiz_type_id ?? payload.quiz_type);
 }
 
-async function listQuizzes(lang, userId = null) {
-  return quizRepository.findAllActiveQuizzes(lang, userId);
+async function listQuizzes(lang, userId = null, pagination = null) {
+  return quizRepository.findAllActiveQuizzes(lang, userId, pagination);
 }
 
 async function listTopicGroups(lang) {

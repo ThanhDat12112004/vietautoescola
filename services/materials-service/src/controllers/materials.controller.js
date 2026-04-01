@@ -1,10 +1,24 @@
 const materialsService = require('../services/materials.service');
 const { getLang } = require('../utils/lang');
+const {
+  parsePositiveNumber,
+  parseRequiredId,
+  requireBilingualNames,
+} = require('../validators/materials.validator');
 
 async function listSubjects(req, res, next) {
   try {
     const lang = getLang(req.query.lang);
     const rows = await materialsService.listSubjects(lang);
+    return res.json(rows);
+  } catch (error) {
+    return next(error);
+  }
+}
+
+async function listMaterialCountsBySubject(_req, res, next) {
+  try {
+    const rows = await materialsService.listMaterialCountsBySubject();
     return res.json(rows);
   } catch (error) {
     return next(error);
@@ -32,10 +46,8 @@ async function listTopicGroupsAdmin(_req, res, next) {
 
 async function createTopicGroup(req, res, next) {
   const { code, name_vi, name_es, description_vi, description_es, is_active } = req.body;
-  if (!name_vi || !name_es) {
-    return res.status(400).json({ message: 'name_vi and name_es are required' });
-  }
   try {
+    requireBilingualNames(name_vi, name_es, 'name_vi and name_es are required');
     const result = await materialsService.createTopicGroup({
       code,
       name_vi,
@@ -52,15 +64,10 @@ async function createTopicGroup(req, res, next) {
 }
 
 async function updateTopicGroup(req, res, next) {
-  const topicGroupId = Number(req.params.id);
-  if (Number.isNaN(topicGroupId)) {
-    return res.status(400).json({ message: 'Invalid topic group id' });
-  }
   const { code, name_vi, name_es, description_vi, description_es, is_active } = req.body;
-  if (!name_vi || !name_es) {
-    return res.status(400).json({ message: 'name_vi and name_es are required' });
-  }
   try {
+    const topicGroupId = parseRequiredId(req.params.id, 'id', 'topic group id');
+    requireBilingualNames(name_vi, name_es, 'name_vi and name_es are required');
     const result = await materialsService.updateTopicGroup(topicGroupId, {
       code,
       name_vi,
@@ -76,11 +83,8 @@ async function updateTopicGroup(req, res, next) {
 }
 
 async function deleteTopicGroup(req, res, next) {
-  const topicGroupId = Number(req.params.id);
-  if (Number.isNaN(topicGroupId)) {
-    return res.status(400).json({ message: 'Invalid topic group id' });
-  }
   try {
+    const topicGroupId = parseRequiredId(req.params.id, 'id', 'topic group id');
     const result = await materialsService.deleteTopicGroup(topicGroupId);
     return res.json(result);
   } catch (error) {
@@ -99,17 +103,13 @@ async function listSubjectsAdmin(_req, res, next) {
 
 async function createSubject(req, res, next) {
   const { name_vi, name_es, description_vi, description_es, material_topic_group_id } = req.body;
-
-  if (!name_vi || !name_es) {
-    return res.status(400).json({ message: 'name_vi, name_es are required' });
-  }
-
-  const topicGroupId = Number(material_topic_group_id ?? 1);
-  if (!Number.isFinite(topicGroupId) || topicGroupId <= 0) {
-    return res.status(400).json({ message: 'material_topic_group_id must be a positive number' });
-  }
-
   try {
+    requireBilingualNames(name_vi, name_es, 'name_vi, name_es are required');
+    const topicGroupId = parsePositiveNumber(
+      material_topic_group_id,
+      'material_topic_group_id',
+      1
+    );
     const result = await materialsService.createSubject({
       name_vi,
       name_es,
@@ -126,23 +126,15 @@ async function createSubject(req, res, next) {
 }
 
 async function updateSubject(req, res, next) {
-  const subjectId = Number(req.params.id);
-  if (Number.isNaN(subjectId)) {
-    return res.status(400).json({ message: 'Invalid subject id' });
-  }
-
   const { name_vi, name_es, description_vi, description_es, material_topic_group_id } = req.body;
-
-  if (!name_vi || !name_es) {
-    return res.status(400).json({ message: 'name_vi, name_es are required' });
-  }
-
-  const topicGroupId = Number(material_topic_group_id ?? 1);
-  if (!Number.isFinite(topicGroupId) || topicGroupId <= 0) {
-    return res.status(400).json({ message: 'material_topic_group_id must be a positive number' });
-  }
-
   try {
+    const subjectId = parseRequiredId(req.params.id, 'id', 'subject id');
+    requireBilingualNames(name_vi, name_es, 'name_vi, name_es are required');
+    const topicGroupId = parsePositiveNumber(
+      material_topic_group_id,
+      'material_topic_group_id',
+      1
+    );
     const result = await materialsService.updateSubject(subjectId, {
       name_vi,
       name_es,
@@ -158,12 +150,8 @@ async function updateSubject(req, res, next) {
 }
 
 async function deleteSubject(req, res, next) {
-  const subjectId = Number(req.params.id);
-  if (Number.isNaN(subjectId)) {
-    return res.status(400).json({ message: 'Invalid subject id' });
-  }
-
   try {
+    const subjectId = parseRequiredId(req.params.id, 'id', 'subject id');
     const result = await materialsService.deleteSubject(subjectId);
     return res.json(result);
   } catch (error) {
@@ -172,12 +160,8 @@ async function deleteSubject(req, res, next) {
 }
 
 async function listReferenceMaterials(req, res, next) {
-  const subjectId = Number(req.params.id);
-  if (Number.isNaN(subjectId)) {
-    return res.status(400).json({ message: 'Invalid subject id' });
-  }
-
   try {
+    const subjectId = parseRequiredId(req.params.id, 'id', 'subject id');
     const lang = getLang(req.query.lang);
     const rows = await materialsService.listReferenceMaterials(subjectId, lang);
     return res.json(rows);
@@ -187,11 +171,6 @@ async function listReferenceMaterials(req, res, next) {
 }
 
 async function createReferenceMaterial(req, res, next) {
-  const subjectId = Number(req.params.id);
-  if (Number.isNaN(subjectId)) {
-    return res.status(400).json({ message: 'Invalid subject id' });
-  }
-
   const {
     title_vi,
     description_vi,
@@ -204,13 +183,13 @@ async function createReferenceMaterial(req, res, next) {
     file_size_mb_es,
     page_count_es,
   } = req.body;
-  if (!title_vi || !file_path_vi || !title_es || !file_path_es) {
-    return res.status(400).json({
-      message: 'title_vi, file_path_vi, title_es, file_path_es are required',
-    });
-  }
-
   try {
+    const subjectId = parseRequiredId(req.params.id, 'id', 'subject id');
+    if (!title_vi || !file_path_vi || !title_es || !file_path_es) {
+      const appError = new Error('title_vi, file_path_vi, title_es, file_path_es are required');
+      appError.status = 400;
+      throw appError;
+    }
     const result = await materialsService.createReferenceMaterial({
       subject_id: subjectId,
       title_vi,
@@ -233,11 +212,6 @@ async function createReferenceMaterial(req, res, next) {
 }
 
 async function createReferenceMaterialsBilingual(req, res, next) {
-  const subjectId = Number(req.params.id);
-  if (Number.isNaN(subjectId)) {
-    return res.status(400).json({ message: 'Invalid subject id' });
-  }
-
   const {
     title_vi,
     description_vi,
@@ -251,13 +225,13 @@ async function createReferenceMaterialsBilingual(req, res, next) {
     page_count_es,
   } = req.body;
 
-  if (!title_vi || !file_path_vi || !title_es || !file_path_es) {
-    return res.status(400).json({
-      message: 'title_vi, file_path_vi, title_es, file_path_es are required',
-    });
-  }
-
   try {
+    const subjectId = parseRequiredId(req.params.id, 'id', 'subject id');
+    if (!title_vi || !file_path_vi || !title_es || !file_path_es) {
+      const appError = new Error('title_vi, file_path_vi, title_es, file_path_es are required');
+      appError.status = 400;
+      throw appError;
+    }
     const result = await materialsService.createReferenceMaterialsBilingual({
       subject_id: subjectId,
       title_vi,
@@ -338,6 +312,7 @@ async function deleteReferenceMaterial(req, res, next) {
 }
 
 module.exports = {
+  listMaterialCountsBySubject,
   listTopicGroups,
   listTopicGroupsAdmin,
   createTopicGroup,

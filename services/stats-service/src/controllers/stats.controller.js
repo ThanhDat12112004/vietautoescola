@@ -1,11 +1,11 @@
 const statsService = require('../services/stats.service');
 const { getLang } = require('../utils/lang');
+const { normalizePeriod, parseLimit, parseRadius } = require('../validators/stats.validator');
 
 async function getLeaderboard(req, res, next) {
   try {
-    const limitParam = Number(req.query.limit || 10);
-    const limit = Number.isNaN(limitParam) ? 10 : Math.min(Math.max(limitParam, 1), 100);
-    const period = String(req.query.period || 'all');
+    const limit = parseLimit(req.query.limit, 10, 1, 100);
+    const period = normalizePeriod(req.query.period);
     const data = await statsService.getLeaderboard(limit, period);
     return res.json(data);
   } catch (error) {
@@ -55,7 +55,7 @@ async function getUserDashboard(req, res, next) {
 
 async function getMyLeaderboardRank(req, res, next) {
   try {
-    const period = String(req.query.period || 'all');
+    const period = normalizePeriod(req.query.period);
     const data = await statsService.getMyLeaderboardRank(req.user.id, period);
     return res.json(data);
   } catch (error) {
@@ -65,9 +65,8 @@ async function getMyLeaderboardRank(req, res, next) {
 
 async function getMyLeaderboardAround(req, res, next) {
   try {
-    const period = String(req.query.period || 'all');
-    const radiusParam = Number(req.query.radius || 3);
-    const radius = Number.isNaN(radiusParam) ? 3 : Math.min(Math.max(radiusParam, 1), 10);
+    const period = normalizePeriod(req.query.period);
+    const radius = parseRadius(req.query.radius, 3, 1, 10);
     const data = await statsService.getMyLeaderboardAround(req.user.id, period, radius);
     return res.json(data);
   } catch (error) {

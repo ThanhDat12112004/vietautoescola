@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState } from "react";
-import { Language } from "@/lib/data";
+import type { Language } from '@/lib/api/types';
 
 type LanguageContextType = {
   lang: Language;

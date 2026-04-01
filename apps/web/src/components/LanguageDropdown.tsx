@@ -7,7 +7,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
-import type { Language } from '@/lib/data';
+import type { Language } from '@/lib/api/types';
 
 type TFn = (vi: string, es: string) => string;
 

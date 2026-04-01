@@ -1,18 +1,13 @@
 import Footer from '@/components/Footer';
 import Navbar from '@/components/Navbar';
 import { Card, CardContent } from '@/components/ui/card';
+import { getLeaderboard as getLeaderboardStats, getMyLeaderboardRank as getMyLeaderboardRankStats } from '@/lib/api/quiz';
+import { resolveMediaUrl } from '@/lib/api/upload';
+import type { LeaderboardPeriod, LeaderboardUser, MyLeaderboardRank } from '@/lib/api/types';
 import { useLanguage } from '@/hooks/useLanguage';
-import {
-  getLeaderboard,
-  getMyLeaderboardAround,
-  getMyLeaderboardRank,
-  resolveMediaUrl,
-  type LeaderboardPeriod,
-  type LeaderboardUser,
-  type MyLeaderboardRank,
-} from '@/lib/api';
 import { getStoredAuth } from '@/lib/auth';
 import { cn } from '@/lib/utils';
+import { useQuery } from '@tanstack/react-query';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 
@@ -39,6 +34,12 @@ const topRowBorderClass: Record<number, string> = {
   3: 'border-orange-400/50 ring-1 ring-orange-300/28',
   4: 'border-primary/40 ring-1 ring-primary/20',
   5: 'border-slate-500/45 ring-1 ring-slate-400/30',
+};
+
+const DEFAULT_PERIOD_AVAILABILITY: Record<LeaderboardPeriod, boolean> = {
+  all: true,
+  week: true,
+  month: true,
 };
 
 /** Huy chương SVG (top 1–5) hoặc số thứ hạng */
@@ -74,22 +75,62 @@ function RankBadge({ rank, compact }: { rank: number; compact?: boolean }) {
 
 const Leaderboard = () => {
   const { t } = useLanguage();
-  const [rows, setRows] = useState<LeaderboardUser[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
   const [failedAvatarIds, setFailedAvatarIds] = useState<Record<number, true>>({});
-  const [myRank, setMyRank] = useState<MyLeaderboardRank | null>(null);
-  const [myRankLoading, setMyRankLoading] = useState(false);
   const [period, setPeriod] = useState<LeaderboardPeriod>('all');
-  const [aroundRows, setAroundRows] = useState<LeaderboardUser[]>([]);
-  const [periodAvailability, setPeriodAvailability] = useState<Record<LeaderboardPeriod, boolean>>({
-    all: true,
-    week: true,
-    month: true,
-  });
   const selfRowRef = useRef<HTMLLIElement | null>(null);
 
   const myUserId = getStoredAuth()?.user?.id ?? null;
+
+  const {
+    data: rows = [],
+    isLoading: loading,
+    error: leaderboardError,
+  } = useQuery<LeaderboardUser[]>({
+    queryKey: ['leaderboard', period],
+    queryFn: () => getLeaderboardStats(10, period),
+    staleTime: 15_000,
+  });
+
+  const error = useMemo(
+    () =>
+      leaderboardError
+        ? leaderboardError instanceof Error
+          ? leaderboardError.message
+          : t('Không tải được bảng xếp hạng', 'No se pudo cargar el ranking')
+        : '',
+    [leaderboardError, t]
+  );
+
+  const { data: periodAvailability = DEFAULT_PERIOD_AVAILABILITY } = useQuery<
+    Record<LeaderboardPeriod, boolean>
+  >({
+    queryKey: ['leaderboard-availability'],
+    queryFn: async () => {
+      const [weekRows, monthRows] = await Promise.all([
+        getLeaderboardStats(1, 'week').catch(() => [] as LeaderboardUser[]),
+        getLeaderboardStats(1, 'month').catch(() => [] as LeaderboardUser[]),
+      ]);
+      return {
+        all: true,
+        week: weekRows.length > 0,
+        month: monthRows.length > 0,
+      };
+    },
+    staleTime: 30_000,
+  });
+
+  const {
+    data: myRank = null,
+    isLoading: myRankLoading,
+  } = useQuery<MyLeaderboardRank | null>({
+    queryKey: ['leaderboard-me-rank', myUserId, period],
+    queryFn: async () => {
+      if (!myUserId) return null;
+      return getMyLeaderboardRankStats(period);
+    },
+    enabled: Boolean(myUserId),
+    staleTime: 15_000,
+  });
 
   /** Ưu tiên họ tên đầy đủ; không có thì username */
   const getPrimaryName = (user: LeaderboardUser) => {
@@ -108,59 +149,6 @@ const Leaderboard = () => {
   };
 
   useEffect(() => {
-    let active = true;
-
-    (async () => {
-      try {
-        setLoading(true);
-        const data = await getLeaderboard(10, period);
-        if (!active) return;
-        setRows(data);
-        setError('');
-      } catch (err) {
-        if (!active) return;
-        setError(
-          err instanceof Error
-            ? err.message
-            : t('Không tải được bảng xếp hạng', 'No se pudo cargar el ranking')
-        );
-      } finally {
-        if (active) {
-          setLoading(false);
-        }
-      }
-    })();
-
-    return () => {
-      active = false;
-    };
-  }, [period, t]);
-
-  useEffect(() => {
-    let active = true;
-    void (async () => {
-      try {
-        const [weekRows, monthRows] = await Promise.all([
-          getLeaderboard(1, 'week').catch(() => [] as LeaderboardUser[]),
-          getLeaderboard(1, 'month').catch(() => [] as LeaderboardUser[]),
-        ]);
-        if (!active) return;
-        setPeriodAvailability({
-          all: true,
-          week: weekRows.length > 0,
-          month: monthRows.length > 0,
-        });
-      } catch {
-        if (!active) return;
-        setPeriodAvailability({ all: true, week: false, month: false });
-      }
-    })();
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  useEffect(() => {
     if (period !== 'all' && !periodAvailability[period]) {
       setPeriod('all');
     }
@@ -173,37 +161,6 @@ const Leaderboard = () => {
     () => ranked.reduce((sum, user) => sum + Number(user.total_quizzes || 0), 0),
     [ranked]
   );
-
-  useEffect(() => {
-    if (!myUserId) {
-      setMyRank(null);
-      setMyRankLoading(false);
-      setAroundRows([]);
-      return;
-    }
-    let active = true;
-    setMyRankLoading(true);
-    void (async () => {
-      try {
-        const [rankData, aroundData] = await Promise.all([
-          getMyLeaderboardRank(period),
-          getMyLeaderboardAround(period, 3),
-        ]);
-        if (active) setMyRank(rankData);
-        if (active) setAroundRows(aroundData);
-      } catch {
-        if (active) {
-          setMyRank(null);
-          setAroundRows([]);
-        }
-      } finally {
-        if (active) setMyRankLoading(false);
-      }
-    })();
-    return () => {
-      active = false;
-    };
-  }, [myUserId, period]);
 
   const periodTabs = useMemo(
     () => [

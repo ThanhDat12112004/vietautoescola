@@ -184,6 +184,23 @@ async function findAllSubjectsAdmin() {
   return rows;
 }
 
+async function findMaterialCountsBySubject() {
+  const [rows] = await pool.query(
+    `SELECT
+       mt.id AS subject_id,
+       COUNT(rm.id) AS total
+     FROM material_types mt
+     LEFT JOIN reference_materials rm ON rm.material_type_id = mt.id
+     GROUP BY mt.id
+     ORDER BY mt.id ASC`
+  );
+
+  return rows.map((row) => ({
+    subject_id: Number(row.subject_id),
+    total: Number(row.total || 0),
+  }));
+}
+
 async function generateNextSubjectCode() {
   const [rows] = await pool.query('SELECT code FROM material_types');
   const usedCodes = new Set();
@@ -401,6 +418,7 @@ module.exports = {
   countSubjectsByTopicGroupId,
   findSubjects,
   findAllSubjectsAdmin,
+  findMaterialCountsBySubject,
   createSubject,
   updateSubject,
   deleteSubject,

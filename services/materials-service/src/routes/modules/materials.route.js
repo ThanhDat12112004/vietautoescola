@@ -1,11 +1,13 @@
 const express = require('express');
 const materialsController = require('../../controllers/materials.controller');
 const { authRequired, requireRoles } = require('../../middleware/auth.middleware');
+const { cacheGet } = require('../../middleware/cache.middleware');
 
 const router = express.Router();
 
-router.get('/subjects', materialsController.listSubjects);
-router.get('/topic-groups', materialsController.listTopicGroups);
+router.get('/subjects', cacheGet(60_000), materialsController.listSubjects);
+router.get('/subjects/material-counts', cacheGet(60_000), materialsController.listMaterialCountsBySubject);
+router.get('/topic-groups', cacheGet(60_000), materialsController.listTopicGroups);
 router.get(
   '/admin/topic-groups',
   authRequired,
@@ -54,7 +56,7 @@ router.delete(
   requireRoles('admin'),
   materialsController.deleteSubject
 );
-router.get('/subjects/:id/materials', materialsController.listReferenceMaterials);
+router.get('/subjects/:id/materials', cacheGet(60_000), materialsController.listReferenceMaterials);
 router.post(
   '/subjects/:id/materials',
   authRequired,

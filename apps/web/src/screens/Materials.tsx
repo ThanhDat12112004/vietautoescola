@@ -3,14 +3,16 @@ import Navbar from '@/components/Navbar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { useLanguage } from '@/hooks/useLanguage';
 import {
+  getMaterialCountsBySubject,
   getMaterialsBySubject,
   getSubjects,
-  resolveMediaUrl,
   type MaterialItem,
   type Subject,
-} from '@/lib/api';
+} from '@/lib/api/materials';
+import { resolveMediaUrl } from '@/lib/api/upload';
+import { useDebouncedValue } from '@/hooks/useDebouncedValue';
+import { useLanguage } from '@/hooks/useLanguage';
 import { cn, fileExtensionFromPath, formatFileSizeFromMb } from '@/lib/utils';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
@@ -18,6 +20,14 @@ import { useSearchParams } from 'react-router-dom';
 const ITEMS_PER_PAGE = 18;
 
 const MATERIALS_ILLUSTRATION_SRC = '/brand/document.png';
+
+function normalizeSearchValue(value: string) {
+  return value
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+}
 
 function resolveMaterialPageCount(material: MaterialItem, lang: 'vi' | 'es'): number | null {
   if (material.page_count != null && Number.isFinite(Number(material.page_count))) {
@@ -83,6 +93,8 @@ const Materials = () => {
   const [loadingSubjects, setLoadingSubjects] = useState(true);
   const [loadingMaterials, setLoadingMaterials] = useState(false);
   const [error, setError] = useState('');
+  const debouncedSearchQuery = useDebouncedValue(searchQuery, 300);
+  const isGlobalSearch = normalizeSearchValue(debouncedSearchQuery).length > 0;
 
   const readStorageKey = 'materials_read_ids_v1';
 
@@ -170,14 +182,24 @@ const Materials = () => {
     (async () => {
       try {
         setLoadingMaterials(true);
-        const searchingAll = normalizeForSearch(searchQuery).length > 0;
+        const subjectsInActiveGroup = activeTopicGroup
+          ? subjects.filter(
+              (subject) => String(subject.material_topic_group_name || '').trim() === activeTopicGroup
+            )
+          : subjects;
 
         const rows =
-          searchingAll || activeSubject === null
+          isGlobalSearch
             ? (
                 await Promise.all(subjects.map((subject) => getMaterialsBySubject(subject.id, lang)))
               ).flat()
-            : await getMaterialsBySubject(activeSubject, lang);
+            : activeSubject != null
+              ? await getMaterialsBySubject(activeSubject, lang)
+              : (
+                  await Promise.all(
+                    subjectsInActiveGroup.map((subject) => getMaterialsBySubject(subject.id, lang))
+                  )
+                ).flat();
 
         const uniqueRows = Array.from(new Map(rows.map((item) => [item.id, item])).values());
         if (!active) return;
@@ -199,7 +221,7 @@ const Materials = () => {
     return () => {
       active = false;
     };
-  }, [activeSubject, lang, searchQuery, subjects, t]);
+  }, [activeSubject, activeTopicGroup, isGlobalSearch, lang, subjects, t]);
 
   useEffect(() => {
     if (!subjects.length) {
@@ -211,18 +233,18 @@ const Materials = () => {
 
     (async () => {
       try {
-        const rowsBySubject = await Promise.all(
-          subjects.map((subject) => getMaterialsBySubject(subject.id, lang))
-        );
+        const countRows = await getMaterialCountsBySubject();
         if (!active) return;
 
-        const nextCounts = subjects.reduce<Record<number, number>>((acc, subject, index) => {
-          const rows = rowsBySubject[index] || [];
-          acc[subject.id] = rows.length;
-          return acc;
-        }, {});
+        const subjectIdSet = new Set(subjects.map((subject) => subject.id));
 
-        setSubjectMaterialCounts(nextCounts);
+        setSubjectMaterialCounts(
+          Object.fromEntries(
+            countRows
+              .filter((row) => subjectIdSet.has(Number(row.subject_id)))
+              .map((row) => [Number(row.subject_id), Number(row.total || 0)])
+          )
+        );
       } catch {
         if (!active) return;
         setSubjectMaterialCounts({});
@@ -232,7 +254,7 @@ const Materials = () => {
     return () => {
       active = false;
     };
-  }, [lang, subjects]);
+  }, [subjects]);
 
   const activeSubjectInfo = useMemo(
     () => subjects.find((subject) => subject.id === activeSubject),
@@ -270,15 +292,8 @@ const Materials = () => {
 
   const readMaterialSet = useMemo(() => new Set(readMaterialIds), [readMaterialIds]);
 
-  const normalizeForSearch = (value: string) =>
-    value
-      .trim()
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '');
-
   const filteredMaterials = useMemo(() => {
-    const q = normalizeForSearch(searchQuery);
+    const q = normalizeSearchValue(debouncedSearchQuery);
     return materials.filter((material) => {
       const byRead =
         readFilter === 'all'
@@ -288,7 +303,7 @@ const Materials = () => {
             : !readMaterialSet.has(material.id);
       if (!byRead) return false;
       if (!q) return true;
-      const blob = normalizeForSearch(
+      const blob = normalizeSearchValue(
         [
           material.title_vi,
           material.title_es,
@@ -300,7 +315,7 @@ const Materials = () => {
       );
       return blob.includes(q);
     });
-  }, [materials, readFilter, readMaterialSet, searchQuery]);
+  }, [debouncedSearchQuery, materials, readFilter, readMaterialSet]);
 
   const readCounts = useMemo(() => {
     const done = materials.filter((material) => readMaterialSet.has(material.id)).length;
@@ -356,16 +371,16 @@ const Materials = () => {
 
   useEffect(() => {
     if (prevSearchForPage.current === undefined) {
-      prevSearchForPage.current = searchQuery;
+      prevSearchForPage.current = debouncedSearchQuery;
       return;
     }
-    if (prevSearchForPage.current === searchQuery) return;
-    prevSearchForPage.current = searchQuery;
+    if (prevSearchForPage.current === debouncedSearchQuery) return;
+    prevSearchForPage.current = debouncedSearchQuery;
     setCurrentPage(1);
     const next = new URLSearchParams(searchParams);
     next.delete('page');
     setSearchParams(next, { replace: true });
-  }, [searchQuery, searchParams, setSearchParams]);
+  }, [debouncedSearchQuery, searchParams, setSearchParams]);
 
   const totalPages = useMemo(
     () => Math.max(1, Math.ceil(filteredMaterials.length / ITEMS_PER_PAGE)),
@@ -567,16 +582,16 @@ const Materials = () => {
                           'min-h-8 flex-1 whitespace-nowrap rounded-full px-2.5 py-1.5 text-center text-xs font-semibold transition-[color,background-color,box-shadow,border-color] sm:px-3',
                           key === 'all' &&
                             (readFilter === key
-                              ? 'border border-primary/35 bg-primary/18 text-primary shadow-sm'
-                              : 'border border-transparent bg-transparent text-primary/80 hover:bg-primary/10'),
+                              ? 'border border-slate-300 bg-slate-100 text-slate-800 shadow-sm'
+                              : 'border border-transparent bg-transparent text-slate-600 hover:bg-slate-100/80'),
                           key === 'read' &&
                             (readFilter === key
                               ? 'border border-emerald-300 bg-emerald-100 text-emerald-800 shadow-sm'
                               : 'border border-transparent bg-transparent text-emerald-700 hover:bg-emerald-50'),
                           key === 'unread' &&
                             (readFilter === key
-                              ? 'border border-rose-300 bg-rose-100 text-rose-800 shadow-sm'
-                              : 'border border-transparent bg-transparent text-rose-700 hover:bg-rose-50')
+                              ? 'border border-amber-300 bg-amber-100 text-amber-900 shadow-sm'
+                              : 'border border-transparent bg-transparent text-amber-800 hover:bg-amber-50')
                         )}
                       >
                         {key === 'all' && (
@@ -641,7 +656,7 @@ const Materials = () => {
                   }}
                 >
                   <option value="">{t('Tất cả chủ đề', 'Todos los temas')}</option>
-                  {(subjectsByGroup[activeTopicGroup] || []).map((subject) => (
+                  {subjectsForActiveGroup.map((subject) => (
                     <option key={subject.id} value={String(subject.id)}>
                       {subject.name}
                     </option>
@@ -820,7 +835,7 @@ const Materials = () => {
                                 'inline-block rounded border px-2 py-0.5 text-[11px] font-semibold',
                                 readMaterialSet.has(material.id)
                                   ? 'border-emerald-900/20 bg-emerald-950/[0.06] text-emerald-900/85 dark:border-emerald-500/25 dark:bg-emerald-500/10 dark:text-emerald-100/90'
-                                  : 'border-foreground/12 bg-muted/40 text-foreground/70'
+                                  : 'border-amber-300/70 bg-amber-50 text-amber-900 dark:border-amber-500/35 dark:bg-amber-500/15 dark:text-amber-100'
                               )}
                             >
                               {readMaterialSet.has(material.id)

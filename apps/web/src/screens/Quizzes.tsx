@@ -4,9 +4,10 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { useLanguage } from '@/hooks/useLanguage';
-import { getQuizzes, type QuizListItem } from '@/lib/api';
+import { getQuizzes, type QuizListItem } from '@/lib/api/quiz';
 import { cn } from '@/lib/utils';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 
 const ITEMS_PER_PAGE = 18;
@@ -16,7 +17,6 @@ const QUIZZES_ILLUSTRATION_SRC = '/brand/test.png';
 const Quizzes = () => {
   const { t, lang } = useLanguage();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [quizzes, setQuizzes] = useState<QuizListItem[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeType, setActiveType] = useState<string>('all');
   const [activeTopicGroup, setActiveTopicGroup] = useState<string>('');
@@ -24,9 +24,28 @@ const Quizzes = () => {
   const [expandedTopicGroup, setExpandedTopicGroup] = useState<string>('');
   const [progressFilter, setProgressFilter] = useState<'all' | 'done' | 'todo'>('all');
   const [currentPage, setCurrentPage] = useState(1);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
   const prevSearchForPage = useRef<string | undefined>(undefined);
+  const deferredSearchQuery = useDeferredValue(searchQuery);
+
+  const {
+    data: quizzes = [],
+    isLoading: loading,
+    error: quizzesError,
+  } = useQuery<QuizListItem[]>({
+    queryKey: ['quizzes', lang],
+    queryFn: () => getQuizzes(lang),
+    staleTime: 60_000,
+  });
+
+  const error = useMemo(
+    () =>
+      quizzesError
+        ? quizzesError instanceof Error
+          ? quizzesError.message
+          : t('Không tải được danh sách đề', 'No se pudo cargar la lista')
+        : '',
+    [quizzesError, t]
+  );
 
   const formatQuizType = (value: string) =>
     value.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
@@ -39,35 +58,6 @@ const Quizzes = () => {
       .replace(/[\u0300-\u036f]/g, '')
       .replace(/[^a-z0-9]+/g, '_')
       .replace(/^_+|_+$/g, '');
-
-  useEffect(() => {
-    let active = true;
-
-    (async () => {
-      try {
-        setLoading(true);
-        const rows = await getQuizzes(lang);
-        if (!active) return;
-        setQuizzes(rows);
-        setError('');
-      } catch (err) {
-        if (!active) return;
-        setError(
-          err instanceof Error
-            ? err.message
-            : t('Không tải được danh sách đề', 'No se pudo cargar la lista')
-        );
-      } finally {
-        if (active) {
-          setLoading(false);
-        }
-      }
-    })();
-
-    return () => {
-      active = false;
-    };
-  }, [lang, t]);
 
   useEffect(() => {
     const q = searchParams.get('q');
@@ -249,7 +239,7 @@ const Quizzes = () => {
       .replace(/[\u0300-\u036f]/g, '');
 
   const filtered = useMemo(() => {
-    const q = normalizeForSearch(searchQuery);
+    const q = normalizeForSearch(deferredSearchQuery);
     const searchingAll = q.length > 0;
     return quizzes.filter((quiz) => {
       const byType = activeType === 'all' ? true : quiz.quiz_type === activeType;
@@ -281,7 +271,15 @@ const Quizzes = () => {
       );
       return blob.includes(q);
     });
-  }, [activeCategory, activeTopicGroup, activeType, formatQuizType, progressFilter, quizzes, searchQuery]);
+  }, [
+    activeCategory,
+    activeTopicGroup,
+    activeType,
+    deferredSearchQuery,
+    formatQuizType,
+    progressFilter,
+    quizzes,
+  ]);
 
   useEffect(() => {
     if (!activeTopicGroup) return;
@@ -324,16 +322,16 @@ const Quizzes = () => {
 
   useEffect(() => {
     if (prevSearchForPage.current === undefined) {
-      prevSearchForPage.current = searchQuery;
+      prevSearchForPage.current = deferredSearchQuery;
       return;
     }
-    if (prevSearchForPage.current === searchQuery) return;
-    prevSearchForPage.current = searchQuery;
+    if (prevSearchForPage.current === deferredSearchQuery) return;
+    prevSearchForPage.current = deferredSearchQuery;
     setCurrentPage(1);
     const next = new URLSearchParams(searchParams);
     next.delete('page');
     setSearchParams(next, { replace: true });
-  }, [searchQuery, searchParams, setSearchParams]);
+  }, [deferredSearchQuery, searchParams, setSearchParams]);
 
   const totalPages = useMemo(
     () => Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE)),
@@ -445,7 +443,7 @@ const Quizzes = () => {
                   {t('Trạng thái làm bài', 'Estado')}
                 </span>
                 <div
-                  className="flex w-full flex-wrap gap-0.5 rounded-full border border-primary/22 bg-primary/[0.1] p-1 shadow-sm lg:w-auto lg:flex-nowrap"
+                  className="flex w-full flex-wrap gap-0.5 rounded-full border border-primary/18 bg-primary/[0.06] p-1 shadow-sm lg:w-auto lg:flex-nowrap"
                   role="group"
                   aria-label={t('Lọc theo trạng thái', 'Filtrar por estado')}
                 >
@@ -458,16 +456,16 @@ const Quizzes = () => {
                         'min-h-8 flex-1 whitespace-nowrap rounded-full px-2.5 py-1.5 text-center text-xs font-semibold transition-[color,background-color,box-shadow,border-color] sm:px-3',
                         key === 'all' &&
                           (progressFilter === key
-                            ? 'border border-slate-400 bg-slate-500 text-white shadow-sm'
-                            : 'border border-transparent bg-transparent text-slate-600 hover:bg-slate-100'),
+                            ? 'border border-slate-300 bg-slate-100 text-slate-800 shadow-sm'
+                            : 'border border-transparent bg-transparent text-slate-600 hover:bg-slate-100/80'),
                         key === 'done' &&
                           (progressFilter === key
-                            ? 'border border-emerald-700 bg-emerald-600 text-white shadow-sm'
+                            ? 'border border-emerald-300 bg-emerald-100 text-emerald-800 shadow-sm'
                             : 'border border-transparent bg-transparent text-emerald-700 hover:bg-emerald-50'),
                         key === 'todo' &&
                           (progressFilter === key
-                            ? 'border border-red-700 bg-red-600 text-white shadow-sm'
-                            : 'border border-transparent bg-transparent text-red-700 hover:bg-red-50')
+                            ? 'border border-amber-300 bg-amber-100 text-amber-900 shadow-sm'
+                            : 'border border-transparent bg-transparent text-amber-800 hover:bg-amber-50')
                       )}
                     >
                       {key === 'all' && (
@@ -708,7 +706,7 @@ const Quizzes = () => {
                               'rounded border px-2 py-0.5 text-[11px] font-semibold',
                               quiz.has_completed
                                 ? 'border-emerald-900/20 bg-emerald-950/[0.06] text-emerald-900/85 dark:border-emerald-500/25 dark:bg-emerald-500/10 dark:text-emerald-100/90'
-                                : 'border-red-300/70 bg-red-50 text-red-700'
+                                : 'border-amber-300/70 bg-amber-50 text-amber-900 dark:border-amber-500/35 dark:bg-amber-500/15 dark:text-amber-100'
                             )}
                           >
                             {quiz.has_completed

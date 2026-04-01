@@ -7,40 +7,17 @@ import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/hooks/useLanguage';
-import {
-  getLeaderboard,
-  getMyDashboard,
-  resolveMediaUrl,
-  updateMyAvatar,
-  updateMyProfile,
-  uploadAvatarImage,
-  type DashboardResponse,
-  type LeaderboardUser,
-} from '@/lib/api';
+import { updateMyAvatar, updateMyProfile } from '@/lib/api/auth';
+import { getLeaderboard, getMyDashboard } from '@/lib/api/quiz';
+import { resolveMediaUrl, uploadAvatarImage } from '@/lib/api/upload';
+import type { DashboardResponse, LeaderboardUser } from '@/lib/api/types';
 import { Camera, Pencil, User as UserIcon } from '@/components/BrandIcons';
 import { getStoredAuth, updateStoredAuthUser } from '@/lib/auth';
+import { toStoredMediaPath } from '@/features/profile/profile.helpers';
+import { buildRankMotivation, toUpdateErrorMessage } from '@/features/profile/profile.ui.helpers';
 import { motion } from 'framer-motion';
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-
-function toStoredMediaPath(uploaded: { key?: string; cdn_url?: string } | null | undefined) {
-  if (!uploaded) return '';
-
-  const key = String(uploaded.key || '').trim();
-  if (key) {
-    return `/media/static/${key}`;
-  }
-
-  const raw = String(uploaded.cdn_url || '').trim();
-  if (!raw) return '';
-
-  try {
-    const parsed = new URL(raw);
-    return `${parsed.pathname}${parsed.search}${parsed.hash}`;
-  } catch {
-    return raw.startsWith('/') ? raw : `/${raw}`;
-  }
-}
 
 const Profile = () => {
   const { t, lang } = useLanguage();
@@ -101,29 +78,7 @@ const Profile = () => {
   }, [dashboard, leaderboard]);
 
   const rankMotivation = useMemo(() => {
-    if (!rank) {
-      return lang === 'vi'
-        ? 'Làm bài thi để tích điểm và xuất hiện trên bảng xếp hạng — mỗi bài đều đếm!'
-        : 'Haz exámenes para sumar puntos y entrar en el ranking: ¡cada intento cuenta!';
-    }
-    if (rank === 1) {
-      return lang === 'vi'
-        ? 'Bạn đang dẫn đầu bảng — duy trì nhịp luyện để giữ ngôi vương!'
-        : 'Lideras la clasificación: ¡mantén el ritmo para seguir arriba!';
-    }
-    if (rank <= 3) {
-      return lang === 'vi'
-        ? `Bạn đang top #${rank} — thêm vài bài nữa để tranh hạng cao hơn!`
-        : `¡Estás en el top #${rank}! Unos exámenes más y subes posiciones.`;
-    }
-    if (rank <= 10) {
-      return lang === 'vi'
-        ? `Bạn đã lọt top 10 (#${rank}) — cố một nhịp nữa để tiến xa hơn!`
-        : `¡Entre los 10 primeros (#${rank})! Sigue practicando para subir.`;
-    }
-    return lang === 'vi'
-      ? `Hạng #${rank} — mỗi lần làm bài đều giúp bạn tiến lên.`
-      : `Puesto #${rank}: cada examen te acerca a los primeros puestos.`;
+    return buildRankMotivation(rank, lang);
   }, [rank, lang]);
 
   if (loading) {
@@ -296,8 +251,7 @@ const Profile = () => {
         description: t('Tên hiển thị đã được cập nhật', 'Nombre actualizado'),
       });
     } catch (err) {
-      const message =
-        err instanceof Error ? err.message : t('Cập nhật thất bại', 'Error al actualizar');
+      const message = toUpdateErrorMessage(err, t('Cập nhật thất bại', 'Error al actualizar'));
       setError(message);
       toast({
         title: t('Không thể cập nhật', 'No se pudo actualizar'),
@@ -357,8 +311,7 @@ const Profile = () => {
         description: t('Mật khẩu đã được thay đổi', 'La contraseña ha sido actualizada'),
       });
     } catch (err) {
-      const message =
-        err instanceof Error ? err.message : t('Cập nhật thất bại', 'Error al actualizar');
+      const message = toUpdateErrorMessage(err, t('Cập nhật thất bại', 'Error al actualizar'));
       setError(message);
       toast({
         title: t('Không thể cập nhật', 'No se pudo actualizar'),

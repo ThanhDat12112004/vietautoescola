@@ -1,14 +1,7 @@
-const pool = require('../config/db');
 const attemptRepository = require('../repositories/attempt.repository');
 
 async function calculateAttemptResult(quizId, submittedAnswers) {
-  const [questions] = await pool.query(
-    `SELECT id, points
-     FROM questions
-     WHERE quiz_id = ?
-     ORDER BY order_number ASC`,
-    [quizId]
-  );
+  const questions = await attemptRepository.findQuestionsByQuizId(quizId);
 
   if (!questions.length) {
     return {
@@ -21,12 +14,7 @@ async function calculateAttemptResult(quizId, submittedAnswers) {
   }
 
   const questionIds = questions.map((q) => q.id);
-  const [answers] = await pool.query(
-    `SELECT id, question_id, is_correct
-     FROM answers
-     WHERE question_id IN (?)`,
-    [questionIds]
-  );
+  const answers = await attemptRepository.findAnswersByQuestionIds(questionIds);
 
   const correctAnswerByQuestion = new Map();
   for (const ans of answers) {

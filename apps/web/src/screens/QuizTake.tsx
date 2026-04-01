@@ -5,14 +5,22 @@ import { useLanguage } from '@/hooks/useLanguage';
 import {
   checkQuestion,
   getQuizDetail,
-  resolveMediaUrl,
   startAttempt,
   submitAttempt,
   type CheckQuestionResult,
   type QuizDetail,
   type SubmitAttemptResult,
-} from '@/lib/api';
+} from '@/lib/api/quiz';
+import {
+  resolveMediaUrl,
+} from '@/lib/api/upload';
 import { getStoredAuth } from '@/lib/auth';
+import { formatTimer, shuffleArray } from '@/features/quiz-take/quizTake.helpers';
+import {
+  getCandidateDisplayName,
+  getQuestionBadgeClassName as getQuestionBadgeClassNameHelper,
+  hasUnsavedQuizProgress,
+} from '@/features/quiz-take/quizTake.ui.helpers';
 import {
   ArrowLeft,
   ArrowRight,
@@ -31,15 +39,6 @@ import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 type QuizMode = 'practice' | 'exam';
 
 type CheckedMap = Record<number, CheckQuestionResult>;
-
-function shuffleArray(items) {
-  const next = [...items];
-  for (let i = next.length - 1; i > 0; i -= 1) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [next[i], next[j]] = [next[j], next[i]];
-  }
-  return next;
-}
 
 const ANSWER_BADGES = ['/brand/a.png', '/brand/b.png', '/brand/c.png'];
 
@@ -66,9 +65,9 @@ const QuizTake = () => {
   const [timer, setTimer] = useState(0);
   const [submitResult, setSubmitResult] = useState<SubmitAttemptResult | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [preferStackedQuestionLayout, setPreferStackedQuestionLayout] = useState(false);
   const authUser = getStoredAuth()?.user;
-  const candidateName =
-    (authUser?.full_name && authUser.full_name.trim()) || authUser?.username || '-';
+  const candidateName = getCandidateDisplayName(authUser);
 
   useEffect(() => {
     if (!getStoredAuth()?.token) {
@@ -173,6 +172,11 @@ const QuizTake = () => {
   const checkedForCurrent = question ? checkedMap[question.id] : undefined;
 
   useEffect(() => {
+    // Re-evaluate layout whenever user moves to another question.
+    setPreferStackedQuestionLayout(false);
+  }, [question?.id]);
+
+  useEffect(() => {
     if (!showExplanationPanel || mode !== 'practice' || !question?.explanation) return;
     if (!checkedForCurrent) return;
 
@@ -206,18 +210,6 @@ const QuizTake = () => {
     });
     return map;
   }, [checkedMap, submitResult]);
-
-  const formatTime = (s: number) => {
-    const h = Math.floor(s / 3600);
-    const m = Math.floor(s / 60);
-    const sec = s % 60;
-    if (h > 0) {
-      return `${h.toString().padStart(2, '0')}:${(m % 60).toString().padStart(2, '0')}:${sec
-        .toString()
-        .padStart(2, '0')}`;
-    }
-    return `${m.toString().padStart(2, '0')}:${sec.toString().padStart(2, '00')}`;
-  };
 
   // Auto-check when answer is selected in practice mode
   const handleSelect = async (answerId: number) => {
@@ -273,8 +265,11 @@ const QuizTake = () => {
 
   const handleLeaveQuiz = (targetPath: string) => {
     if (isSubmitting) return;
-
-    const hasUnsavedProgress = !submitResult && (Object.keys(selectedAnswers).length > 0 || timer > 0);
+    const hasUnsavedProgress = hasUnsavedQuizProgress(
+      submitResult,
+      Object.keys(selectedAnswers).length,
+      timer
+    );
     if (hasUnsavedProgress) {
       const accepted = window.confirm(
         t(
@@ -471,34 +466,15 @@ const QuizTake = () => {
   const mobileTopCount = Math.ceil(questions.length / 2);
 
   /** Ô số câu đang xem: sky (dễ tách khỏi đỏ “sai”). Đã làm / đúng: lá; sai: đỏ đậm hơn. */
-  const getQuestionBadgeClassName = (questionId: number, index: number) => {
-    const isCurrent = index === currentIndex;
-    const currentMark = 'border-sky-600 bg-sky-50 text-sky-900 ring-1 ring-sky-300/70 shadow-sm';
-
-    if (mode === 'exam') {
-      const hasAnswered = Boolean(selectedAnswers[questionId]);
-
-      if (hasAnswered) {
-        return 'border-emerald-600 bg-emerald-50 text-emerald-900';
-      }
-
-      return isCurrent
-        ? currentMark
-        : 'border-border bg-background text-muted-foreground hover:bg-muted';
-    }
-
-    const detail = detailsMap[questionId];
-    const hasJudged = Boolean(detail);
-    const isCorrect = Boolean(detail?.is_correct);
-
-    if (hasJudged) {
-      return isCorrect
-        ? 'border-green-600 bg-green-50 text-green-800'
-        : 'border-red-600 bg-red-50 text-red-800 ring-1 ring-red-300/60';
-    }
-
-    return isCurrent ? currentMark : 'border-border bg-background text-muted-foreground hover:bg-muted';
-  };
+  const getQuestionBadgeClassName = (questionId: number, index: number) =>
+    getQuestionBadgeClassNameHelper({
+      mode,
+      questionId,
+      index,
+      currentIndex,
+      selectedAnswers,
+      detailsMap,
+    });
 
   const explanationDisabled =
     mode !== 'practice' || !checkedForCurrent || !question.explanation;
@@ -506,20 +482,30 @@ const QuizTake = () => {
   const renderImageArea = () => (
     <>
       <div
-        className="relative flex w-full min-h-0 items-center justify-center overflow-hidden rounded-lg border-0 bg-transparent
-          landscape:max-h-none landscape:flex-1 landscape:aspect-[4/3] landscape:min-h-[min(280px,32vmin)] landscape:xl:min-h-[min(320px,34vmin)]"
+        className="relative flex w-full h-[clamp(180px,36dvh,320px)] items-center justify-center overflow-hidden rounded-lg border border-slate-300/60 bg-slate-50/40
+          sm:h-[clamp(200px,34dvh,360px)] md:h-[clamp(220px,32dvh,420px)]
+          landscape:h-full landscape:min-h-[260px] landscape:flex-1
+          landscape:rounded-md landscape:border-0 landscape:bg-transparent"
       >
         {question.image_url ? (
           <img
             src={resolveMediaUrl(question.image_url)}
             alt="question"
-            className="mx-auto block h-auto w-auto max-w-full object-contain object-center
-              portrait:max-h-[min(40dvh,280px)]
-              landscape:h-full landscape:min-h-0 landscape:w-full landscape:max-h-full landscape:max-w-full"
+            onLoad={(event) => {
+              const { naturalWidth, naturalHeight } = event.currentTarget;
+              if (!naturalWidth || !naturalHeight) {
+                setPreferStackedQuestionLayout(false);
+                return;
+              }
+              // Prefer stacked layout when image is clearly portrait/tall.
+              setPreferStackedQuestionLayout(naturalHeight / naturalWidth >= 1.2);
+            }}
+            className="mx-auto block h-auto w-auto max-h-full max-w-full object-contain object-center
+              lg:landscape:h-full lg:landscape:w-full"
           />
         ) : (
           <div
-            className="flex w-full min-h-[6.5rem] flex-1 flex-col items-center justify-center px-2 pb-12 pt-3 text-center text-[clamp(0.625rem,2.2vmin,0.875rem)] text-muted-foreground portrait:min-h-[7rem] landscape:min-h-0 landscape:flex-1 landscape:pb-3 landscape:pt-2"
+            className="flex h-full w-full flex-col items-center justify-center px-2 pb-12 pt-3 text-center text-[clamp(0.625rem,2.2vmin,0.875rem)] text-muted-foreground landscape:pb-3 landscape:pt-2"
           >
             {t('Không có hình minh họa', 'Sin imagen')}
           </div>
@@ -554,7 +540,7 @@ const QuizTake = () => {
       <span className="font-black leading-none text-slate-700 text-[clamp(1rem,4.2vmin,2.75rem)]">
         {String(question.order_number).padStart(2, '0')}.
       </span>
-      <h3 className="pt-0.5 font-bold leading-snug text-[clamp(0.8125rem,2.75vmin,1.35rem)] landscape:pt-1 landscape:text-[clamp(0.875rem,2.05vmin,1.5rem)]">
+      <h3 className="pt-0.5 font-bold leading-snug text-[clamp(1rem,2.35vmin,1.375rem)] landscape:pt-1 landscape:text-[clamp(1.0625rem,2.15vmin,1.4375rem)]">
         {question.question_text}
       </h3>
     </div>
@@ -577,7 +563,7 @@ const QuizTake = () => {
           <button
             key={answer.id}
             onClick={() => void handleSelect(answer.id)}
-            className={`group flex w-full items-center gap-1.5 rounded-lg border px-[clamp(0.375rem,1.5vmin,0.75rem)] py-[clamp(0.25rem,1.35vmin,0.5rem)] text-left text-[clamp(0.6875rem,2.35vmin,1.0625rem)] leading-snug transition-all duration-200
+            className={`group flex w-full items-center gap-1.5 rounded-lg border px-[clamp(0.375rem,1.5vmin,0.75rem)] py-[clamp(0.25rem,1.35vmin,0.5rem)] text-left leading-snug transition-all duration-200
               landscape:gap-2.5 landscape:rounded-lg landscape:px-[clamp(0.4rem,1.25vmin,0.65rem)] landscape:py-[clamp(0.28rem,1.1vmin,0.5rem)] ${
               isCorrect
                 ? 'border-green-500 bg-green-50 shadow-sm'
@@ -600,7 +586,7 @@ const QuizTake = () => {
               </span>
             )}
             <span
-              className={`flex-1 break-words pt-0.5 leading-snug landscape:leading-snug landscape:text-[clamp(0.875rem,1.85vmin,1.125rem)] ${answerTextClass}`}
+              className={`flex-1 break-words pt-0.5 text-[clamp(0.9375rem,2.05vmin,1.3125rem)] leading-snug landscape:leading-snug ${answerTextClass}`}
             >
               {answer.answer_text}
             </span>
@@ -659,7 +645,7 @@ const QuizTake = () => {
       <div
         className="flex min-h-0 flex-1 flex-col overflow-hidden w-full rounded-[1rem] border border-slate-300/70 bg-white/90 shadow-[0_18px_36px_rgba(15,23,42,0.12)] p-1 sm:p-1.5 md:p-1.5 lg:p-2"
       >
-        <div className="mb-1.5 shrink-0 grid grid-cols-[minmax(0,1fr)_auto] gap-1 md:gap-1.5 landscape:grid-cols-[auto_minmax(0,1fr)_auto] landscape:gap-x-2 landscape:gap-y-1">
+        <div className="mb-0 shrink-0 grid grid-cols-[minmax(0,1fr)_auto] gap-1 md:gap-1.5 landscape:grid-cols-[auto_minmax(0,1fr)_auto] landscape:gap-x-2 landscape:gap-y-1">
           <div className="col-span-2 flex w-full min-w-0 items-center justify-between gap-1.5 rounded-md border border-slate-300/70 bg-slate-50/90 px-1.5 py-1 text-[clamp(0.625rem,2.2vmin,0.875rem)] sm:px-2 landscape:col-span-1 landscape:row-span-2 landscape:w-auto landscape:max-w-full landscape:justify-start landscape:gap-2 landscape:px-2 landscape:py-1.5 landscape:text-sm">
             <button
               type="button"
@@ -708,7 +694,7 @@ const QuizTake = () => {
               <span
                 className={`font-sans tabular-nums text-[clamp(0.625rem,2.2vmin,0.875rem)] font-bold landscape:text-sm ${timer < 60 ? 'text-destructive' : 'text-foreground'}`}
               >
-                {formatTime(timer)}
+                {formatTimer(timer)}
               </span>
             </div>
           </div>
@@ -747,18 +733,28 @@ const QuizTake = () => {
 
         {/* Landscape: hai cột như máy tính */}
         <div
-          className="hidden min-h-0 flex-1 grid-cols-1 grid-rows-[auto_minmax(0,1fr)] gap-2 rounded-xl border border-slate-300/70 bg-slate-100/65 p-2 landscape:grid landscape:grid-cols-2 landscape:grid-rows-1 landscape:gap-3 landscape:items-stretch xl:gap-4"
+          className={`hidden min-h-0 flex-1 grid-cols-1 grid-rows-[auto_minmax(0,1fr)] gap-2 rounded-xl border border-slate-300/70 bg-slate-100/65 p-2 landscape:grid landscape:items-stretch ${
+            preferStackedQuestionLayout
+              ? 'landscape:grid-cols-1 landscape:grid-rows-[auto_minmax(0,1fr)] landscape:gap-2'
+              : 'landscape:grid-cols-[minmax(0,4fr)_minmax(0,6fr)] landscape:grid-rows-1 landscape:gap-0'
+          }`}
         >
           <div
             className="flex min-h-0 shrink-0 flex-col gap-2 rounded-xl border border-slate-300/70 bg-white p-2 sm:p-3
-              landscape:h-full landscape:min-h-[320px] landscape:gap-3 landscape:overflow-hidden
-              xl:min-h-[360px] xl:gap-3
-              2xl:min-h-[400px]"
+              landscape:h-full landscape:min-h-[260px] landscape:gap-3 landscape:overflow-hidden
+              landscape:rounded-r-none landscape:border-r-2 landscape:border-r-slate-300/80
+              data-[stacked=true]:landscape:rounded-r-xl data-[stacked=true]:landscape:border-r data-[stacked=true]:landscape:border-r-slate-300/70
+              xl:min-h-[290px] xl:gap-3
+              2xl:min-h-[320px]"
+            data-stacked={preferStackedQuestionLayout ? 'true' : 'false'}
           >
             {renderImageArea()}
           </div>
 
-            <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-xl border border-slate-300/70 bg-white landscape:h-full">
+          <div
+            className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-xl border border-slate-300/70 bg-white landscape:h-full landscape:rounded-l-none landscape:border-l-0 data-[stacked=true]:landscape:rounded-l-xl data-[stacked=true]:landscape:border-l"
+            data-stacked={preferStackedQuestionLayout ? 'true' : 'false'}
+          >
             {error && (
               <p className="shrink-0 px-2 pt-1.5 text-xs text-destructive landscape:px-2.5 xl:px-4 xl:pt-2">{error}</p>
             )}
@@ -810,7 +806,7 @@ const QuizTake = () => {
         </div>
 
         <div
-          className="mt-1.5 shrink-0 rounded-md border border-slate-300/70 bg-white p-1 md:p-1.5 xl:p-2"
+          className="mt-0 shrink-0 rounded-md border border-slate-300/70 bg-white p-1 md:p-1.5 xl:p-2"
         >
           {shouldUseTwoRowsOnMobile ? (
             <>

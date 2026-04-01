@@ -384,10 +384,16 @@ async function findFirstTypeIdByCategoryId(categoryId) {
   return 1;
 }
 
-async function findAllActiveQuizzes(lang, userId = null) {
+async function findAllActiveQuizzes(lang, userId = null, pagination = null) {
+  const requestedLimit = Number(pagination?.limit || 0);
+  const requestedPage = Number(pagination?.page || 1);
+  const usePagination = Number.isFinite(requestedLimit) && requestedLimit > 0;
+  const safeLimit = usePagination ? Math.min(Math.floor(requestedLimit), 100) : 0;
+  const safePage = Number.isFinite(requestedPage) && requestedPage > 0 ? Math.floor(requestedPage) : 1;
+  const safeOffset = usePagination ? (safePage - 1) * safeLimit : 0;
+
   if (!userId) {
-    const [rows] = await pool.query(
-      `SELECT
+    let query = `SELECT
          q.id,
          CAST(q.category_id AS CHAR) AS quiz_type,
          q.duration_minutes,
@@ -406,14 +412,20 @@ async function findAllActiveQuizzes(lang, userId = null) {
        LEFT JOIN quiz_categories c ON c.id = q.category_id
        LEFT JOIN quiz_topic_groups qtg ON qtg.id = c.quiz_topic_group_id
        WHERE q.is_active = TRUE
-       ORDER BY q.created_at DESC`
-    );
+       ORDER BY q.created_at DESC`;
+
+    const queryParams = [];
+    if (usePagination) {
+      query += ' LIMIT ? OFFSET ?';
+      queryParams.push(safeLimit, safeOffset);
+    }
+
+    const [rows] = await pool.query(query, queryParams);
 
     return rows;
   }
 
-  const [rows] = await pool.query(
-    `SELECT
+  let query = `SELECT
        q.id,
        CAST(q.category_id AS CHAR) AS quiz_type,
        q.duration_minutes,
@@ -441,9 +453,15 @@ async function findAllActiveQuizzes(lang, userId = null) {
        GROUP BY quiz_id
      ) ua ON ua.quiz_id = q.id
      WHERE q.is_active = TRUE
-     ORDER BY q.created_at DESC`,
-    [userId]
-  );
+     ORDER BY q.created_at DESC`;
+
+  const queryParams = [userId];
+  if (usePagination) {
+    query += ' LIMIT ? OFFSET ?';
+    queryParams.push(safeLimit, safeOffset);
+  }
+
+  const [rows] = await pool.query(query, queryParams);
 
   return rows;
 }

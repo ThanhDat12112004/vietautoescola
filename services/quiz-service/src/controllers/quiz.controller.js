@@ -4,12 +4,28 @@ const {
   createManualQuizSchema,
   updateQuizDetailSchema,
 } = require('../validators/quiz-admin.validator');
+const {
+  parseOptionalPositiveNumber,
+  parsePositiveNumber,
+  parseRequiredId,
+  requireBilingualNames,
+} = require('../validators/quiz-request.validator');
 const { validateOrThrow } = require('../utils/validate');
 
 async function listQuizzes(req, res, next) {
   try {
     const lang = getLang(req.query.lang);
-    const quizzes = await quizService.listQuizzes(lang, req.user?.id || null);
+    const rawLimit = Number(req.query.limit);
+    const rawPage = Number(req.query.page || 1);
+    const hasPagination = Number.isFinite(rawLimit) && rawLimit > 0;
+    const pagination = hasPagination
+      ? {
+          limit: Math.min(Math.floor(rawLimit), 100),
+          page: Number.isFinite(rawPage) && rawPage > 0 ? Math.floor(rawPage) : 1,
+        }
+      : null;
+
+    const quizzes = await quizService.listQuizzes(lang, req.user?.id || null, pagination);
     return res.json(quizzes);
   } catch (error) {
     return next(error);
@@ -47,10 +63,8 @@ async function listAdminTopicGroups(_req, res, next) {
 
 async function createTopicGroup(req, res, next) {
   const { code, name_vi, name_es, description_vi, description_es, is_active } = req.body;
-  if (!name_vi || !name_es) {
-    return res.status(400).json({ message: 'name_vi and name_es are required' });
-  }
   try {
+    requireBilingualNames(name_vi, name_es);
     const result = await quizService.createTopicGroup({
       code,
       name_vi,
@@ -66,15 +80,10 @@ async function createTopicGroup(req, res, next) {
 }
 
 async function updateTopicGroup(req, res, next) {
-  const topicGroupId = Number(req.params.id);
-  if (Number.isNaN(topicGroupId)) {
-    return res.status(400).json({ message: 'Invalid topic group id' });
-  }
   const { code, name_vi, name_es, description_vi, description_es, is_active } = req.body;
-  if (!name_vi || !name_es) {
-    return res.status(400).json({ message: 'name_vi and name_es are required' });
-  }
   try {
+    const topicGroupId = parseRequiredId(req.params.id, 'topic group id');
+    requireBilingualNames(name_vi, name_es);
     const result = await quizService.updateTopicGroup(topicGroupId, {
       code,
       name_vi,
@@ -90,11 +99,8 @@ async function updateTopicGroup(req, res, next) {
 }
 
 async function deleteTopicGroup(req, res, next) {
-  const topicGroupId = Number(req.params.id);
-  if (Number.isNaN(topicGroupId)) {
-    return res.status(400).json({ message: 'Invalid topic group id' });
-  }
   try {
+    const topicGroupId = parseRequiredId(req.params.id, 'topic group id');
     const result = await quizService.deleteTopicGroup(topicGroupId);
     return res.json(result);
   } catch (error) {
@@ -113,12 +119,8 @@ async function listTypes(req, res, next) {
 }
 
 async function getQuizDetail(req, res, next) {
-  const quizId = Number(req.params.id);
-  if (Number.isNaN(quizId)) {
-    return res.status(400).json({ message: 'Invalid quiz id' });
-  }
-
   try {
+    const quizId = parseRequiredId(req.params.id, 'quiz id');
     const lang = getLang(req.query.lang);
     const quiz = await quizService.getQuizDetail(quizId, lang);
     return res.json(quiz);
@@ -179,21 +181,10 @@ async function createType(req, res, next) {
     quiz_category_id,
   } = req.body;
 
-  if (!name_vi || !name_es) {
-    return res.status(400).json({ message: 'name_vi and name_es are required' });
-  }
-  const topicGroupId = Number(quiz_topic_group_id);
-  const categoryId = Number(quiz_category_id);
-  if (
-    (quiz_topic_group_id != null && (!Number.isFinite(topicGroupId) || topicGroupId <= 0)) ||
-    (quiz_category_id != null && (!Number.isFinite(categoryId) || categoryId <= 0))
-  ) {
-    return res
-      .status(400)
-      .json({ message: 'quiz_topic_group_id/quiz_category_id must be positive number' });
-  }
-
   try {
+    requireBilingualNames(name_vi, name_es);
+    const topicGroupId = parseOptionalPositiveNumber(quiz_topic_group_id, 'quiz_topic_group_id');
+    const categoryId = parseOptionalPositiveNumber(quiz_category_id, 'quiz_category_id');
     const result = await quizService.createType({
       code,
       quiz_topic_group_id: Number.isFinite(topicGroupId) ? topicGroupId : undefined,
@@ -211,11 +202,6 @@ async function createType(req, res, next) {
 }
 
 async function updateType(req, res, next) {
-  const typeId = Number(req.params.id);
-  if (Number.isNaN(typeId)) {
-    return res.status(400).json({ message: 'Invalid type id' });
-  }
-
   const {
     code,
     name_vi,
@@ -226,21 +212,11 @@ async function updateType(req, res, next) {
     quiz_topic_group_id,
     quiz_category_id,
   } = req.body;
-  if (!name_vi || !name_es) {
-    return res.status(400).json({ message: 'name_vi and name_es are required' });
-  }
-  const topicGroupId = Number(quiz_topic_group_id);
-  const categoryId = Number(quiz_category_id);
-  if (
-    (quiz_topic_group_id != null && (!Number.isFinite(topicGroupId) || topicGroupId <= 0)) ||
-    (quiz_category_id != null && (!Number.isFinite(categoryId) || categoryId <= 0))
-  ) {
-    return res
-      .status(400)
-      .json({ message: 'quiz_topic_group_id/quiz_category_id must be positive number' });
-  }
-
   try {
+    const typeId = parseRequiredId(req.params.id, 'type id');
+    requireBilingualNames(name_vi, name_es);
+    const topicGroupId = parseOptionalPositiveNumber(quiz_topic_group_id, 'quiz_topic_group_id');
+    const categoryId = parseOptionalPositiveNumber(quiz_category_id, 'quiz_category_id');
     const result = await quizService.updateType(typeId, {
       code,
       quiz_topic_group_id: Number.isFinite(topicGroupId) ? topicGroupId : undefined,
@@ -258,12 +234,8 @@ async function updateType(req, res, next) {
 }
 
 async function deleteType(req, res, next) {
-  const typeId = Number(req.params.id);
-  if (Number.isNaN(typeId)) {
-    return res.status(400).json({ message: 'Invalid type id' });
-  }
-
   try {
+    const typeId = parseRequiredId(req.params.id, 'type id');
     const result = await quizService.deleteType(typeId);
     return res.json(result);
   } catch (error) {
@@ -282,16 +254,9 @@ async function createCategory(req, res, next) {
     quiz_topic_group_id,
   } = req.body;
 
-  if (!name_vi || !name_es) {
-    return res.status(400).json({ message: 'name_vi and name_es are required' });
-  }
-
-  const topicGroupId = Number(quiz_topic_group_id ?? 1);
-  if (!Number.isFinite(topicGroupId) || topicGroupId <= 0) {
-    return res.status(400).json({ message: 'quiz_topic_group_id must be a positive number' });
-  }
-
   try {
+    requireBilingualNames(name_vi, name_es);
+    const topicGroupId = parsePositiveNumber(quiz_topic_group_id, 'quiz_topic_group_id', 1);
     const result = await quizService.createCategory({
       quiz_topic_group_id: topicGroupId,
       name_vi,
@@ -308,11 +273,6 @@ async function createCategory(req, res, next) {
 }
 
 async function updateCategory(req, res, next) {
-  const categoryId = Number(req.params.id);
-  if (Number.isNaN(categoryId)) {
-    return res.status(400).json({ message: 'Invalid category id' });
-  }
-
   const {
     name_vi,
     name_es,
@@ -323,16 +283,10 @@ async function updateCategory(req, res, next) {
     quiz_topic_group_id,
   } = req.body;
 
-  if (!name_vi || !name_es) {
-    return res.status(400).json({ message: 'name_vi and name_es are required' });
-  }
-
-  const topicGroupId = Number(quiz_topic_group_id ?? 1);
-  if (!Number.isFinite(topicGroupId) || topicGroupId <= 0) {
-    return res.status(400).json({ message: 'quiz_topic_group_id must be a positive number' });
-  }
-
   try {
+    const categoryId = parseRequiredId(req.params.id, 'category id');
+    requireBilingualNames(name_vi, name_es);
+    const topicGroupId = parsePositiveNumber(quiz_topic_group_id, 'quiz_topic_group_id', 1);
     const result = await quizService.updateCategory(categoryId, {
       quiz_topic_group_id: topicGroupId,
       name_vi,
@@ -349,12 +303,8 @@ async function updateCategory(req, res, next) {
 }
 
 async function deleteCategory(req, res, next) {
-  const categoryId = Number(req.params.id);
-  if (Number.isNaN(categoryId)) {
-    return res.status(400).json({ message: 'Invalid category id' });
-  }
-
   try {
+    const categoryId = parseRequiredId(req.params.id, 'category id');
     const result = await quizService.deleteCategory(categoryId);
     return res.json(result);
   } catch (error) {
@@ -363,11 +313,6 @@ async function deleteCategory(req, res, next) {
 }
 
 async function updateQuiz(req, res, next) {
-  const quizId = Number(req.params.id);
-  if (Number.isNaN(quizId)) {
-    return res.status(400).json({ message: 'Invalid quiz id' });
-  }
-
   const {
     category_id,
     title_vi,
@@ -387,6 +332,7 @@ async function updateQuiz(req, res, next) {
   }
 
   try {
+    const quizId = parseRequiredId(req.params.id, 'quiz id');
     const result = await quizService.updateQuiz(quizId, {
       category_id,
       title_vi,
@@ -405,12 +351,8 @@ async function updateQuiz(req, res, next) {
 }
 
 async function getAdminQuizDetail(req, res, next) {
-  const quizId = Number(req.params.id);
-  if (Number.isNaN(quizId)) {
-    return res.status(400).json({ message: 'Invalid quiz id' });
-  }
-
   try {
+    const quizId = parseRequiredId(req.params.id, 'quiz id');
     const detail = await quizService.getQuizDetailForAdmin(quizId);
     return res.json(detail);
   } catch (error) {
@@ -419,12 +361,8 @@ async function getAdminQuizDetail(req, res, next) {
 }
 
 async function updateQuizDetail(req, res, next) {
-  const quizId = Number(req.params.id);
-  if (Number.isNaN(quizId)) {
-    return res.status(400).json({ message: 'Invalid quiz id' });
-  }
-
   try {
+    const quizId = parseRequiredId(req.params.id, 'quiz id');
     const payload = validateOrThrow(updateQuizDetailSchema, req.body);
     const result = await quizService.updateQuizDetail(quizId, payload);
     return res.json(result);
@@ -434,12 +372,8 @@ async function updateQuizDetail(req, res, next) {
 }
 
 async function deleteQuiz(req, res, next) {
-  const quizId = Number(req.params.id);
-  if (Number.isNaN(quizId)) {
-    return res.status(400).json({ message: 'Invalid quiz id' });
-  }
-
   try {
+    const quizId = parseRequiredId(req.params.id, 'quiz id');
     const result = await quizService.deleteQuiz(quizId);
     return res.json(result);
   } catch (error) {

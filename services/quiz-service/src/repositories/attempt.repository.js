@@ -55,6 +55,30 @@ async function findQuestionByIdAndQuizId(questionId, quizId) {
   return rows[0] || null;
 }
 
+async function findQuestionsByQuizId(quizId) {
+  const [rows] = await pool.query(
+    `SELECT id, points
+     FROM questions
+     WHERE quiz_id = ?
+     ORDER BY order_number ASC`,
+    [quizId]
+  );
+
+  return rows;
+}
+
+async function findAnswersByQuestionIds(questionIds) {
+  if (!Array.isArray(questionIds) || !questionIds.length) return [];
+
+  const [rows] = await pool.query(
+    `SELECT id, question_id, is_correct
+     FROM answers
+     WHERE question_id IN (?)`,
+    [questionIds]
+  );
+  return rows;
+}
+
 async function findCorrectAnswerForQuestion(questionId) {
   const [rows] = await pool.execute(
     `SELECT id
@@ -186,6 +210,8 @@ module.exports = {
   findAttemptForSubmit,
   findAttemptByIdAndUser,
   findQuestionByIdAndQuizId,
+  findQuestionsByQuizId,
+  findAnswersByQuestionIds,
   findCorrectAnswerForQuestion,
   findAnswerByIdAndQuestionId,
   markAttemptCompleted,

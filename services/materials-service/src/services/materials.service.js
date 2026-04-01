@@ -87,6 +87,10 @@ async function listSubjectsForAdmin() {
   return materialsRepository.findAllSubjectsAdmin();
 }
 
+async function listMaterialCountsBySubject() {
+  return materialsRepository.findMaterialCountsBySubject();
+}
+
 async function createSubject(payload) {
   try {
     return await materialsRepository.createSubject(payload);
@@ -200,6 +204,7 @@ module.exports = {
   deleteTopicGroup,
   listSubjects,
   listSubjectsForAdmin,
+  listMaterialCountsBySubject,
   createSubject,
   updateSubject,
   deleteSubject,

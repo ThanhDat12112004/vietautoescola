@@ -6,14 +6,10 @@
 [1] > user-service@1.0.0 dev
 [1] > nodemon src/server.js
 [1] 
-[3] 
-[3] > media-service@1.0.0 dev
-[3] > nodemon src/server.js
-[3] 
-[4] 
-[4] > stats-service@1.0.0 dev
-[4] > nodemon src/server.js
-[4] 
+[2] 
+[2] > quiz-service@1.0.0 dev
+[2] > nodemon src/server.js
+[2] 
 [0] 
 [0] > api-gateway@1.0.0 dev
 [0] > nodemon src/server.js
@@ -22,95 +18,477 @@
 [5] > materials-service@1.0.0 dev
 [5] > nodemon src/server.js
 [5] 
-[2] 
-[2] > quiz-service@1.0.0 dev
-[2] > nodemon src/server.js
-[2] 
 [6] 
 [6] > web@1.0.0 dev
 [6] > next dev -p ${WEB_PORT}
 [6] 
-[5] [33m[nodemon] 3.1.14[39m
+[3] 
+[3] > media-service@1.0.0 dev
+[3] > nodemon src/server.js
+[3] 
+[4] 
+[4] > stats-service@1.0.0 dev
+[4] > nodemon src/server.js
+[4] 
 [1] [33m[nodemon] 3.1.14[39m
-[5] [33m[nodemon] to restart at any time, enter `rs`[39m
-[5] [33m[nodemon] watching path(s): *.*[39m
-[3] [33m[nodemon] 3.1.14[39m
-[3] [33m[nodemon] to restart at any time, enter `rs`[39m
-[5] [33m[nodemon] watching extensions: js,mjs,cjs,json[39m
-[5] [32m[nodemon] starting `node src/server.js`[39m
-[0] [33m[nodemon] 3.1.14[39m
 [1] [33m[nodemon] to restart at any time, enter `rs`[39m
+[2] [33m[nodemon] 3.1.14[39m
 [1] [33m[nodemon] watching path(s): *.*[39m
 [1] [33m[nodemon] watching extensions: js,mjs,cjs,json[39m
 [1] [32m[nodemon] starting `node src/server.js`[39m
-[0] [33m[nodemon] to restart at any time, enter `rs`[39m
-[0] [33m[nodemon] watching path(s): *.*[39m
-[0] [33m[nodemon] watching extensions: js,mjs,cjs,json[39m
-[0] [32m[nodemon] starting `node src/server.js`[39m
-[3] [33m[nodemon] watching path(s): *.*[39m
-[3] [33m[nodemon] watching extensions: js,mjs,cjs,json[39m
-[3] [32m[nodemon] starting `node src/server.js`[39m
+[2] [33m[nodemon] to restart at any time, enter `rs`[39m
+[2] [33m[nodemon] watching path(s): *.*[39m
 [4] [33m[nodemon] 3.1.14[39m
-[2] [33m[nodemon] 3.1.14[39m
+[2] [33m[nodemon] watching extensions: js,mjs,cjs,json[39m
+[2] [32m[nodemon] starting `node src/server.js`[39m
 [4] [33m[nodemon] to restart at any time, enter `rs`[39m
 [4] [33m[nodemon] watching path(s): *.*[39m
 [4] [33m[nodemon] watching extensions: js,mjs,cjs,json[39m
 [4] [32m[nodemon] starting `node src/server.js`[39m
-[2] [33m[nodemon] to restart at any time, enter `rs`[39m
-[2] [33m[nodemon] watching path(s): *.*[39m
-[2] [33m[nodemon] watching extensions: js,mjs,cjs,json[39m
-[2] [32m[nodemon] starting `node src/server.js`[39m
+[3] [33m[nodemon] 3.1.14[39m
+[0] [33m[nodemon] 3.1.14[39m
+[3] [33m[nodemon] to restart at any time, enter `rs`[39m
+[3] [33m[nodemon] watching path(s): *.*[39m
+[3] [33m[nodemon] watching extensions: js,mjs,cjs,json[39m
+[3] [32m[nodemon] starting `node src/server.js`[39m
+[5] [33m[nodemon] 3.1.14[39m
+[0] [33m[nodemon] to restart at any time, enter `rs`[39m
+[5] [33m[nodemon] to restart at any time, enter `rs`[39m
+[5] [33m[nodemon] watching path(s): *.*[39m
+[5] [33m[nodemon] watching extensions: js,mjs,cjs,json[39m
+[5] [32m[nodemon] starting `node src/server.js`[39m
+[0] [33m[nodemon] watching path(s): *.*[39m
+[0] [33m[nodemon] watching extensions: js,mjs,cjs,json[39m
+[0] [32m[nodemon] starting `node src/server.js`[39m
 [0] api-gateway listening on port 8080
-[3] media-service listening on port 4002
-[1] user-service listening on port 4003
 [4] stats-service listening on port 4004
+[1] user-service listening on port 4003
 [5] materials-service listening on port 4005
+[3] media-service listening on port 4002
 [2] quiz-service listening on port 4001
 [6]   ▲ Next.js 14.2.25
-[6]   - Local:        http://localhost:1234
+[6]   - Local:        http://localhost:3000
 [6] 
 [6]  ✓ Starting...
-[6]  ✓ Ready in 1236ms
+[6]  ✓ Ready in 1231ms
 [6]  ○ Compiling /[[...slug]] ...
-[6]  ✓ Compiled /[[...slug]] in 2.9s (1750 modules)
-[6]  GET / 200 in 3095ms
-[6]  GET / 200 in 16ms
-[6]  GET /brand/background.png 200 in 24ms
-[0] (node:93174) [DEP0060] DeprecationWarning: The `util._extend` API is deprecated. Please use Object.assign() instead.
+[6]  ✓ Compiled /[[...slug]] in 3.3s (1840 modules)
+[6]  GET /quiz/1?mode=practice 200 in 3577ms
+[6]  GET /brand/background.png 200 in 23ms
+[6] (node:1326) [DEP0060] DeprecationWarning: The `util._extend` API is deprecated. Please use Object.assign() instead.
+[6] (Use `node --trace-deprecation ...` to show where the warning was created)
+[0] (node:1324) [DEP0060] DeprecationWarning: The `util._extend` API is deprecated. Please use Object.assign() instead.
 [0] (Use `node --trace-deprecation ...` to show where the warning was created)
-[5] [0mGET /materials/subjects?lang=vi [36m304[0m 72.787 ms - -[0m
-[0] [0mGET /materials/subjects?lang=vi [36m304[0m 97.067 ms - -[0m
-[2] [0mGET /api/types?lang=vi [36m304[0m 61.943 ms - -[0m
-[0] [0mGET /api/types?lang=vi [36m304[0m 89.180 ms - -[0m
-[2] [0mGET /api/quizzes?lang=vi [36m304[0m 81.883 ms - -[0m
-[0] [0mGET /api/quizzes?lang=vi [36m304[0m 97.059 ms - -[0m
-[4] [0mGET /stats/summary [36m304[0m 81.103 ms - -[0m
-[0] [0mGET /stats/summary [36m304[0m 93.754 ms - -[0m
-[2] [0mGET /api/types?lang=vi [36m304[0m 2.561 ms - -[0m
-[5] [0mGET /materials/subjects?lang=vi [36m304[0m 3.431 ms - -[0m
-[0] [0mGET /api/types?lang=vi [36m304[0m 6.342 ms - -[0m
-[0] [0mGET /materials/subjects?lang=vi [36m304[0m 9.059 ms - -[0m
-[2] [0mGET /api/quizzes?lang=vi [36m304[0m 4.631 ms - -[0m
-[0] [0mGET /api/quizzes?lang=vi [36m304[0m 7.637 ms - -[0m
-[4] [0mGET /stats/summary [36m304[0m 4.967 ms - -[0m
-[0] [0mGET /stats/summary [36m304[0m 6.765 ms - -[0m
-[5] [0mGET /materials/subjects/2/materials?lang=vi [36m304[0m 3.553 ms - -[0m
-[0] [0mGET /materials/subjects/2/materials?lang=vi [36m304[0m 10.983 ms - -[0m
-[5] [0mGET /materials/subjects/8/materials?lang=vi [36m304[0m 6.829 ms - -[0m
-[0] [0mGET /materials/subjects/8/materials?lang=vi [36m304[0m 13.652 ms - -[0m
-[5] [0mGET /materials/subjects/4/materials?lang=vi [36m304[0m 4.256 ms - -[0m
-[0] [0mGET /materials/subjects/4/materials?lang=vi [36m304[0m 17.958 ms - -[0m
-[5] [0mGET /materials/subjects/10/materials?lang=vi [36m304[0m 4.473 ms - -[0m
-[5] [0mGET /materials/subjects/3/materials?lang=vi [36m304[0m 20.929 ms - -[0m
-[0] [0mGET /materials/subjects/10/materials?lang=vi [36m304[0m 16.974 ms - -[0m
-[5] [0mGET /materials/subjects/1/materials?lang=vi [36m304[0m 21.221 ms - -[0m
-[0] [0mGET /materials/subjects/3/materials?lang=vi [36m304[0m 28.021 ms - -[0m
-[0] [0mGET /materials/subjects/1/materials?lang=vi [36m304[0m 27.494 ms - -[0m
-[5] [0mGET /materials/subjects/7/materials?lang=vi [36m304[0m 20.256 ms - -[0m
-[0] [0mGET /materials/subjects/7/materials?lang=vi [36m304[0m 28.758 ms - -[0m
-[5] [0mGET /materials/subjects/5/materials?lang=vi [36m304[0m 2.459 ms - -[0m
-[0] [0mGET /materials/subjects/5/materials?lang=vi [36m304[0m 11.501 ms - -[0m
-[5] [0mGET /materials/subjects/9/materials?lang=vi [36m304[0m 14.111 ms - -[0m
-[5] [0mGET /materials/subjects/6/materials?lang=vi [36m304[0m 2.069 ms - -[0m
-[0] [0mGET /materials/subjects/9/materials?lang=vi [36m304[0m 19.058 ms - -[0m
-[0] [0mGET /materials/subjects/6/materials?lang=vi [36m304[0m 7.551 ms - -[0m
+[1] [0mGET /auth/session [36m304[0m 27.168 ms - -[0m
+[0] [0mGET /auth/session [36m304[0m 45.823 ms - -[0m
+[1] [0mGET /auth/session [36m304[0m 2.817 ms - -[0m
+[0] [0mGET /auth/session [36m304[0m 6.432 ms - -[0m
+[2] [0mPOST /api/attempts/start [32m201[0m 41.696 ms - 17[0m
+[0] [0mPOST /api/attempts/start [32m201[0m 49.897 ms - 17[0m
+[2] [0mPOST /api/attempts/start [32m201[0m 26.555 ms - 17[0m
+[0] [0mPOST /api/attempts/start [32m201[0m 49.136 ms - 17[0m
+[0] [0mGET /media/static/questions/2026/c9371ec42b8e4fb096ce24f7f26e7af2.jpg [36m304[0m 19.864 ms - -[0m
+[3] [0mGET /media/static/questions/2026/c9371ec42b8e4fb096ce24f7f26e7af2.jpg [36m304[0m 8.222 ms - -[0m
+[1] [0mGET /auth/session [36m304[0m 3.088 ms - -[0m
+[0] [0mGET /auth/session [36m304[0m 8.552 ms - -[0m
+[1] [0mGET /auth/session [36m304[0m 5.379 ms - -[0m
+[0] [0mGET /auth/session [36m304[0m 10.220 ms - -[0m
+[6]  ✓ Compiled in 756ms (1840 modules)
+[6]  GET /brand/background.png 200 in 57ms
+[2] [0mPOST /api/attempts/start [32m201[0m 12.948 ms - 17[0m
+[0] [0mPOST /api/attempts/start [32m201[0m 19.955 ms - 17[0m
+[2] [0mPOST /api/attempts/start [32m201[0m 16.307 ms - 17[0m
+[0] [0mPOST /api/attempts/start [32m201[0m 22.649 ms - 17[0m
+[2] [0mPOST /api/attempts/start [32m201[0m 14.725 ms - 17[0m
+[2] [0mPOST /api/attempts/start [32m201[0m 14.200 ms - 17[0m
+[0] [0mPOST /api/attempts/start [32m201[0m 20.060 ms - 17[0m
+[0] [0mPOST /api/attempts/start [32m201[0m 20.059 ms - 17[0m
+[2] [0mGET /api/quizzes/1?lang=vi [36m304[0m 16.179 ms - -[0m
+[0] [0mGET /api/quizzes/1?lang=vi [36m304[0m 23.182 ms - -[0m
+[6]  GET /.well-known/appspecific/com.chrome.devtools.json 200 in 33ms
+[1] [0mGET /auth/session [36m304[0m 5.215 ms - -[0m
+[0] [0mGET /auth/session [36m304[0m 8.264 ms - -[0m
+[1] [0mGET /auth/session [36m304[0m 3.764 ms - -[0m
+[0] [0mGET /auth/session [36m304[0m 7.642 ms - -[0m
+[1] [0mGET /auth/session [36m304[0m 4.703 ms - -[0m
+[0] [0mGET /auth/session [36m304[0m 7.899 ms - -[0m
+[6]  ✓ Compiled in 747ms (1840 modules)
+[2] [0mPOST /api/attempts/start [32m201[0m 12.291 ms - 17[0m
+[0] [0mPOST /api/attempts/start [32m201[0m 15.543 ms - 17[0m
+[0] [0mGET /api/quizzes/1?lang=vi [36m304[0m 18.112 ms - -[0m
+[2] [0mGET /api/quizzes/1?lang=vi [36m304[0m 12.934 ms - -[0m
+[6]  GET /brand/background.png 200 in 68ms
+[3] [0mGET /media/static/questions/2026/c9371ec42b8e4fb096ce24f7f26e7af2.jpg [36m304[0m 1.263 ms - -[0m
+[0] [0mGET /media/static/questions/2026/c9371ec42b8e4fb096ce24f7f26e7af2.jpg [36m304[0m 11.151 ms - -[0m
+[1] [0mGET /auth/session [36m304[0m 4.773 ms - -[0m
+[0] [0mGET /auth/session [36m304[0m 7.092 ms - -[0m
+[1] [0mGET /auth/session [36m304[0m 4.646 ms - -[0m
+[0] [0mGET /auth/session [36m304[0m 7.438 ms - -[0m
+[6]  ✓ Compiled /cache-api/public in 227ms (950 modules)
+[2] [0mGET /api/quizzes?lang=vi [32m200[0m 14.424 ms - 173521[0m
+[0] [0mGET /api/quizzes?lang=vi [32m200[0m 17.995 ms - 173521[0m
+[6]  GET /cache-api/public?resource=quizzes&lang=vi 200 in 330ms
+[0] [0mGET /materials/subjects?lang=vi [32m200[0m 32.763 ms - 3383[0m
+[5] [0mGET /materials/subjects?lang=vi [32m200[0m 26.192 ms - 3383[0m
+[6]  GET /cache-api/public?resource=subjects&lang=vi 200 in 43ms
+[5] [0mGET /materials/subjects/3/materials?lang=vi [32m200[0m 5.067 ms - 1936[0m
+[0] [0mGET /materials/subjects/3/materials?lang=vi [32m200[0m 6.989 ms - 1936[0m
+[6]  GET /cache-api/public?resource=materials&subjectId=3&lang=vi 200 in 21ms
+[5] [0mGET /materials/subjects/1/materials?lang=vi [32m200[0m 2.133 ms - 1854[0m
+[0] [0mGET /materials/subjects/1/materials?lang=vi [32m200[0m 6.932 ms - 1854[0m
+[6]  GET /cache-api/public?resource=materials&subjectId=1&lang=vi 200 in 22ms
+[5] [0mGET /materials/subjects/5/materials?lang=vi [32m200[0m 1.289 ms - 1939[0m
+[0] [0mGET /materials/subjects/5/materials?lang=vi [32m200[0m 4.255 ms - 1939[0m
+[5] [0mGET /materials/subjects/2/materials?lang=vi [32m200[0m 9.543 ms - 1936[0m
+[0] [0mGET /materials/subjects/2/materials?lang=vi [32m200[0m 11.507 ms - 1936[0m
+[5] [0mGET /materials/subjects/4/materials?lang=vi [32m200[0m 10.633 ms - 1939[0m
+[0] [0mGET /materials/subjects/4/materials?lang=vi [32m200[0m 13.572 ms - 1939[0m
+[6]  GET /cache-api/public?resource=materials&subjectId=5&lang=vi 200 in 26ms
+[6]  GET /cache-api/public?resource=materials&subjectId=2&lang=vi 200 in 30ms
+[5] [0mGET /materials/subjects/6/materials?lang=vi [32m200[0m 8.699 ms - 1939[0m
+[0] [0mGET /materials/subjects/6/materials?lang=vi [32m200[0m 10.934 ms - 1939[0m
+[6]  GET /cache-api/public?resource=materials&subjectId=4&lang=vi 200 in 30ms
+[6]  GET /cache-api/public?resource=materials&subjectId=6&lang=vi 200 in 32ms
+[5] [0mGET /materials/subjects/material-counts [36m304[0m 1.531 ms - -[0m
+[0] [0mGET /materials/subjects/material-counts [36m304[0m 3.114 ms - -[0m
+[5] [0mGET /materials/subjects/7/materials?lang=vi [32m200[0m 3.141 ms - 1939[0m
+[0] [0mGET /materials/subjects/7/materials?lang=vi [32m200[0m 5.627 ms - 1939[0m
+[5] [0mGET /materials/subjects/8/materials?lang=vi [32m200[0m 1.221 ms - 1939[0m
+[0] [0mGET /materials/subjects/8/materials?lang=vi [32m200[0m 4.260 ms - 1939[0m
+[6]  GET /cache-api/public?resource=materials&subjectId=7&lang=vi 200 in 25ms
+[6]  GET /cache-api/public?resource=materials&subjectId=8&lang=vi 200 in 23ms
+[5] [0mGET /materials/subjects/10/materials?lang=vi [32m200[0m 1.840 ms - 1939[0m
+[5] [0mGET /materials/subjects/9/materials?lang=vi [32m200[0m 1.873 ms - 1939[0m
+[0] [0mGET /materials/subjects/10/materials?lang=vi [32m200[0m 3.621 ms - 1939[0m
+[0] [0mGET /materials/subjects/9/materials?lang=vi [32m200[0m 3.619 ms - 1939[0m
+[6]  GET /cache-api/public?resource=materials&subjectId=10&lang=vi 200 in 23ms
+[6]  GET /cache-api/public?resource=materials&subjectId=9&lang=vi 200 in 24ms
+[0] [0mGET /stats/leaderboard?limit=10&period=all [32m200[0m 27.698 ms - 1908[0m
+[4] [0mGET /stats/leaderboard?limit=10&period=all [32m200[0m 18.206 ms - 1908[0m
+[4] [0mGET /stats/leaderboard?limit=1&period=month [32m200[0m 16.296 ms - 187[0m
+[0] [0mGET /stats/leaderboard?limit=1&period=month [32m200[0m 27.996 ms - 187[0m
+[6]  GET /cache-api/public?resource=leaderboard&limit=10&period=all 200 in 48ms
+[4] [0mGET /stats/leaderboard?limit=1&period=week [32m200[0m 19.169 ms - 187[0m
+[0] [0mGET /stats/leaderboard?limit=1&period=week [32m200[0m 29.815 ms - 187[0m
+[6]  GET /cache-api/public?resource=leaderboard&limit=1&period=month 200 in 49ms
+[6]  GET /cache-api/public?resource=leaderboard&limit=1&period=week 200 in 49ms
+[4] [0mGET /stats/leaderboard/me?period=all [36m304[0m 37.260 ms - -[0m
+[0] [0mGET /stats/leaderboard/me?period=all [36m304[0m 46.665 ms - -[0m
+[2] [0mGET /api/types?lang=vi [32m200[0m 3.966 ms - 2617[0m
+[0] [0mGET /api/types?lang=vi [32m200[0m 5.801 ms - 2617[0m
+[2] [0mGET /api/quizzes?lang=vi&limit=24&page=1 [32m200[0m 7.295 ms - 9903[0m
+[0] [0mGET /api/quizzes?lang=vi&limit=24&page=1 [32m200[0m 9.334 ms - 9903[0m
+[4] [0mGET /stats/summary [32m200[0m 8.595 ms - 80[0m
+[0] [0mGET /stats/summary [32m200[0m 10.704 ms - 80[0m
+[6]  GET /cache-api/public?resource=quizzes&lang=vi&limit=24&page=1 200 in 17ms
+[6]  GET /cache-api/public?resource=types&lang=vi 200 in 19ms
+[6]  GET /cache-api/public?resource=summary 200 in 20ms
+[1] [0mGET /auth/session [36m304[0m 3.726 ms - -[0m
+[0] [0mGET /auth/session [36m304[0m 6.709 ms - -[0m
+[1] [0mGET /auth/session [36m304[0m 2.459 ms - -[0m
+[0] [0mGET /auth/session [36m304[0m 4.428 ms - -[0m
+[6]  GET /cache-api/public?resource=subjects&lang=vi 200 in 35ms
+[5] [0mGET /materials/subjects?lang=vi [32m200[0m 6.506 ms - 3383[0m
+[0] [0mGET /materials/subjects?lang=vi [32m200[0m 20.412 ms - 3383[0m
+[5] [0mGET /materials/subjects/4/materials?lang=vi [32m200[0m 2.600 ms - 1939[0m
+[0] [0mGET /materials/subjects/4/materials?lang=vi [32m200[0m 4.905 ms - 1939[0m
+[5] [0mGET /materials/subjects/3/materials?lang=vi [32m200[0m 3.352 ms - 1936[0m
+[0] [0mGET /materials/subjects/3/materials?lang=vi [32m200[0m 5.612 ms - 1936[0m
+[5] [0mGET /materials/subjects/1/materials?lang=vi [32m200[0m 3.398 ms - 1854[0m
+[0] [0mGET /materials/subjects/1/materials?lang=vi [32m200[0m 5.437 ms - 1854[0m
+[5] [0mGET /materials/subjects/2/materials?lang=vi [32m200[0m 3.408 ms - 1936[0m
+[0] [0mGET /materials/subjects/2/materials?lang=vi [32m200[0m 5.405 ms - 1936[0m
+[6]  GET /cache-api/public?resource=materials&subjectId=3&lang=vi 200 in 41ms
+[5] [0mGET /materials/subjects/6/materials?lang=vi [32m200[0m 0.889 ms - 1939[0m
+[6]  GET /cache-api/public?resource=materials&subjectId=4&lang=vi 200 in 40ms
+[0] [0mGET /materials/subjects/6/materials?lang=vi [32m200[0m 6.544 ms - 1939[0m
+[6]  GET /cache-api/public?resource=materials&subjectId=1&lang=vi 200 in 41ms
+[5] [0mGET /materials/subjects/5/materials?lang=vi [32m200[0m 6.457 ms - 1939[0m
+[0] [0mGET /materials/subjects/5/materials?lang=vi [32m200[0m 8.539 ms - 1939[0m
+[6]  GET /cache-api/public?resource=materials&subjectId=2&lang=vi 200 in 42ms
+[6]  GET /cache-api/public?resource=materials&subjectId=6&lang=vi 200 in 43ms
+[6]  GET /cache-api/public?resource=materials&subjectId=5&lang=vi 200 in 44ms
+[5] [0mGET /materials/subjects/material-counts [36m304[0m 1.139 ms - -[0m
+[0] [0mGET /materials/subjects/material-counts [36m304[0m 2.311 ms - -[0m
+[5] [0mGET /materials/subjects/10/materials?lang=vi [32m200[0m 0.746 ms - 1939[0m
+[0] [0mGET /materials/subjects/10/materials?lang=vi [32m200[0m 1.962 ms - 1939[0m
+[5] [0mGET /materials/subjects/9/materials?lang=vi [32m200[0m 1.273 ms - 1939[0m
+[0] [0mGET /materials/subjects/9/materials?lang=vi [32m200[0m 4.020 ms - 1939[0m
+[5] [0mGET /materials/subjects/7/materials?lang=vi [32m200[0m 1.234 ms - 1939[0m
+[0] [0mGET /materials/subjects/7/materials?lang=vi [32m200[0m 2.613 ms - 1939[0m
+[5] [0mGET /materials/subjects/8/materials?lang=vi [32m200[0m 1.286 ms - 1939[0m
+[0] [0mGET /materials/subjects/8/materials?lang=vi [32m200[0m 2.361 ms - 1939[0m
+[6]  GET /cache-api/public?resource=materials&subjectId=7&lang=vi 200 in 18ms
+[6]  GET /cache-api/public?resource=materials&subjectId=8&lang=vi 200 in 16ms
+[6]  GET /cache-api/public?resource=materials&subjectId=10&lang=vi 200 in 17ms
+[6]  GET /cache-api/public?resource=materials&subjectId=9&lang=vi 200 in 17ms
+[2] [0mGET /api/quizzes?lang=vi [32m200[0m 7.097 ms - 173521[0m
+[0] [0mGET /api/quizzes?lang=vi [32m200[0m 9.131 ms - 173521[0m
+[6]  GET /cache-api/public?resource=quizzes&lang=vi 200 in 19ms
+[4] [0mGET /stats/leaderboard/me?period=all [36m304[0m 8.038 ms - -[0m
+[0] [0mGET /stats/leaderboard/me?period=all [36m304[0m 11.403 ms - -[0m
+[4] [0mGET /stats/leaderboard?limit=10&period=all [32m200[0m 1.934 ms - 1908[0m
+[0] [0mGET /stats/leaderboard?limit=10&period=all [32m200[0m 4.115 ms - 1908[0m
+[4] [0mGET /stats/leaderboard?limit=1&period=week [32m200[0m 4.405 ms - 187[0m
+[0] [0mGET /stats/leaderboard?limit=1&period=week [32m200[0m 6.789 ms - 187[0m
+[0] [0mGET /stats/leaderboard?limit=1&period=month [32m200[0m 6.579 ms - 187[0m
+[4] [0mGET /stats/leaderboard?limit=1&period=month [32m200[0m 4.252 ms - 187[0m
+[6]  GET /cache-api/public?resource=leaderboard&limit=10&period=all 200 in 23ms
+[6]  GET /cache-api/public?resource=leaderboard&limit=1&period=week 200 in 22ms
+[6]  GET /cache-api/public?resource=leaderboard&limit=1&period=month 200 in 22ms
+[2] [0mGET /api/quizzes?lang=vi&limit=24&page=1 [32m200[0m 3.231 ms - 9903[0m
+[0] [0mGET /api/quizzes?lang=vi&limit=24&page=1 [32m200[0m 5.415 ms - 9903[0m
+[6]  GET /cache-api/public?resource=quizzes&lang=vi&limit=24&page=1 200 in 11ms
+[2] [0mGET /api/types?lang=vi [32m200[0m 1.226 ms - 2617[0m
+[0] [0mGET /api/types?lang=vi [32m200[0m 2.786 ms - 2617[0m
+[4] [0mGET /stats/summary [32m200[0m 4.304 ms - 80[0m
+[0] [0mGET /stats/summary [32m200[0m 5.485 ms - 80[0m
+[1] [0mGET /auth/session [36m304[0m 2.552 ms - -[0m
+[0] [0mGET /auth/session [36m304[0m 4.222 ms - -[0m
+[6]  ✓ Compiled in 727ms (1868 modules)
+[1] [0mGET /auth/session [36m304[0m 1.428 ms - -[0m
+[0] [0mGET /auth/session [36m304[0m 2.492 ms - -[0m
+[6]  GET /brand/background.png 200 in 51ms
+[1] [0mGET /auth/session [36m304[0m 1.478 ms - -[0m
+[0] [0mGET /auth/session [36m304[0m 2.336 ms - -[0m
+[6]  ✓ Compiled in 614ms (1868 modules)
+[6]  GET /brand/background.png 200 in 35ms
+[1] [0mGET /auth/session [36m304[0m 2.260 ms - -[0m
+[0] [0mGET /auth/session [36m304[0m 4.270 ms - -[0m
+[1] [0mGET /auth/session [36m304[0m 3.068 ms - -[0m
+[0] [0mGET /auth/session [36m304[0m 5.284 ms - -[0m
+[5] [0mGET /materials/subjects?lang=vi [32m200[0m 5.893 ms - 3383[0m
+[0] [0mGET /materials/subjects?lang=vi [32m200[0m 9.666 ms - 3383[0m
+[6]  GET /cache-api/public?resource=subjects&lang=vi 200 in 33ms
+[5] [0mGET /materials/subjects/material-counts [36m304[0m 1.952 ms - -[0m
+[0] [0mGET /materials/subjects/material-counts [36m304[0m 3.179 ms - -[0m
+[5] [0mGET /materials/subjects/2/materials?lang=vi [32m200[0m 2.626 ms - 1936[0m
+[0] [0mGET /materials/subjects/2/materials?lang=vi [32m200[0m 4.666 ms - 1936[0m
+[5] [0mGET /materials/subjects/4/materials?lang=vi [32m200[0m 3.000 ms - 1939[0m
+[0] [0mGET /materials/subjects/4/materials?lang=vi [32m200[0m 4.950 ms - 1939[0m
+[5] [0mGET /materials/subjects/6/materials?lang=vi [32m200[0m 3.022 ms - 1939[0m
+[0] [0mGET /materials/subjects/6/materials?lang=vi [32m200[0m 5.546 ms - 1939[0m
+[5] [0mGET /materials/subjects/3/materials?lang=vi [32m200[0m 4.336 ms - 1936[0m
+[0] [0mGET /materials/subjects/3/materials?lang=vi [32m200[0m 6.550 ms - 1936[0m
+[5] [0mGET /materials/subjects/10/materials?lang=vi [32m200[0m 6.173 ms - 1939[0m
+[0] [0mGET /materials/subjects/10/materials?lang=vi [32m200[0m 7.984 ms - 1939[0m
+[6]  GET /cache-api/public?resource=materials&subjectId=4&lang=vi 200 in 25ms
+[6]  GET /cache-api/public?resource=materials&subjectId=2&lang=vi 200 in 25ms
+[6]  GET /cache-api/public?resource=materials&subjectId=3&lang=vi 200 in 25ms
+[6]  GET /cache-api/public?resource=materials&subjectId=6&lang=vi 200 in 25ms
+[5] [0mGET /materials/subjects/7/materials?lang=vi [32m200[0m 1.784 ms - 1939[0m
+[6]  GET /cache-api/public?resource=materials&subjectId=10&lang=vi 200 in 27ms
+[0] [0mGET /materials/subjects/7/materials?lang=vi [32m200[0m 2.885 ms - 1939[0m
+[6]  GET /cache-api/public?resource=materials&subjectId=7&lang=vi 200 in 13ms
+[5] [0mGET /materials/subjects/8/materials?lang=vi [32m200[0m 1.461 ms - 1939[0m
+[0] [0mGET /materials/subjects/8/materials?lang=vi [32m200[0m 3.769 ms - 1939[0m
+[5] [0mGET /materials/subjects/9/materials?lang=vi [32m200[0m 1.294 ms - 1939[0m
+[5] [0mGET /materials/subjects/1/materials?lang=vi [32m200[0m 1.177 ms - 1854[0m
+[0] [0mGET /materials/subjects/9/materials?lang=vi [32m200[0m 3.282 ms - 1939[0m
+[5] [0mGET /materials/subjects/5/materials?lang=vi [32m200[0m 1.190 ms - 1939[0m
+[0] [0mGET /materials/subjects/1/materials?lang=vi [32m200[0m 3.520 ms - 1854[0m
+[0] [0mGET /materials/subjects/5/materials?lang=vi [32m200[0m 3.569 ms - 1939[0m
+[6]  GET /cache-api/public?resource=materials&subjectId=9&lang=vi 200 in 14ms
+[6]  GET /cache-api/public?resource=materials&subjectId=8&lang=vi 200 in 15ms
+[6]  GET /cache-api/public?resource=materials&subjectId=5&lang=vi 200 in 14ms
+[6]  GET /cache-api/public?resource=materials&subjectId=1&lang=vi 200 in 15ms
+[2] [0mGET /api/quizzes?lang=vi [32m200[0m 13.066 ms - 173521[0m
+[0] [0mGET /api/quizzes?lang=vi [32m200[0m 18.705 ms - 173521[0m
+[6]  GET /cache-api/public?resource=quizzes&lang=vi 200 in 34ms
+[2] [0mGET /api/types?lang=vi [32m200[0m 1.537 ms - 2617[0m
+[0] [0mGET /api/types?lang=vi [32m200[0m 5.741 ms - 2617[0m
+[2] [0mGET /api/quizzes?lang=vi&limit=24&page=1 [32m200[0m 3.783 ms - 9903[0m
+[0] [0mGET /api/quizzes?lang=vi&limit=24&page=1 [32m200[0m 7.487 ms - 9903[0m
+[6]  GET /cache-api/public?resource=quizzes&lang=vi&limit=24&page=1 200 in 22ms
+[6]  GET /cache-api/public?resource=types&lang=vi 200 in 23ms
+[4] [0mGET /stats/summary [32m200[0m 5.277 ms - 80[0m
+[0] [0mGET /stats/summary [32m200[0m 8.792 ms - 80[0m
+[6]  GET /cache-api/public?resource=summary 200 in 30ms
+[1] [0mGET /auth/session [36m304[0m 2.980 ms - -[0m
+[0] [0mGET /auth/session [36m304[0m 5.202 ms - -[0m
+[6]  ✓ Compiled in 1203ms (1868 modules)
+[2] [0mGET /api/quizzes?lang=vi&limit=24&page=1 [32m200[0m 5.688 ms - 9903[0m
+[0] [0mGET /api/quizzes?lang=vi&limit=24&page=1 [32m200[0m 7.593 ms - 9903[0m
+[6]  GET /cache-api/public?resource=quizzes&lang=vi&limit=24&page=1 200 in 22ms
+[5] [0mGET /materials/subjects/material-counts [36m304[0m 1.845 ms - -[0m
+[0] [0mGET /materials/subjects/material-counts [36m304[0m 3.867 ms - -[0m
+[6]  GET /brand/background.png 200 in 63ms
+[2] [0mGET /api/types?lang=vi [32m200[0m 1.190 ms - 2617[0m
+[5] [0mGET /materials/subjects?lang=vi [32m200[0m 1.178 ms - 3383[0m
+[0] [0mGET /api/types?lang=vi [32m200[0m 3.063 ms - 2617[0m
+[0] [0mGET /materials/subjects?lang=vi [32m200[0m 2.874 ms - 3383[0m
+[6]  GET /cache-api/public?resource=subjects&lang=vi 200 in 68ms
+[6]  GET /cache-api/public?resource=types&lang=vi 200 in 70ms
+[4] [0mGET /stats/summary [32m200[0m 4.913 ms - 80[0m
+[0] [0mGET /stats/summary [32m200[0m 6.374 ms - 80[0m
+[6]  GET /cache-api/public?resource=summary 200 in 70ms
+[1] [0mGET /auth/session [36m304[0m 3.150 ms - -[0m
+[0] [0mGET /auth/session [36m304[0m 5.170 ms - -[0m
+[1] [0mGET /auth/session [36m304[0m 5.712 ms - -[0m
+[0] [0mGET /auth/session [36m304[0m 12.098 ms - -[0m
+[6]  ✓ Compiled in 666ms (1840 modules)
+[0] [0mGET /materials/subjects/material-counts [36m304[0m 15.316 ms - -[0m
+[5] [0mGET /materials/subjects/material-counts [36m304[0m 8.090 ms - -[0m
+[6]  ✓ Compiled /cache-api/public in 255ms (950 modules)
+[5] [0mGET /materials/subjects?lang=vi [32m200[0m 2.533 ms - 3383[0m
+[0] [0mGET /materials/subjects?lang=vi [32m200[0m 4.591 ms - 3383[0m
+[2] [0mGET /api/types?lang=vi [32m200[0m 1.578 ms - 2617[0m
+[0] [0mGET /api/types?lang=vi [32m200[0m 6.310 ms - 2617[0m
+[2] [0mGET /api/quizzes?lang=vi&limit=24&page=1 [32m200[0m 5.364 ms - 9903[0m
+[0] [0mGET /api/quizzes?lang=vi&limit=24&page=1 [32m200[0m 9.252 ms - 9903[0m
+[4] [0mGET /stats/summary [32m200[0m 6.326 ms - 80[0m
+[0] [0mGET /stats/summary [32m200[0m 9.317 ms - 80[0m
+[6]  GET /cache-api/public?resource=quizzes&lang=vi&limit=24&page=1 200 in 438ms
+[6]  GET /cache-api/public?resource=types&lang=vi 200 in 399ms
+[6]  GET /cache-api/public?resource=subjects&lang=vi 200 in 405ms
+[6]  GET /cache-api/public?resource=summary 200 in 402ms
+[6]  GET /brand/background.png 200 in 404ms
+[1] [0mGET /auth/session [36m304[0m 3.890 ms - -[0m
+[0] [0mGET /auth/session [36m304[0m 7.857 ms - -[0m
+[1] [0mGET /auth/session [36m304[0m 6.276 ms - -[0m
+[0] [0mGET /auth/session [36m304[0m 14.423 ms - -[0m
+[6]  ✓ Compiled in 503ms (1868 modules)
+[4] [0mGET /stats/summary [32m200[0m 7.115 ms - 80[0m
+[0] [0mGET /stats/summary [32m200[0m 10.467 ms - 80[0m
+[6]  GET /cache-api/public?resource=summary 200 in 70ms
+[6]  GET /brand/background.png 200 in 63ms
+[1] [0mGET /auth/session [36m304[0m 6.324 ms - -[0m
+[0] [0mGET /auth/session [36m304[0m 10.787 ms - -[0m
+[6]  ✓ Compiled in 467ms (1868 modules)
+[2] [0mGET /api/quizzes?lang=vi&limit=24&page=1 [32m200[0m 11.476 ms - 9903[0m
+[0] [0mGET /api/quizzes?lang=vi&limit=24&page=1 [32m200[0m 15.493 ms - 9903[0m
+[6]  GET /cache-api/public?resource=quizzes&lang=vi&limit=24&page=1 200 in 28ms
+[6]  GET /brand/background.png 200 in 26ms
+[5] [0mGET /materials/subjects/material-counts [36m304[0m 3.160 ms - -[0m
+[0] [0mGET /materials/subjects/material-counts [36m304[0m 5.860 ms - -[0m
+[2] [0mGET /api/types?lang=vi [32m200[0m 2.184 ms - 2617[0m
+[0] [0mGET /api/types?lang=vi [32m200[0m 5.789 ms - 2617[0m
+[5] [0mGET /materials/subjects?lang=vi [32m200[0m 2.634 ms - 3383[0m
+[0] [0mGET /materials/subjects?lang=vi [32m200[0m 5.133 ms - 3383[0m
+[6]  GET /cache-api/public?resource=subjects&lang=vi 200 in 20ms
+[6]  GET /cache-api/public?resource=types&lang=vi 200 in 28ms
+[4] [0mGET /stats/summary [32m200[0m 6.156 ms - 80[0m
+[0] [0mGET /stats/summary [32m200[0m 10.471 ms - 80[0m
+[6]  GET /cache-api/public?resource=summary 200 in 26ms
+[1] [0mGET /auth/session [36m304[0m 5.054 ms - -[0m
+[0] [0mGET /auth/session [36m304[0m 8.271 ms - -[0m
+[1] [0mGET /auth/session [36m304[0m 1.678 ms - -[0m
+[0] [0mGET /auth/session [36m304[0m 3.713 ms - -[0m
+[6]  ✓ Compiled in 514ms (1840 modules)
+[5] [0mGET /materials/subjects/material-counts [36m304[0m 3.304 ms - -[0m
+[0] [0mGET /materials/subjects/material-counts [36m304[0m 5.776 ms - -[0m
+[6]  ✓ Compiled /cache-api/public in 113ms (950 modules)
+[5] [0mGET /materials/subjects?lang=vi [32m200[0m 1.686 ms - 3383[0m
+[0] [0mGET /materials/subjects?lang=vi [32m200[0m 2.539 ms - 3383[0m
+[2] [0mGET /api/types?lang=vi [32m200[0m 1.351 ms - 2617[0m
+[0] [0mGET /api/types?lang=vi [32m200[0m 3.864 ms - 2617[0m
+[2] [0mGET /api/quizzes?lang=vi&limit=24&page=1 [32m200[0m 3.786 ms - 9903[0m
+[0] [0mGET /api/quizzes?lang=vi&limit=24&page=1 [32m200[0m 6.036 ms - 9903[0m
+[4] [0mGET /stats/summary [32m200[0m 4.646 ms - 80[0m
+[0] [0mGET /stats/summary [32m200[0m 6.295 ms - 80[0m
+[6]  GET /cache-api/public?resource=quizzes&lang=vi&limit=24&page=1 200 in 248ms
+[6]  GET /cache-api/public?resource=subjects&lang=vi 200 in 251ms
+[6]  GET /cache-api/public?resource=types&lang=vi 200 in 252ms
+[6]  GET /cache-api/public?resource=summary 200 in 253ms
+[6]  GET /brand/background.png 200 in 211ms
+[1] [0mGET /auth/session [36m304[0m 4.957 ms - -[0m
+[0] [0mGET /auth/session [36m304[0m 7.456 ms - -[0m
+[2] [0mGET /api/quizzes?lang=vi [32m200[0m 16.366 ms - 173521[0m
+[0] [0mGET /api/quizzes?lang=vi [32m200[0m 18.614 ms - 173521[0m
+[6]  GET /cache-api/public?resource=quizzes&lang=vi 200 in 30ms
+[1] [0mGET /auth/session [36m304[0m 4.655 ms - -[0m
+[0] [0mGET /auth/session [36m304[0m 9.096 ms - -[0m
+[6]  ✓ Compiled in 625ms (1868 modules)
+[2] [0mGET /api/quizzes?lang=vi&limit=24&page=1 [32m200[0m 5.945 ms - 9903[0m
+[0] [0mGET /api/quizzes?lang=vi&limit=24&page=1 [32m200[0m 7.982 ms - 9903[0m
+[6]  GET /cache-api/public?resource=quizzes&lang=vi&limit=24&page=1 200 in 25ms
+[6]  GET /brand/background.png 200 in 66ms
+[5] [0mGET /materials/subjects/material-counts [36m304[0m 1.380 ms - -[0m
+[0] [0mGET /materials/subjects/material-counts [36m304[0m 2.646 ms - -[0m
+[2] [0mGET /api/types?lang=vi [32m200[0m 0.959 ms - 2617[0m
+[5] [0mGET /materials/subjects?lang=vi [32m200[0m 1.373 ms - 3383[0m
+[0] [0mGET /api/types?lang=vi [32m200[0m 2.201 ms - 2617[0m
+[0] [0mGET /materials/subjects?lang=vi [32m200[0m 3.979 ms - 3383[0m
+[6]  GET /cache-api/public?resource=types&lang=vi 200 in 20ms
+[6]  GET /cache-api/public?resource=subjects&lang=vi 200 in 23ms
+[4] [0mGET /stats/summary [32m200[0m 4.209 ms - 80[0m
+[0] [0mGET /stats/summary [32m200[0m 6.271 ms - 80[0m
+[6]  GET /cache-api/public?resource=summary 200 in 24ms
+[1] [0mGET /auth/session [36m304[0m 2.475 ms - -[0m
+[0] [0mGET /auth/session [36m304[0m 5.393 ms - -[0m
+[1] [0mGET /auth/session [36m304[0m 6.746 ms - -[0m
+[0] [0mGET /auth/session [36m304[0m 11.667 ms - -[0m
+[6]  ✓ Compiled in 620ms (1840 modules)
+[5] [0mGET /materials/subjects/material-counts [36m304[0m 6.090 ms - -[0m
+[0] [0mGET /materials/subjects/material-counts [36m304[0m 12.413 ms - -[0m
+[6]  ✓ Compiled /cache-api/public in 107ms (950 modules)
+[5] [0mGET /materials/subjects?lang=vi [32m200[0m 1.915 ms - 3383[0m
+[0] [0mGET /materials/subjects?lang=vi [32m200[0m 4.654 ms - 3383[0m
+[2] [0mGET /api/types?lang=vi [32m200[0m 2.505 ms - 2617[0m
+[0] [0mGET /api/types?lang=vi [32m200[0m 7.421 ms - 2617[0m
+[4] [0mGET /stats/summary [32m200[0m 5.493 ms - 80[0m
+[0] [0mGET /stats/summary [32m200[0m 8.115 ms - 80[0m
+[2] [0mGET /api/quizzes?lang=vi&limit=24&page=1 [32m200[0m 5.354 ms - 9903[0m
+[0] [0mGET /api/quizzes?lang=vi&limit=24&page=1 [32m200[0m 10.100 ms - 9903[0m
+[6]  GET /cache-api/public?resource=quizzes&lang=vi&limit=24&page=1 200 in 232ms
+[6]  GET /cache-api/public?resource=types&lang=vi 200 in 198ms
+[6]  GET /cache-api/public?resource=summary 200 in 185ms
+[6]  GET /cache-api/public?resource=subjects&lang=vi 200 in 194ms
+[6]  GET /brand/background.png 200 in 189ms
+[1] [0mGET /auth/session [36m304[0m 3.061 ms - -[0m
+[0] [0mGET /auth/session [36m304[0m 5.459 ms - -[0m
+[1] [0mGET /auth/session [36m304[0m 3.333 ms - -[0m
+[0] [0mGET /auth/session [36m304[0m 6.416 ms - -[0m
+[5] [0mGET /materials/subjects/5/materials?lang=vi [32m200[0m 2.835 ms - 1939[0m
+[0] [0mGET /materials/subjects/5/materials?lang=vi [32m200[0m 6.085 ms - 1939[0m
+[5] [0mGET /materials/subjects/3/materials?lang=vi [32m200[0m 3.081 ms - 1936[0m
+[0] [0mGET /materials/subjects/3/materials?lang=vi [32m200[0m 6.029 ms - 1936[0m
+[5] [0mGET /materials/subjects/6/materials?lang=vi [32m200[0m 2.988 ms - 1939[0m
+[5] [0mGET /materials/subjects/1/materials?lang=vi [32m200[0m 2.933 ms - 1854[0m
+[0] [0mGET /materials/subjects/6/materials?lang=vi [32m200[0m 5.893 ms - 1939[0m
+[5] [0mGET /materials/subjects/2/materials?lang=vi [32m200[0m 3.012 ms - 1936[0m
+[0] [0mGET /materials/subjects/1/materials?lang=vi [32m200[0m 5.855 ms - 1854[0m
+[0] [0mGET /materials/subjects/2/materials?lang=vi [32m200[0m 5.828 ms - 1936[0m
+[6]  GET /cache-api/public?resource=materials&subjectId=5&lang=vi 200 in 45ms
+[6]  GET /cache-api/public?resource=materials&subjectId=6&lang=vi 200 in 45ms
+[6]  GET /cache-api/public?resource=materials&subjectId=3&lang=vi 200 in 46ms
+[5] [0mGET /materials/subjects/8/materials?lang=vi [32m200[0m 6.909 ms - 1939[0m
+[6]  GET /cache-api/public?resource=materials&subjectId=1&lang=vi 200 in 45ms
+[0] [0mGET /materials/subjects/8/materials?lang=vi [32m200[0m 9.375 ms - 1939[0m
+[6]  GET /cache-api/public?resource=materials&subjectId=2&lang=vi 200 in 47ms
+[6]  GET /cache-api/public?resource=materials&subjectId=8&lang=vi 200 in 40ms
+[5] [0mGET /materials/subjects/9/materials?lang=vi [32m200[0m 1.264 ms - 1939[0m
+[0] [0mGET /materials/subjects/9/materials?lang=vi [32m200[0m 3.064 ms - 1939[0m
+[5] [0mGET /materials/subjects/10/materials?lang=vi [32m200[0m 1.538 ms - 1939[0m
+[0] [0mGET /materials/subjects/10/materials?lang=vi [32m200[0m 3.189 ms - 1939[0m
+[5] [0mGET /materials/subjects/4/materials?lang=vi [32m200[0m 2.192 ms - 1939[0m
+[0] [0mGET /materials/subjects/4/materials?lang=vi [32m200[0m 4.112 ms - 1939[0m
+[5] [0mGET /materials/subjects/7/materials?lang=vi [32m200[0m 2.189 ms - 1939[0m
+[0] [0mGET /materials/subjects/7/materials?lang=vi [32m200[0m 4.159 ms - 1939[0m
+[6]  GET /cache-api/public?resource=materials&subjectId=9&lang=vi 200 in 19ms
+[6]  GET /cache-api/public?resource=materials&subjectId=4&lang=vi 200 in 21ms
+[6]  GET /cache-api/public?resource=materials&subjectId=10&lang=vi 200 in 19ms
+[6]  GET /cache-api/public?resource=materials&subjectId=7&lang=vi 200 in 21ms
+[4] [0mGET /stats/summary [32m200[0m 5.161 ms - 80[0m
+[0] [0mGET /stats/summary [32m200[0m 6.885 ms - 80[0m
+[2] [0mGET /api/quizzes?lang=vi [32m200[0m 8.540 ms - 173521[0m
+[0] [0mGET /api/quizzes?lang=vi [32m200[0m 10.487 ms - 173521[0m
+[6]  GET /cache-api/public?resource=quizzes&lang=vi 200 in 29ms
+[5] [0mGET /materials/subjects?lang=vi [32m200[0m 2.101 ms - 3383[0m
+[0] [0mGET /materials/subjects?lang=vi [32m200[0m 3.725 ms - 3383[0m
+[6]  GET /cache-api/public?resource=subjects&lang=vi 200 in 19ms
+[5] [0mGET /materials/subjects/material-counts [36m304[0m 1.196 ms - -[0m
+[0] [0mGET /materials/subjects/material-counts [36m304[0m 2.458 ms - -[0m
+[4] [0mGET /stats/leaderboard/me?period=all [36m304[0m 6.763 ms - -[0m
+[0] [0mGET /stats/leaderboard/me?period=all [36m304[0m 9.272 ms - -[0m
+[4] [0mGET /stats/leaderboard?limit=10&period=all [32m200[0m 2.066 ms - 1908[0m
+[0] [0mGET /stats/leaderboard?limit=10&period=all [32m200[0m 3.513 ms - 1908[0m
+[4] [0mGET /stats/leaderboard?limit=1&period=month [32m200[0m 3.704 ms - 187[0m
+[4] [0mGET /stats/leaderboard?limit=1&period=week [32m200[0m 3.660 ms - 187[0m
+[0] [0mGET /stats/leaderboard?limit=1&period=month [32m200[0m 5.694 ms - 187[0m
+[0] [0mGET /stats/leaderboard?limit=1&period=week [32m200[0m 5.065 ms - 187[0m
+[6]  GET /cache-api/public?resource=leaderboard&limit=10&period=all 200 in 25ms
+[6]  GET /cache-api/public?resource=leaderboard&limit=1&period=month 200 in 32ms
+[6]  GET /cache-api/public?resource=leaderboard&limit=1&period=week 200 in 25ms
+[1] [0mGET /auth/session [36m304[0m 11.072 ms - -[0m
+[0] [0mGET /auth/session [36m304[0m 36.374 ms - -[0m

@@ -1,14 +1,20 @@
 const express = require('express');
 const quizController = require('../../controllers/quiz.controller');
 const { authRequired, authOptional, requireRoles } = require('../../middleware/auth.middleware');
+const { cacheGet } = require('../../middleware/cache.middleware');
 
 const router = express.Router();
 
-router.get('/quizzes', authOptional, quizController.listQuizzes);
-router.get('/topic-groups', quizController.listTopicGroups);
-router.get('/categories', quizController.listCategories);
-router.get('/types', quizController.listTypes);
-router.get('/quizzes/:id', quizController.getQuizDetail);
+router.get(
+  '/quizzes',
+  cacheGet(60_000, { bypass: (req) => Boolean(req.headers.authorization) }),
+  authOptional,
+  quizController.listQuizzes
+);
+router.get('/topic-groups', cacheGet(60_000), quizController.listTopicGroups);
+router.get('/categories', cacheGet(60_000), quizController.listCategories);
+router.get('/types', cacheGet(60_000), quizController.listTypes);
+router.get('/quizzes/:id', cacheGet(60_000), quizController.getQuizDetail);
 router.post('/quizzes', authRequired, requireRoles('admin'), quizController.createManualQuiz);
 router.get(
   '/admin/topic-groups',
