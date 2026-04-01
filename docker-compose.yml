@@ -6,7 +6,7 @@ services:
     restart: unless-stopped
     environment:
       MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: viet_acosla
+      MYSQL_DATABASE: viet_autoescuela
       TZ: Asia/Ho_Chi_Minh
     ports:
       - '3306:3306'
