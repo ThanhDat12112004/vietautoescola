@@ -1,0 +1,10 @@
+node_modules
+**/node_modules
+.next
+**/.next
+.git
+.gitignore
+.cursor
+.logs
+*.log
+apps/web/tsconfig.tsbuildinfo

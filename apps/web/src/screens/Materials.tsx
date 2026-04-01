@@ -562,7 +562,7 @@ const Materials = () => {
                     </div>
                   </div>
                 </div>
-                
+
 
                 <div className="shrink-0 lg:ml-auto lg:flex lg:flex-col lg:items-end">
                   <span className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.06em] text-primary/90 lg:text-right">
@@ -582,16 +582,16 @@ const Materials = () => {
                           'min-h-8 flex-1 whitespace-nowrap rounded-full px-2.5 py-1.5 text-center text-xs font-semibold transition-[color,background-color,box-shadow,border-color] sm:px-3',
                           key === 'all' &&
                             (readFilter === key
-                              ? 'border border-slate-300 bg-slate-100 text-slate-800 shadow-sm'
-                              : 'border border-transparent bg-transparent text-slate-600 hover:bg-slate-100/80'),
+                              ? 'border border-primary/35 bg-primary/18 text-primary shadow-sm'
+                              : 'border border-transparent bg-transparent text-primary/80 hover:bg-primary/10'),
                           key === 'read' &&
                             (readFilter === key
                               ? 'border border-emerald-300 bg-emerald-100 text-emerald-800 shadow-sm'
                               : 'border border-transparent bg-transparent text-emerald-700 hover:bg-emerald-50'),
                           key === 'unread' &&
                             (readFilter === key
-                              ? 'border border-amber-300 bg-amber-100 text-amber-900 shadow-sm'
-                              : 'border border-transparent bg-transparent text-amber-800 hover:bg-amber-50')
+                              ? 'border border-rose-300 bg-rose-100 text-rose-800 shadow-sm'
+                              : 'border border-transparent bg-transparent text-rose-700 hover:bg-rose-50')
                         )}
                       >
                         {key === 'all' && (
@@ -749,7 +749,7 @@ const Materials = () => {
                 </div>
               </aside>
               <div>
-                
+
             {!loadingSubjects && error && <p className="text-sm text-destructive mb-3">{error}</p>}
 
             {loadingMaterials && (
@@ -835,7 +835,7 @@ const Materials = () => {
                                 'inline-block rounded border px-2 py-0.5 text-[11px] font-semibold',
                                 readMaterialSet.has(material.id)
                                   ? 'border-emerald-900/20 bg-emerald-950/[0.06] text-emerald-900/85 dark:border-emerald-500/25 dark:bg-emerald-500/10 dark:text-emerald-100/90'
-                                  : 'border-amber-300/70 bg-amber-50 text-amber-900 dark:border-amber-500/35 dark:bg-amber-500/15 dark:text-amber-100'
+                                  : 'border-foreground/12 bg-muted/40 text-foreground/70'
                               )}
                             >
                               {readMaterialSet.has(material.id)

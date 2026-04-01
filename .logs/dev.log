@@ -492,3 +492,8 @@
 [6]  GET /cache-api/public?resource=leaderboard&limit=1&period=week 200 in 25ms
 [1] [0mGET /auth/session [36m304[0m 11.072 ms - -[0m
 [0] [0mGET /auth/session [36m304[0m 36.374 ms - -[0m
+[6]  GET /apple-touch-icon-precomposed.png 200 in 54ms
+[6]  GET /apple-touch-icon.png 200 in 51ms
+[6]  GET / 200 in 52ms
+[6]  ✓ Compiled in 1020ms (1840 modules)
+[6]  ✓ Compiled in 1414ms (1840 modules)

@@ -1,0 +1,20 @@
+FROM node:20-alpine
+
+WORKDIR /app
+
+COPY package.json package-lock.json ./
+COPY apps/api-gateway/package.json apps/api-gateway/package.json
+COPY services/user-service/package.json services/user-service/package.json
+COPY services/quiz-service/package.json services/quiz-service/package.json
+COPY services/media-service/package.json services/media-service/package.json
+COPY services/stats-service/package.json services/stats-service/package.json
+COPY services/materials-service/package.json services/materials-service/package.json
+
+RUN npm ci
+
+COPY apps/api-gateway apps/api-gateway
+COPY services services
+
+ENV NODE_ENV=production
+
+CMD ["npm", "run", "start", "--workspace", "apps/api-gateway"]

@@ -65,7 +65,6 @@ const QuizTake = () => {
   const [timer, setTimer] = useState(0);
   const [submitResult, setSubmitResult] = useState<SubmitAttemptResult | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [preferStackedQuestionLayout, setPreferStackedQuestionLayout] = useState(false);
   const authUser = getStoredAuth()?.user;
   const candidateName = getCandidateDisplayName(authUser);
 
@@ -170,11 +169,6 @@ const QuizTake = () => {
   const question = questions[currentIndex];
   const selectedId = question ? selectedAnswers[question.id] : undefined;
   const checkedForCurrent = question ? checkedMap[question.id] : undefined;
-
-  useEffect(() => {
-    // Re-evaluate layout whenever user moves to another question.
-    setPreferStackedQuestionLayout(false);
-  }, [question?.id]);
 
   useEffect(() => {
     if (!showExplanationPanel || mode !== 'practice' || !question?.explanation) return;
@@ -482,24 +476,15 @@ const QuizTake = () => {
   const renderImageArea = () => (
     <>
       <div
-        className="relative flex w-full h-[clamp(180px,36dvh,320px)] items-center justify-center overflow-hidden rounded-lg border border-slate-300/60 bg-slate-50/40
-          sm:h-[clamp(200px,34dvh,360px)] md:h-[clamp(220px,32dvh,420px)]
-          landscape:h-full landscape:min-h-[260px] landscape:flex-1
-          landscape:rounded-md landscape:border-0 landscape:bg-transparent"
+        className="relative flex w-full h-[clamp(120px,24dvh,180px)] items-center justify-center overflow-hidden rounded-lg border border-slate-300/60 bg-slate-50/40
+          sm:h-[clamp(130px,22dvh,190px)] md:h-[clamp(140px,20dvh,210px)]
+          landscape:h-[clamp(150px,22dvh,220px)] landscape:min-h-[150px]
+          lg:landscape:h-full lg:landscape:min-h-[240px] lg:landscape:flex-1 lg:landscape:rounded-md lg:landscape:border-0 lg:landscape:bg-transparent"
       >
         {question.image_url ? (
           <img
             src={resolveMediaUrl(question.image_url)}
             alt="question"
-            onLoad={(event) => {
-              const { naturalWidth, naturalHeight } = event.currentTarget;
-              if (!naturalWidth || !naturalHeight) {
-                setPreferStackedQuestionLayout(false);
-                return;
-              }
-              // Prefer stacked layout when image is clearly portrait/tall.
-              setPreferStackedQuestionLayout(naturalHeight / naturalWidth >= 1.2);
-            }}
             className="mx-auto block h-auto w-auto max-h-full max-w-full object-contain object-center
               lg:landscape:h-full lg:landscape:w-full"
           />
@@ -733,28 +718,18 @@ const QuizTake = () => {
 
         {/* Landscape: hai cột như máy tính */}
         <div
-          className={`hidden min-h-0 flex-1 grid-cols-1 grid-rows-[auto_minmax(0,1fr)] gap-2 rounded-xl border border-slate-300/70 bg-slate-100/65 p-2 landscape:grid landscape:items-stretch ${
-            preferStackedQuestionLayout
-              ? 'landscape:grid-cols-1 landscape:grid-rows-[auto_minmax(0,1fr)] landscape:gap-2'
-              : 'landscape:grid-cols-[minmax(0,4fr)_minmax(0,6fr)] landscape:grid-rows-1 landscape:gap-0'
-          }`}
+          className="hidden min-h-0 flex-1 grid-cols-1 grid-rows-[auto_minmax(0,1fr)] gap-2 rounded-xl border border-slate-300/70 bg-slate-100/65 p-2 landscape:grid landscape:grid-cols-[minmax(0,4fr)_minmax(0,6fr)] landscape:grid-rows-1 landscape:gap-0 landscape:items-stretch"
         >
           <div
             className="flex min-h-0 shrink-0 flex-col gap-2 rounded-xl border border-slate-300/70 bg-white p-2 sm:p-3
-              landscape:h-full landscape:min-h-[260px] landscape:gap-3 landscape:overflow-hidden
-              landscape:rounded-r-none landscape:border-r-2 landscape:border-r-slate-300/80
-              data-[stacked=true]:landscape:rounded-r-xl data-[stacked=true]:landscape:border-r data-[stacked=true]:landscape:border-r-slate-300/70
+              landscape:h-full landscape:min-h-[260px] landscape:gap-3 landscape:overflow-hidden landscape:rounded-r-none landscape:border-r-2 landscape:border-r-slate-300/80
               xl:min-h-[290px] xl:gap-3
               2xl:min-h-[320px]"
-            data-stacked={preferStackedQuestionLayout ? 'true' : 'false'}
           >
             {renderImageArea()}
           </div>
 
-          <div
-            className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-xl border border-slate-300/70 bg-white landscape:h-full landscape:rounded-l-none landscape:border-l-0 data-[stacked=true]:landscape:rounded-l-xl data-[stacked=true]:landscape:border-l"
-            data-stacked={preferStackedQuestionLayout ? 'true' : 'false'}
-          >
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-xl border border-slate-300/70 bg-white landscape:h-full landscape:rounded-l-none landscape:border-l-0">
             {error && (
               <p className="shrink-0 px-2 pt-1.5 text-xs text-destructive landscape:px-2.5 xl:px-4 xl:pt-2">{error}</p>
             )}

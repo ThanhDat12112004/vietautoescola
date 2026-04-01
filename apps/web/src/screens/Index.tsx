@@ -676,10 +676,10 @@ const Index = () => {
               <span className="inline-flex rounded-full border border-primary/20 bg-primary/5 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
                 {t('Hệ thống ôn thi DGT', 'Sistema de preparación DGT')}
               </span>
-              <h2 className="font-display text-3xl font-bold leading-tight text-foreground sm:text-4xl">
+              <h2 className="font-display text-3xl font-bold text-foreground sm:text-4xl">
                 {t('Đề thi theo mục tiêu', 'Exámenes por objetivo')}
               </h2>
-              <p className="mt-1.5 max-w-xl text-base font-medium leading-relaxed text-[#4a3038] sm:text-lg">
+              <p className="mt-3 max-w-xl text-base font-medium leading-relaxed text-[#4a3038] sm:text-lg">
                 {t(
                   'Chọn dạng đề phù hợp để học hiệu quả và nâng điểm nhanh chóng.',
                   'Elige el tipo de examen adecuado para mejorar rápidamente.'
@@ -702,7 +702,7 @@ const Index = () => {
           </motion.div>
 
           {quizTypes.length ? (
-            <div className="grid gap-4 lg:grid-cols-[minmax(0,1.65fr)_minmax(0,1fr)] lg:items-start">
+            <div className="grid gap-6 lg:min-h-[200px] lg:grid-cols-[minmax(0,1.65fr)_minmax(0,1fr)] lg:items-start">
               {/* Featured Quiz Type - Large Card */}
               <motion.div
                 custom={1}
@@ -714,9 +714,9 @@ const Index = () => {
               >
                 <Link to={`/quizzes?type=${encodeURIComponent(primaryQuizType || '')}`}>
                   <Card className="group h-full overflow-hidden border border-brand-cta-end/25 bg-[linear-gradient(180deg,rgba(255,252,253,0.99)_0%,rgba(255,242,246,0.95)_100%)] shadow-[0_14px_34px_rgba(29,8,15,0.24)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_20px_44px_rgba(29,8,15,0.3)]">
-                    <div className="grid h-full min-h-[250px] grid-rows-[1fr_1fr_auto] sm:min-h-[270px] lg:min-h-[290px]">
+                    <div className="grid h-full min-h-[340px] grid-rows-[1fr_1fr_auto] sm:min-h-[370px] lg:min-h-[400px]">
                       <div className="relative row-span-2 overflow-hidden">
-                        <div className="absolute inset-0 flex items-center justify-center bg-[radial-gradient(circle_at_50%_24%,rgba(255,255,255,0.38)_0%,rgba(255,255,255,0)_62%),linear-gradient(180deg,rgba(255,245,248,0.88)_0%,rgba(255,228,236,0.62)_100%)] p-3 sm:p-4">
+                        <div className="absolute inset-0 flex items-center justify-center bg-[radial-gradient(circle_at_50%_24%,rgba(255,255,255,0.38)_0%,rgba(255,255,255,0)_62%),linear-gradient(180deg,rgba(255,245,248,0.88)_0%,rgba(255,228,236,0.62)_100%)] p-4 sm:p-5">
                           <img
                             src="/brand/quiz-illustration.png"
                             alt={formatQuizType(primaryQuizType || '')}
@@ -730,8 +730,8 @@ const Index = () => {
                           {t('Đề nổi bật', 'Destacado')}
                         </div>
                       </div>
-                      <CardContent className="row-span-1 border-t border-brand-cta-end/25 bg-[linear-gradient(135deg,rgba(104,22,40,0.94)_0%,rgba(140,33,55,0.92)_100%)] p-3 text-white sm:p-4">
-                        <div className="grid gap-2">
+                      <CardContent className="row-span-1 border-t border-brand-cta-end/25 bg-[linear-gradient(135deg,rgba(104,22,40,0.94)_0%,rgba(140,33,55,0.92)_100%)] p-4 text-white sm:p-5">
+                        <div className="grid gap-3">
                           <div className="flex flex-wrap items-start justify-between gap-3">
                             <h3 className="font-display text-2xl font-bold text-white sm:text-[1.65rem]">
                               {formatQuizType(primaryQuizType || '')}
@@ -759,7 +759,7 @@ const Index = () => {
               </motion.div>
 
               {/* Other Quiz Types - Smaller Cards */}
-              <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-1">
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
                 {quizTypes.slice(1, 5).length ? (
                   quizTypes.slice(1, 5).map((type, i) => {
                     const typeQuizzes = quizzes.filter(
@@ -789,8 +789,8 @@ const Index = () => {
                         <Link to={`/quizzes?type=${encodeURIComponent(type)}`} className="block">
                           <Card className="group overflow-hidden border border-border/80 bg-[linear-gradient(170deg,rgba(255,255,255,0.98)_0%,rgba(252,247,248,0.93)_100%)] shadow-[0_6px_18px_rgba(20,27,45,0.05)] transition-all hover:-translate-y-1 hover:border-primary/35 hover:shadow-[0_12px_26px_rgba(20,27,45,0.12)]">
                             <CardContent className="p-0">
-                              <div className="flex min-h-[90px]">
-                                <div className="flex w-[4.5rem] shrink-0 flex-col items-center justify-center gap-1.5 self-stretch rounded-l-xl border-r border-primary/15 bg-[linear-gradient(180deg,rgba(122,32,56,0.2)_0%,rgba(122,32,56,0.08)_100%)] px-1.5 py-2 sm:w-[4.8rem]">
+                              <div className="flex min-h-[124px]">
+                                <div className="flex w-[5rem] shrink-0 flex-col items-center justify-center gap-2 self-stretch rounded-l-xl border-r border-primary/15 bg-[linear-gradient(180deg,rgba(122,32,56,0.2)_0%,rgba(122,32,56,0.08)_100%)] px-2 py-3 sm:w-[5.25rem]">
                                   <img
                                     src="/brand/test.png"
                                     alt=""
@@ -802,8 +802,8 @@ const Index = () => {
                                     {typeQuizzes.length}+
                                   </span>
                                 </div>
-                                <div className="flex min-w-0 flex-1 flex-col p-2.5">
-                                  <div className="mb-0.5 flex items-start justify-between gap-2">
+                                <div className="flex min-w-0 flex-1 flex-col p-3.5">
+                                  <div className="mb-1 flex items-start justify-between gap-2">
                                     <h4 className="min-w-0 flex-1 font-display text-base font-bold leading-snug text-foreground">
                                       {formatQuizType(type)}
                                     </h4>
@@ -812,12 +812,12 @@ const Index = () => {
                                       <ArrowRight className="h-4 w-4" />
                                     </span>
                                   </div>
-                                  <p className="mb-1 text-[12px] font-semibold tabular-nums text-primary/90 sm:text-[13px]">
+                                  <p className="mb-1.5 text-[12px] font-semibold tabular-nums text-primary/90 sm:text-[13px]">
                                     {lang === 'vi'
                                       ? `${typeQuizzes.length} bài • ${typeQuestionTotal.toLocaleString('vi-VN')} câu hỏi`
                                       : `${typeQuizzes.length} exámenes • ${typeQuestionTotal.toLocaleString('es-ES')} preguntas`}
                                   </p>
-                                  <p className="mb-0.5 line-clamp-2 flex-1 text-sm text-muted-foreground">
+                                  <p className="mb-1 line-clamp-2 flex-1 text-sm text-muted-foreground">
                                     {typeDescription}
                                   </p>
                                   {completedCount > 0 && (
@@ -896,7 +896,7 @@ const Index = () => {
       </section>
 
       {/* Materials Section - Clean Carousel */}
-      <section className="relative bg-background pt-7 pb-9 sm:pt-8 sm:pb-10">
+      <section className="relative bg-background pt-10 pb-14 sm:pt-12 sm:pb-16">
         <div className="container mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
           <motion.div
             initial="hidden"
@@ -904,16 +904,16 @@ const Index = () => {
             viewport={{ once: true }}
             variants={fadeUp}
             custom={0}
-            className="mb-5 grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start"
+            className="mb-10 grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start"
           >
             <div className="max-w-2xl">
               <span className="inline-flex rounded-full border border-primary/20 bg-primary/5 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
                 {t('Hệ thống ôn thi DGT', 'Sistema de preparación DGT')}
               </span>
-              <h2 className="mt-1.5 font-display text-3xl font-bold text-foreground sm:text-4xl">
+              <h2 className="mt-2 font-display text-3xl font-bold text-foreground sm:text-4xl">
                 {t('Tài liệu học trọng tâm', 'Temario de estudio clave')}
               </h2>
-              <p className="mt-1.5 max-w-xl text-base font-medium leading-relaxed text-[#4a3038] sm:text-lg">
+              <p className="mt-3 max-w-xl text-base font-medium leading-relaxed text-[#4a3038] sm:text-lg">
                 {t(
                   'Nội dung thiết yếu theo chủ đề để học đúng trọng tâm và tiết kiệm thời gian.',
                   'Contenido esencial por temas para estudiar con enfoque y ahorrar tiempo.'
@@ -954,8 +954,8 @@ const Index = () => {
           {subjects.length ? (
             <div className="relative">
               <div
-                className="flex snap-x snap-mandatory gap-3 overflow-x-auto overflow-y-hidden pb-2 pl-0.5 pr-1 scrollbar-hide [-webkit-overflow-scrolling:touch] touch-pan-x sm:gap-4 sm:pr-0"
-                style={{ touchAction: 'pan-x', overscrollBehaviorX: 'contain' }}
+                className="flex snap-x snap-mandatory gap-3 overflow-x-auto overflow-y-hidden pb-4 pl-0.5 pr-1 scrollbar-hide sm:gap-5 sm:pr-0"
+                style={{ touchAction: 'auto', overscrollBehaviorX: 'contain' }}
               >
                 {featuredSubjects.map((subject, i) => (
                   // Material count comes from live API per subject.
@@ -967,13 +967,13 @@ const Index = () => {
                     whileInView="visible"
                     viewport={{ once: true }}
                     variants={fadeUp}
-                    className="w-[68vw] max-w-[220px] flex-shrink-0 snap-start sm:min-w-[248px] sm:max-w-none sm:w-[266px] lg:min-w-[292px] lg:w-[306px]"
+                    className="w-[72vw] max-w-[240px] flex-shrink-0 snap-start sm:min-w-[280px] sm:max-w-none sm:w-[300px] lg:min-w-[340px] lg:w-[360px]"
                   >
                     <Link to={`/materials?subject=${subject.id}`}>
                       <Card className="group h-full border border-border bg-card transition-all hover:border-primary/30 hover:shadow-lg">
                         <CardContent className="p-0">
                           {/* Image Section — thấp hơn trên mobile để thẻ gọn */}
-                          <div className="flex h-24 w-full items-center justify-center overflow-hidden rounded-t-lg bg-gradient-to-br from-primary/5 to-accent/5 px-2 pt-1.5 sm:h-32 md:h-36">
+                          <div className="flex h-32 w-full items-center justify-center overflow-hidden rounded-t-lg bg-gradient-to-br from-primary/5 to-accent/5 px-2 pt-2 sm:h-44 md:h-52">
                             <img
                               src="/brand/materials-illustration.png"
                               alt={subject.name}
@@ -982,18 +982,18 @@ const Index = () => {
                             />
                           </div>
                           {/* Content Section */}
-                          <div className="flex min-h-[7rem] flex-col p-3 sm:min-h-[8.25rem] sm:p-4">
+                          <div className="flex min-h-[8.5rem] flex-col p-4 sm:min-h-[11rem] sm:p-5">
                             <h3 className="mb-1.5 line-clamp-2 font-display text-base font-bold leading-snug text-foreground sm:mb-2 sm:text-lg">
                               {subject.name}
                             </h3>
-                            <p className="mb-2 line-clamp-2 flex-1 text-xs leading-relaxed text-muted-foreground sm:mb-3 sm:text-sm">
+                            <p className="mb-3 line-clamp-2 flex-1 text-xs leading-relaxed text-muted-foreground sm:mb-4 sm:text-sm">
                               {subject.description ||
                                 t(
                                   'Xem tài liệu chi tiết cho chủ đề này',
                                   'Ver el temario de este tema'
                                 )}
                             </p>
-                            <div className="mt-auto flex shrink-0 items-center justify-between gap-2 border-t border-border/50 pt-2.5 sm:gap-3 sm:pt-3">
+                            <div className="mt-auto flex shrink-0 items-center justify-between gap-2 border-t border-border/50 pt-3 sm:gap-3 sm:pt-4">
                               <span className="min-w-0 truncate rounded-full border border-primary/20 bg-primary/5 px-2 py-0.5 text-[11px] font-semibold text-primary sm:px-2.5 sm:py-1 sm:text-xs">
                                 {lang === 'vi'
                                   ? `${materialsCountBySubject[subject.id] || 0} tài liệu`
